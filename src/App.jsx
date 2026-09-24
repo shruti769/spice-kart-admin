@@ -61,14 +61,14 @@ export default function App() {
         {v.p_orders && <Orders v={v} />}
         {v.p_orderdetail && <OrderDetail v={v} />}
         {v.p_catalogue && <Catalogue v={v} />}
-        {v.p_productform && <ProductForm v={v} />}
+        {v.p_productform && <ProductForm key={v.isAddMode ? 'add' : `edit-${v.editingProduct?.id ?? 'none'}`} v={v} />}
         {v.p_proddetail && <ProductDetail v={v} />}
         {v.p_cust && <Customers v={v} />}
         {v.p_custdetail && <CustomerDetail v={v} />}
         {v.p_del && <Delivery v={v} />}
         {v.p_driver && <DriverDetail v={v} />}
         {v.p_promo && <Promotions v={v} />}
-        {v.p_promonew && <NewPromotion v={v} />}
+        {v.p_promonew && <NewPromotion key={v.editingCoupon?.id ?? 'new'} v={v} />}
         {v.p_pay && <Payments v={v} />}
         {v.p_refunds && <Refunds v={v} />}
         {v.p_rev && <Reviews v={v} />}

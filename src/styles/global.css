@@ -22,7 +22,14 @@ main > .ad-scroll > *{flex:none;min-height:fit-content;flex:none}
 
 /* Sign-in and 2FA fields */
 .sk-input::placeholder{color:#A3ADA6}
+.sk-cat-input::placeholder{color:#A8AFA9}
 .sk-input:focus,.sk-otp:focus{border-color:#8BE000 !important;box-shadow:0 0 0 3px rgba(139,224,0,.18)}
+/* Product form: prefixed number fields, no number spinners, disabled selects. */
+.sk-input-wrap:focus-within{border-color:#8BE000 !important;box-shadow:0 0 0 3px rgba(139,224,0,.18)}
+.sk-input::-webkit-outer-spin-button,.sk-input::-webkit-inner-spin-button{-webkit-appearance:none;margin:0}
+.sk-input[type=number]{-moz-appearance:textfield;appearance:textfield}
+.sk-input-bare:focus{box-shadow:none}
+.sk-input:disabled{cursor:not-allowed;background:#F6F7F4 !important}
 
 /* The console fills the browser window. */
 #root{width:100%}

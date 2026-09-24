@@ -1,13 +1,3 @@
-import imgBasmatiRice from '../assets/images/basmati-rice.jpg'
-import imgPaneer from '../assets/images/paneer.jpg'
-import imgFreshCoriander from '../assets/images/fresh-coriander.jpg'
-import imgGaramMasala from '../assets/images/garam-masala.jpg'
-import imgFullCreamMilk from '../assets/images/full-cream-milk.jpg'
-import imgAlphonsoMangoes from '../assets/images/alphonso-mangoes.jpg'
-import imgSourdoughLoaf from '../assets/images/sourdough-loaf.jpg'
-import imgOliveOil from '../assets/images/olive-oil.jpg'
-import imgTurmericPowder from '../assets/images/turmeric-powder.jpg'
-
 // Records shown across the console, collected for the global search.
 // `go` names the view-model handler that opens the matching screen.
 
@@ -22,22 +12,6 @@ const ORDERS = [
   ['#SK10475', 'Emily Nguyen', '11 items · $118.60 · Express', 'Delivered'],
 ].map(([id, customer, detail, status]) => ({
   group: 'Orders', title: `${id} · ${customer}`, subtitle: detail, meta: status, badge: 'OR', go: 'openOrder',
-}))
-
-const PRODUCTS = [
-  ['Basmati Rice 5kg', 'SK-PAN-0142', 'Grains, Rice & Cereals', '$24.50', 'Critical · 6 left', imgBasmatiRice],
-  ['Paneer 500g', 'SK-DAI-0088', 'Dairy & Refrigerated', '$7.90', 'Low stock · 11 left', imgPaneer],
-  ['Fresh Coriander', 'SK-FRU-0118', 'Fresh Produce', '$2.50', 'Low stock · 18 left', imgFreshCoriander],
-  ['Garam Masala 100g', 'SK-SPI-0017', 'Spices & Masalas', '$4.20', 'Low stock · 24 left', imgGaramMasala],
-  ['Full Cream Milk 2L', 'SK-DAI-0002', 'Dairy & Refrigerated', '$4.50', 'In stock', imgFullCreamMilk],
-  ['Alphonso Mangoes 1kg', 'SK-FRU-0231', 'Fresh Produce', '$12.99', 'In stock', imgAlphonsoMangoes],
-  ['Sourdough Loaf', 'SK-BAK-0054', 'Bakery & Bread', '$6.50', 'Out of stock', imgSourdoughLoaf],
-  ['Olive Oil 1L', 'SK-PAN-0301', 'Grains, Rice & Cereals', '$18.71', 'In stock', imgOliveOil],
-  ['Turmeric Powder 200g', 'SK-SPI-0004', 'Spices & Masalas', '$3.80', 'In stock', imgTurmericPowder],
-  ['Frozen Paratha 5pk', '', 'Frozen Foods & Vegetables', '', 'Low stock · 31 left', null],
-].map(([name, sku, category, price, stock, image]) => ({
-  group: 'Products', title: name, subtitle: [sku, category].filter(Boolean).join(' · '),
-  meta: price || stock, keywords: stock, image, go: 'nav_proddetail',
 }))
 
 const CUSTOMERS = [
@@ -67,13 +41,6 @@ const DRIVERS = [
   keywords: phone.replace(/\s/g, ''), badge: initials(name), go: 'nav_driver',
 }))
 
-const CATEGORIES = [
-  'Dairy & Refrigerated', 'Bakery & Bread', 'Fresh Produce', 'Flours', 'Pulses & Lentils', 'Spices & Masalas',
-  'Grains, Rice & Cereals', 'Oil & Ghee', 'Snacks & Savouries', 'Instant & Ready to Eat', 'Tea & Beverages',
-  'Condiments, Pickles & Paste', 'Sweeteners & Miscellaneous Baking', 'Frozen Foods & Vegetables',
-  'Fasting Foods', 'General Foods', 'Pooja/Festival',
-].map((name) => ({ group: 'Categories', title: name, subtitle: 'Catalogue category', badge: 'CA', go: 'nav_cats' }))
-
 const PAGES = [
   ['Dashboard', 'nav_dash', 'home overview'], ['Analytics', 'nav_analytics', 'reports'],
   ['Orders', 'nav_orders', ''], ['Delivery', 'nav_del', 'drivers map zones'],
@@ -89,19 +56,32 @@ function initials(name) {
   return name.split(/\s+/).map((w) => w[0]).join('').slice(0, 2).toUpperCase()
 }
 
-const INDEX = [...PAGES, ...ORDERS, ...PRODUCTS, ...CUSTOMERS, ...DRIVERS, ...CATEGORIES].map((r) => ({
+const withHaystack = (r) => ({
   ...r,
   haystack: [r.title, r.subtitle, r.meta, r.keywords].filter(Boolean).join(' ').toLowerCase().replace(/[#’']/g, ''),
-}))
+})
+
+const INDEX = [...PAGES, ...ORDERS, ...CUSTOMERS, ...DRIVERS].map(withHaystack)
+
+/** Search records for live categories (rows from useCategories). */
+export function categoryRecords(categories) {
+  return categories.map((c) => withHaystack({
+    group: 'Categories', title: c.name, subtitle: c.enabled ? 'Catalogue category' : 'Catalogue category · disabled',
+    keywords: [c.short_name, ...(c.subcategories ?? [])].filter(Boolean).join(' '), image: c.image_url || undefined, badge: 'CA', go: 'nav_cats',
+  }))
+}
 
 const GROUP_LIMIT = 4
 
-/** Records matching every word of `query`, grouped in display order, at most 4 per group. */
-export function searchConsole(query) {
+/**
+ * Records matching every word of `query`, grouped in display order, at most 4 per group.
+ * `extra` are additional records (e.g. categoryRecords(...)) appended after the static ones.
+ */
+export function searchConsole(query, extra = []) {
   const words = query.toLowerCase().replace(/[#’']/g, '').split(/\s+/).filter(Boolean)
   if (!words.length) return []
   const counts = {}
-  return INDEX.filter((r) => {
+  return [...INDEX, ...extra].filter((r) => {
     if (!words.every((w) => r.haystack.includes(w))) return false
     counts[r.group] = (counts[r.group] || 0) + 1
     return counts[r.group] <= GROUP_LIMIT

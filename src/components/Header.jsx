@@ -4,7 +4,7 @@ export default function Header({ v }) {
   return (
     <>
       <header style={{ flex: "none", height: "60px", background: "#fff", borderBottom: "1px solid #E4E7E2", display: "flex", alignItems: "center", gap: "14px", padding: "0 26px" }}>
-        <GlobalSearch v={v} placeholder="Search orders, products, customers…" width="300px" background="#F6F7F4" />
+        <GlobalSearch v={v} placeholder="Search orders, customers, drivers…" width="300px" background="#F6F7F4" />
         <span style={{ position: "relative", display: "flex", flex: "none" }}>
           <button onClick={v.toggleStore} style={{ display: "flex", alignItems: "center", gap: "7px", height: "34px", padding: "0 11px", border: `1px solid ${v.storeBd}`, borderRadius: "8px", background: v.storeBg, cursor: "pointer" }}>
             <svg width="14" height="14" viewBox="0 0 20 20" fill="none" style={{ flex: "none" }}>

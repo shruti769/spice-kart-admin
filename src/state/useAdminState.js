@@ -1,4 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
+import { isSupabaseConfigured, supabase } from '../lib/supabase'
+import { fetchIsAdmin } from '../lib/adminAuth'
 
 const INITIAL_STATE = { page: 'login', modal: null, toast: '', catTab: 'products', rowMenu: null, store: 0, storeOpen: false }
 
@@ -32,6 +34,32 @@ export function useAdminState() {
   }, [])
 
   useEffect(() => () => clearTimeout(toastTimer.current), [])
+
+  // Restore a saved Supabase session: admins skip the login page. If the session later ends
+  // (sign-out elsewhere, refresh token revoked) the console returns to the login page.
+  useEffect(() => {
+    if (!isSupabaseConfigured) return
+    let cancelled = false
+    supabase.auth.getSession().then(async ({ data }) => {
+      const sessionUser = data.session?.user
+      if (!sessionUser || cancelled) return
+      try {
+        const isAdmin = await fetchIsAdmin(sessionUser.id)
+        if (isAdmin && !cancelled) {
+          setState((st) => (st.page === 'login' ? { page: 'dash', authEmail: sessionUser.email } : {}))
+        }
+      } catch {
+        // Could not verify admin access: stay on the login page.
+      }
+    })
+    const { data: sub } = supabase.auth.onAuthStateChange((event) => {
+      if (event === 'SIGNED_OUT') setState((st) => (st.page === 'login' ? {} : { page: 'login', modal: null, rowMenu: null, storeOpen: false, editingProduct: null, actionProduct: null }))
+    })
+    return () => {
+      cancelled = true
+      sub.subscription.unsubscribe()
+    }
+  }, [setState])
 
   const go = (p) => setState({ page: p, modal: null, rowMenu: null, storeOpen: false })
   const goBackModule = () => {
@@ -78,6 +106,10 @@ export function useAdminState() {
       v[key + 'Bg'] = on ? '#F1F9DF' : '#fff';
     }
   });
+  // Active sub-tab indexes the catalogue uses to filter its Supabase product lists.
+  v.catProductTab = tabState._catalogue ?? 0;
+  v.catStockTab = tabState._catalogue2 ?? 0;
+  v.promoTab = tabState._promo ?? 0;
   // ---- segmented ranges & filter chips ----
   const RANGES = [['rng6', 5, 1], ['rng7', 5, 1]];
   const rngState = s.ranges || {};
@@ -107,7 +139,8 @@ export function useAdminState() {
     }
   });
   // ---- row actions & dialogs ----
-  const openM = (k) => () => setState({ modal: k, rowMenu: null, storeOpen: false });
+  // Generic (sample-data) modals: never tied to a real product row.
+  const openM = (k) => () => setState({ modal: k, rowMenu: null, storeOpen: false, actionProduct: null });
   v.openRowActions = openM('rowactions');
   v.openStatus = openM('status');
   v.openAssign = openM('assign');
@@ -152,8 +185,8 @@ export function useAdminState() {
   // ---- forms ----
   v.saveDraft = () => { flash('Saved as a draft'); };
   v.publishItem = () => { flash('Published and live in the app'); goBackModule(); };
-  v.saveProduct = () => { flash(s.page === 'editproduct' ? 'Product updated' : 'Product saved to the catalogue'); go('catalogue'); };
-  v.saveAndAdd = () => flash('Saved · form cleared for the next product');
+  v.flash = flash;
+  v.go = go;
   v.saveSettings = () => flash('Settings saved for Spice Kart Australia');
   v.discardChanges = () => flash('Changes discarded');
   v.previewApp = () => flash('Opening the customer app preview…');
@@ -182,14 +215,32 @@ export function useAdminState() {
     v['storeIconBd' + idx] = si === idx ? '#C7E88A' : '#E4E7E2';
   }
   v.p_productform = (s.page === 'addproduct' || s.page === 'editproduct');
-  v.nav_editproduct = () => setState({ page: 'editproduct', modal: null, rowMenu: null });
-  v.nav_addproduct = () => setState({ page: 'addproduct', modal: null, rowMenu: null });
+  // ---- real products (rows from Supabase `public.products`) ----
+  // A product row, as opposed to a click event or nothing.
+  const isProductRow = (row) => !!row && typeof row === 'object' && typeof row.id === 'string' && 'price' in row;
+  // Edit form: ProductForm reads `v.editingProduct`; without one it redirects to the catalogue.
+  v.editProduct = (row) => setState({ page: 'editproduct', editingProduct: isProductRow(row) ? row : null, modal: null, rowMenu: null, actionProduct: null });
+  v.editingProduct = s.editingProduct || null;
+  // Modals acting on one real product (row actions, delete, stock adjustment) read `v.actionProduct`.
+  v.openProductActions = (row) => setState({ modal: 'rowactions', actionProduct: isProductRow(row) ? row : null, rowMenu: null, storeOpen: false });
+  v.openDeleteProduct = (row) => setState({ modal: 'delete', actionProduct: isProductRow(row) ? row : null, rowMenu: null });
+  v.openStockAdjust = (row) => setState({ modal: 'stockadj', actionProduct: isProductRow(row) ? row : null, rowMenu: null });
+  v.actionProduct = s.actionProduct || null;
+  // After a real delete: close the modal and leave the edit form if it showed that product.
+  v.productDeleted = (row) => {
+    setState((st) => {
+      const editingIt = st.page === 'editproduct' && st.editingProduct?.id === row.id;
+      return { modal: null, actionProduct: null, ...(editingIt ? { page: 'catalogue', catTab: 'products', editingProduct: null } : {}) };
+    });
+    flash('Product deleted');
+  };
+  v.nav_editproduct = () => setState({ page: 'editproduct', editingProduct: null, modal: null, rowMenu: null });
+  v.nav_addproduct = () => setState({ page: 'addproduct', editingProduct: null, modal: null, rowMenu: null });
   v.formTitle = s.page === 'editproduct' ? 'Edit product' : 'Add product';
-  v.formSub = s.page === 'editproduct' ? 'Basmati Rice 5kg · SK-PAN-0142 · Grains, Rice &amp; Cereals › Basmati' : 'Create a new product in the Spice Kart catalogue';
+  v.formSub = s.page === 'editproduct' ? '' : 'Create a new product in the Spice Kart catalogue';
   v.formCta = s.page === 'editproduct' ? 'Save changes' : 'Save product';
   v.isAddMode = s.page !== 'editproduct';
   v.openAbout = () => setState({ page: 'proddetail', rowMenu: null, modal: null });
-  v.openDeleteProduct = () => setState({ modal: 'delete', rowMenu: null });
   for (let i = 0; i < 8; i++) {
     const idx = i;
     v['rowMenu' + idx] = () => setState(st => ({ rowMenu: st.rowMenu === idx ? null : idx }));
@@ -284,36 +335,48 @@ export function useAdminState() {
   v.nav_refunds = () => go('refunds');
   v.nav_login = () => go('login');
   v.openOrder = () => go('orderdetail');
-  v.openPromoNew = () => go('promonew');
+  // Coupons (Supabase `public.coupons`): NewPromotion reads `v.editingCoupon` (null → create).
+  const isCouponRow = (row) => !!row && typeof row === 'object' && typeof row.id === 'string' && 'discount_type' in row;
+  v.openPromoNew = () => setState({ page: 'promonew', editingCoupon: null, modal: null, rowMenu: null, storeOpen: false });
+  v.nav_newpromo = v.openPromoNew;
+  v.editCoupon = (row) => setState({ page: 'promonew', editingCoupon: isCouponRow(row) ? row : null, modal: null, rowMenu: null, storeOpen: false });
+  v.editingCoupon = s.editingCoupon || null;
+  v.couponDone = () => setState({ page: 'promo', editingCoupon: null, modal: null, rowMenu: null });
   v.openBannerNew = () => go('bannernew');
   v.openNotifNew = () => go('notifnew');
-  // Dummy auth: any email/password is accepted, then any 6-digit code.
+  // Auth: Login.jsx signs in with Supabase and checks `public.admins`, then calls signedIn.
   const authEmail = s.authEmail || 'aarav.kapoor@spicekart.com.au';
   const user = userFromEmail(authEmail);
   v.authEmail = authEmail;
   v.userName = user.name;
   v.userFirstName = user.firstName;
   v.userInitials = user.initials;
-  v.signIn = (email) => {
-    if (typeof email === 'string') setState({ authEmail: email });
-    go('twofa');
-    flash('Code sent to your authenticator app');
+  v.signedIn = (email) => {
+    setState({ authEmail: email || authEmail });
+    go('dash');
+    flash(`Signed in as ${userFromEmail(email || authEmail).name} · Admin`);
   };
+  v.ssoUnavailable = () => flash('Google SSO is not enabled yet · sign in with your email and password');
   v.verify2fa = () => { go('dash'); flash(`Signed in as ${user.name} · Super Admin`); };
   v.authError = (msg) => flash(msg);
-  v.logout = () => {
-    setState({ page: 'login', modal: null, rowMenu: null, storeOpen: false, catTab: 'products', tabs: {}, ranges: {}, chips: {}, store: 0 });
-    flash('Signed out · two-factor required to sign back in');
+  v.logout = async () => {
+    let error = null;
+    if (isSupabaseConfigured) ({ error } = await supabase.auth.signOut());
+    setState({ page: 'login', modal: null, rowMenu: null, storeOpen: false, catTab: 'products', tabs: {}, ranges: {}, chips: {}, store: 0, editingProduct: null, actionProduct: null, editingCoupon: null });
+    flash(error ? `Signed out locally · ${error.message}` : 'Signed out of the operations console');
   };
   v.openCancel = () => setState({ modal: 'cancel' });
   v.openRefund = () => setState({ modal: 'refund' });
-  v.openStockAdj = () => setState({ modal: 'stockadj' });
-  v.openDelete = () => setState({ modal: 'delete' });
+  v.openStockAdj = () => setState({ modal: 'stockadj', actionProduct: null });
+  v.openDelete = () => setState({ modal: 'delete', actionProduct: null });
   v.openSuspend = () => setState({ modal: 'suspend' });
-  v.openCatEdit = () => setState({ modal: 'catedit' });
-  v.closeModal = () => setState({ modal: null });
+  // Category modal: pass a category row to edit it; anything else (e.g. a click event) opens "Add category".
+  v.openCategoryEdit = (cat) => setState({ modal: 'catedit', editingCategory: cat && typeof cat === 'object' && 'subcategories' in cat ? cat : null, rowMenu: null });
+  v.openCategoryCreate = () => setState({ modal: 'catedit', editingCategory: null, rowMenu: null });
+  v.editingCategory = s.editingCategory || null;
+  v.closeModal = () => setState({ modal: null, editingCategory: null, actionProduct: null });
   v.confirmModal = () => {
-    const msgs = { rowactions: 'Action applied', status: 'Order #SK10482 moved to Packed · customer notified', assign: '2 orders assigned to Jay Patel', contact: 'Message sent to John Smith', calldriver: 'Calling Michael Ryan…', reply: 'Reply posted publicly under the review', hidereview: 'Review hidden from the app', invite: 'Invite emailed to priya.raman@spicekart.com.au', password: 'Password changed · other sessions signed out', sessions: 'Signed out of 3 other sessions', daterange: 'Showing 22 Aug – 21 Sep 2026', filter: 'Filters applied', print: 'Invoice sent to the printer', zones: 'Delivery zones saved', editcustomer: 'Customer details updated', cancel: 'Order #SK10482 cancelled · $94.04 refunded', refund: 'Refund RF-2188 approved · $24.50 returned', stockadj: 'Stock updated · Basmati Rice 5kg now 126 units', delete: 'Basmati Rice 5kg deleted from the catalogue', suspend: 'Account suspended · customer notified', catedit: 'Category saved · Fresh Produce' };
+    const msgs = { rowactions: 'Action applied', status: 'Order #SK10482 moved to Packed · customer notified', assign: '2 orders assigned to Jay Patel', contact: 'Message sent to John Smith', calldriver: 'Calling Michael Ryan…', reply: 'Reply posted publicly under the review', hidereview: 'Review hidden from the app', invite: 'Invite emailed to priya.raman@spicekart.com.au', password: 'Password changed · other sessions signed out', sessions: 'Signed out of 3 other sessions', daterange: 'Showing 22 Aug – 21 Sep 2026', filter: 'Filters applied', print: 'Invoice sent to the printer', zones: 'Delivery zones saved', editcustomer: 'Customer details updated', cancel: 'Order #SK10482 cancelled · $94.04 refunded', refund: 'Refund RF-2188 approved · $24.50 returned', stockadj: 'Stock updated · Basmati Rice 5kg now 126 units', delete: 'Basmati Rice 5kg deleted from the catalogue', suspend: 'Account suspended · customer notified', catedit: 'Category saved' };
     setState({ modal: null });
     flash(msgs[s.modal] || 'Changes saved');
   };

@@ -1,5 +1,7 @@
 import { useState } from 'react'
 import imgSpiceKartLogo from '../assets/images/spice-kart-logo.png'
+import { isSupabaseConfigured, supabase } from '../lib/supabase'
+import { fetchIsAdmin } from '../lib/adminAuth'
 
 const inputStyle = { height: "36px", padding: "0 11px", border: "1px solid #E4E7E2", borderRadius: "8px", background: "#fff", font: "500 12.5px/1.2 Inter,system-ui,sans-serif", color: "#17201A", width: "100%", boxSizing: "border-box", outline: "none" }
 
@@ -8,10 +10,33 @@ export default function Login({ v }) {
   const [password, setPassword] = useState('')
   const [remember, setRemember] = useState(true)
 
-  // Dummy sign-in: any non-empty email and password continue to the 2FA step.
-  const submit = () => {
-    if (!email.trim() || !password) return v.authError('Enter your email and password to sign in')
-    v.signIn(email.trim())
+  const [pending, setPending] = useState(false)
+  const [error, setError] = useState('')
+
+  // Supabase email/password sign-in, then require a row in `public.admins`.
+  const submit = async () => {
+    if (pending) return
+    if (!email.trim() || !password) return setError('Enter your email and password to sign in')
+    if (!isSupabaseConfigured) return setError('Supabase is not configured · add the project URL and key to .env and restart the dev server')
+    setPending(true)
+    setError('')
+    let signedIn = false
+    try {
+      const { data, error: authError } = await supabase.auth.signInWithPassword({ email: email.trim(), password })
+      if (authError) throw authError
+      signedIn = true
+      if (!(await fetchIsAdmin(data.user.id))) {
+        await supabase.auth.signOut()
+        setError('This account is not an admin')
+        setPending(false)
+        return
+      }
+      v.signedIn(data.user.email)
+    } catch (e) {
+      if (signedIn) await supabase.auth.signOut()
+      setError(e?.message || 'Sign-in failed · please try again')
+      setPending(false)
+    }
   }
   const submitOnEnter = (e) => {
     if (e.key === 'Enter') submit()
@@ -53,7 +78,7 @@ export default function Login({ v }) {
               autoFocus
               placeholder="Enter your email"
               value={email}
-              onChange={(e) => setEmail(e.target.value)}
+              onChange={(e) => { setEmail(e.target.value); setError('') }}
               onKeyDown={submitOnEnter}
               style={inputStyle}
             />
@@ -68,11 +93,21 @@ export default function Login({ v }) {
               autoComplete="current-password"
               placeholder="Enter your password"
               value={password}
-              onChange={(e) => setPassword(e.target.value)}
+              onChange={(e) => { setPassword(e.target.value); setError('') }}
               onKeyDown={submitOnEnter}
               style={inputStyle}
             />
           </span>
+          {error && (
+            <span role="alert" style={{ display: "flex", alignItems: "center", gap: "9px", padding: "10px 12px", borderRadius: "9px", background: "#FDF7F5", border: "1px solid #EEDAD5" }}>
+              <svg width="15" height="15" viewBox="0 0 20 20" fill="none" style={{ flex: "none" }}>
+                <circle cx="10" cy="10" r="7.2" stroke="#B3402F" strokeWidth="1.5" />
+                <path d="M10 6.4v4.4" stroke="#B3402F" strokeWidth="1.6" strokeLinecap="round" />
+                <circle cx="10" cy="13.6" r=".95" fill="#B3402F" />
+              </svg>
+              <span style={{ font: "500 11.5px/1.45 Inter,system-ui,sans-serif", color: "#B3402F" }}>{error}</span>
+            </span>
+          )}
           <span style={{ display: "flex", alignItems: "center", gap: "9px" }}>
             <button
               type="button"
@@ -95,15 +130,15 @@ export default function Login({ v }) {
               Forgot password?
             </button>
           </span>
-          <button className="hv2" onClick={submit} style={{ height: "44px", border: "0", borderRadius: "9px", background: "#0B3D1F", color: "#fff", font: "700 13.5px/1.2 Inter,system-ui,sans-serif", cursor: "pointer", boxShadow: "0 6px 16px rgba(11,61,31,.2)" }}>
-            Sign in
+          <button className="hv2" onClick={submit} disabled={pending} aria-busy={pending} style={{ height: "44px", border: "0", borderRadius: "9px", background: "#0B3D1F", color: "#fff", font: "700 13.5px/1.2 Inter,system-ui,sans-serif", cursor: pending ? "default" : "pointer", opacity: pending ? ".75" : "1", boxShadow: "0 6px 16px rgba(11,61,31,.2)" }}>
+            {pending ? 'Signing in…' : 'Sign in'}
           </button>
           <span style={{ display: "flex", alignItems: "center", gap: "10px" }}>
             <span style={{ flex: "1", height: "1px", background: "#E4E7E2", display: "block" }} />
             <span style={{ font: "500 10.5px/1.2 Inter,system-ui,sans-serif", color: "#7C8A81", whiteSpace: "nowrap" }}>or</span>
             <span style={{ flex: "1", height: "1px", background: "#E4E7E2", display: "block" }} />
           </span>
-          <button onClick={v.signIn} style={{ height: "42px", border: "1px solid #E4E7E2", borderRadius: "9px", background: "#fff", font: "600 12.5px/1.2 Inter,system-ui,sans-serif", color: "#17201A", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", gap: "9px" }}>
+          <button onClick={v.ssoUnavailable} style={{ height: "42px", border: "1px solid #E4E7E2", borderRadius: "9px", background: "#fff", font: "600 12.5px/1.2 Inter,system-ui,sans-serif", color: "#17201A", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", gap: "9px" }}>
             <svg width="15" height="15" viewBox="0 0 18 18" fill="none">
               <path d="M9 7.4v3.1h4.3c-.2 1-1.2 3-4.3 3a4.5 4.5 0 010-9c1.3 0 2.2.6 2.7 1l2.1-2A7.4 7.4 0 009 1.5a7.5 7.5 0 100 15c4.3 0 7.2-3 7.2-7.3 0-.6 0-1-.1-1.4H9z" fill="#3F3F3B" />
             </svg>

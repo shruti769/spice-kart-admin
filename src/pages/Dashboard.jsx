@@ -1,6 +1,55 @@
 import GlobalSearch from '../components/GlobalSearch'
+import { useCategoryNames } from '../lib/categories'
+import { isLowStock, isOutOfStock, stockPill, useProducts } from '../lib/products'
+
+const needsRestock = (p) => isLowStock(p) || isOutOfStock(p)
+
+/** Up to five real products that are low on / out of stock, lowest stock first. */
+function LowStockRows({ v, products }) {
+  const categoryNames = useCategoryNames()
+  const rows = products.rows.filter(needsRestock).sort((a, b) => a.stock_qty - b.stock_qty).slice(0, 5)
+  if (!rows.length) {
+    const msg = { loading: 'Loading stock levels…', error: `Couldn't load products · ${products.error}`, off: 'Supabase is not configured' }[products.status] || 'No low-stock products · everything is above its minimum'
+    return (
+      <div style={{ padding: "18px 16px" }}>
+        <span style={{ font: "400 11.5px/1.45 Inter,system-ui,sans-serif", color: products.status === "error" ? "#B3402F" : "#7C8A81" }}>{msg}</span>
+      </div>
+    )
+  }
+  return rows.map((p, i) => {
+    const [label, fg, bg] = stockPill(p)
+    return (
+      <div key={p.id} className="hv3" style={{ display: "grid", gridTemplateColumns: "1.6fr .5fr .6fr .9fr 110px", gap: "14px", padding: "13px 16px", borderBottom: i === rows.length - 1 ? "0" : "1px solid #EFF1ED", alignItems: "center" }}>
+        <span style={{ minWidth: "0", display: "flex", alignItems: "center", gap: "8px" }}>
+          <span style={{ display: "flex", flexDirection: "column", gap: "3px", minWidth: "0" }}>
+            <span style={{ font: "600 12.5px/1.2 Inter,system-ui,sans-serif", color: "#17201A", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{p.name}</span>
+            <span style={{ font: "400 11px/1.2 Inter,system-ui,sans-serif", color: "#7C8A81", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{categoryNames[p.category_id] || p.category_id}</span>
+          </span>
+        </span>
+        <span style={{ minWidth: "0", display: "flex", alignItems: "center", gap: "8px" }}>
+          <span style={{ font: "700 12.5px/1.2 Inter,system-ui,sans-serif", color: "#17201A", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{p.stock_qty}</span>
+        </span>
+        <span style={{ minWidth: "0", display: "flex", alignItems: "center", gap: "8px" }}>
+          <span style={{ font: "400 11px/1.2 Inter,system-ui,sans-serif", color: "#7C8A81", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{p.min_stock != null ? `min ${p.min_stock}` : "—"}</span>
+        </span>
+        <span style={{ minWidth: "0", display: "flex", alignItems: "center", gap: "8px" }}>
+          <span style={{ font: "600 10.5px/1.2 Inter,system-ui,sans-serif", color: fg, background: bg, padding: "5px 8px", borderRadius: "5px", whiteSpace: "nowrap", display: "inline-block" }}>{label}</span>
+        </span>
+        <span style={{ minWidth: "0", display: "flex", alignItems: "center", gap: "8px" }}>
+          <span style={{ marginLeft: "auto", display: "flex", gap: "6px" }}>
+            <button onClick={() => v.flash('Stock adjustments coming soon')} style={{ height: "26px", padding: "0 9px", border: "1px solid #E4E7E2", borderRadius: "6px", background: "#fff", font: "600 11px/1.2 Inter,system-ui,sans-serif", color: "#17201A", cursor: "pointer", whiteSpace: "nowrap" }}>
+              Update stock
+            </button>
+          </span>
+        </span>
+      </div>
+    )
+  })
+}
 
 export default function Dashboard({ v }) {
+  const products = useProducts()
+  const lowCount = products.rows.filter(needsRestock).length
   return (
     <>
       <div style={{ display: "flex", alignItems: "flex-end", gap: "18px", padding: "24px 26px 2px" }}>
@@ -103,7 +152,7 @@ export default function Dashboard({ v }) {
               </span>
               <span style={{ font: "500 11.5px/1.2 Inter,system-ui,sans-serif", color: "#7C8A81", whiteSpace: "nowrap" }}>Low stock products</span>
             </span>
-            <span style={{ font: "700 23px/1.2 Inter,system-ui,sans-serif", color: "#17201A", letterSpacing: "-.4px", whiteSpace: "nowrap" }}>42</span>
+            <span style={{ font: "700 23px/1.2 Inter,system-ui,sans-serif", color: "#17201A", letterSpacing: "-.4px", whiteSpace: "nowrap" }}>{products.status === "ready" ? lowCount.toLocaleString("en-AU") : "—"}</span>
             <span style={{ font: "600 10.5px/1.2 Inter,system-ui,sans-serif", color: "#A93826", background: "#FAEDEA", padding: "4px 7px", borderRadius: "5px", alignSelf: "flex-start", whiteSpace: "nowrap" }}>
               Requires action
             </span>
@@ -683,160 +732,7 @@ export default function Dashboard({ v }) {
                 </span>
               </div>
               {" "}
-              <div className="hv3" style={{ display: "grid", gridTemplateColumns: "1.6fr .5fr .6fr .9fr 110px", gap: "14px", padding: "13px 16px", borderBottom: "1px solid #EFF1ED", alignItems: "center" }}>
-                <span style={{ minWidth: "0", display: "flex", alignItems: "center", gap: "8px" }}>
-                  <span style={{ display: "flex", flexDirection: "column", gap: "3px", minWidth: "0" }}>
-                    <span style={{ font: "600 12.5px/1.2 Inter,system-ui,sans-serif", color: "#17201A", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
-                      Basmati Rice 5kg
-                    </span>
-                    <span style={{ font: "400 11px/1.2 Inter,system-ui,sans-serif", color: "#7C8A81", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
-                      Grains, Rice & Cereals
-                    </span>
-                  </span>
-                </span>
-                <span style={{ minWidth: "0", display: "flex", alignItems: "center", gap: "8px" }}>
-                  <span style={{ font: "700 12.5px/1.2 Inter,system-ui,sans-serif", color: "#17201A", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>6</span>
-                </span>
-                <span style={{ minWidth: "0", display: "flex", alignItems: "center", gap: "8px" }}>
-                  <span style={{ font: "400 11px/1.2 Inter,system-ui,sans-serif", color: "#7C8A81", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>min 25</span>
-                </span>
-                <span style={{ minWidth: "0", display: "flex", alignItems: "center", gap: "8px" }}>
-                  <span style={{ font: "600 10.5px/1.2 Inter,system-ui,sans-serif", color: "#A93826", background: "#FAEDEA", padding: "5px 8px", borderRadius: "5px", whiteSpace: "nowrap", display: "inline-block" }}>
-                    Critical
-                  </span>
-                </span>
-                <span style={{ minWidth: "0", display: "flex", alignItems: "center", gap: "8px" }}>
-                  <span style={{ marginLeft: "auto", display: "flex", gap: "6px" }}>
-                    <button onClick={v.openStockAdj} style={{ height: "26px", padding: "0 9px", border: "1px solid #E4E7E2", borderRadius: "6px", background: "#fff", font: "600 11px/1.2 Inter,system-ui,sans-serif", color: "#17201A", cursor: "pointer", whiteSpace: "nowrap" }}>
-                      Update stock
-                    </button>
-                  </span>
-                </span>
-              </div>
-              {" "}
-              <div className="hv3" style={{ display: "grid", gridTemplateColumns: "1.6fr .5fr .6fr .9fr 110px", gap: "14px", padding: "13px 16px", borderBottom: "1px solid #EFF1ED", alignItems: "center" }}>
-                <span style={{ minWidth: "0", display: "flex", alignItems: "center", gap: "8px" }}>
-                  <span style={{ display: "flex", flexDirection: "column", gap: "3px", minWidth: "0" }}>
-                    <span style={{ font: "600 12.5px/1.2 Inter,system-ui,sans-serif", color: "#17201A", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
-                      Paneer 500g
-                    </span>
-                    <span style={{ font: "400 11px/1.2 Inter,system-ui,sans-serif", color: "#7C8A81", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
-                      Dairy & Refrigerated
-                    </span>
-                  </span>
-                </span>
-                <span style={{ minWidth: "0", display: "flex", alignItems: "center", gap: "8px" }}>
-                  <span style={{ font: "700 12.5px/1.2 Inter,system-ui,sans-serif", color: "#17201A", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>11</span>
-                </span>
-                <span style={{ minWidth: "0", display: "flex", alignItems: "center", gap: "8px" }}>
-                  <span style={{ font: "400 11px/1.2 Inter,system-ui,sans-serif", color: "#7C8A81", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>min 30</span>
-                </span>
-                <span style={{ minWidth: "0", display: "flex", alignItems: "center", gap: "8px" }}>
-                  <span style={{ font: "600 10.5px/1.2 Inter,system-ui,sans-serif", color: "#A93826", background: "#FAEDEA", padding: "5px 8px", borderRadius: "5px", whiteSpace: "nowrap", display: "inline-block" }}>
-                    Critical
-                  </span>
-                </span>
-                <span style={{ minWidth: "0", display: "flex", alignItems: "center", gap: "8px" }}>
-                  <span style={{ marginLeft: "auto", display: "flex", gap: "6px" }}>
-                    <button onClick={v.openStockAdj} style={{ height: "26px", padding: "0 9px", border: "1px solid #E4E7E2", borderRadius: "6px", background: "#fff", font: "600 11px/1.2 Inter,system-ui,sans-serif", color: "#17201A", cursor: "pointer", whiteSpace: "nowrap" }}>
-                      Update stock
-                    </button>
-                  </span>
-                </span>
-              </div>
-              {" "}
-              <div className="hv3" style={{ display: "grid", gridTemplateColumns: "1.6fr .5fr .6fr .9fr 110px", gap: "14px", padding: "13px 16px", borderBottom: "1px solid #EFF1ED", alignItems: "center" }}>
-                <span style={{ minWidth: "0", display: "flex", alignItems: "center", gap: "8px" }}>
-                  <span style={{ display: "flex", flexDirection: "column", gap: "3px", minWidth: "0" }}>
-                    <span style={{ font: "600 12.5px/1.2 Inter,system-ui,sans-serif", color: "#17201A", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
-                      Fresh Coriander
-                    </span>
-                    <span style={{ font: "400 11px/1.2 Inter,system-ui,sans-serif", color: "#7C8A81", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
-                      Fresh Produce
-                    </span>
-                  </span>
-                </span>
-                <span style={{ minWidth: "0", display: "flex", alignItems: "center", gap: "8px" }}>
-                  <span style={{ font: "700 12.5px/1.2 Inter,system-ui,sans-serif", color: "#17201A", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>18</span>
-                </span>
-                <span style={{ minWidth: "0", display: "flex", alignItems: "center", gap: "8px" }}>
-                  <span style={{ font: "400 11px/1.2 Inter,system-ui,sans-serif", color: "#7C8A81", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>min 40</span>
-                </span>
-                <span style={{ minWidth: "0", display: "flex", alignItems: "center", gap: "8px" }}>
-                  <span style={{ font: "600 10.5px/1.2 Inter,system-ui,sans-serif", color: "#8A6100", background: "#FBF1DE", padding: "5px 8px", borderRadius: "5px", whiteSpace: "nowrap", display: "inline-block" }}>
-                    Low Stock
-                  </span>
-                </span>
-                <span style={{ minWidth: "0", display: "flex", alignItems: "center", gap: "8px" }}>
-                  <span style={{ marginLeft: "auto", display: "flex", gap: "6px" }}>
-                    <button onClick={v.openStockAdj} style={{ height: "26px", padding: "0 9px", border: "1px solid #E4E7E2", borderRadius: "6px", background: "#fff", font: "600 11px/1.2 Inter,system-ui,sans-serif", color: "#17201A", cursor: "pointer", whiteSpace: "nowrap" }}>
-                      Update stock
-                    </button>
-                  </span>
-                </span>
-              </div>
-              {" "}
-              <div className="hv3" style={{ display: "grid", gridTemplateColumns: "1.6fr .5fr .6fr .9fr 110px", gap: "14px", padding: "13px 16px", borderBottom: "1px solid #EFF1ED", alignItems: "center" }}>
-                <span style={{ minWidth: "0", display: "flex", alignItems: "center", gap: "8px" }}>
-                  <span style={{ display: "flex", flexDirection: "column", gap: "3px", minWidth: "0" }}>
-                    <span style={{ font: "600 12.5px/1.2 Inter,system-ui,sans-serif", color: "#17201A", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
-                      Garam Masala 100g
-                    </span>
-                    <span style={{ font: "400 11px/1.2 Inter,system-ui,sans-serif", color: "#7C8A81", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
-                      Spices & Masalas
-                    </span>
-                  </span>
-                </span>
-                <span style={{ minWidth: "0", display: "flex", alignItems: "center", gap: "8px" }}>
-                  <span style={{ font: "700 12.5px/1.2 Inter,system-ui,sans-serif", color: "#17201A", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>24</span>
-                </span>
-                <span style={{ minWidth: "0", display: "flex", alignItems: "center", gap: "8px" }}>
-                  <span style={{ font: "400 11px/1.2 Inter,system-ui,sans-serif", color: "#7C8A81", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>min 40</span>
-                </span>
-                <span style={{ minWidth: "0", display: "flex", alignItems: "center", gap: "8px" }}>
-                  <span style={{ font: "600 10.5px/1.2 Inter,system-ui,sans-serif", color: "#8A6100", background: "#FBF1DE", padding: "5px 8px", borderRadius: "5px", whiteSpace: "nowrap", display: "inline-block" }}>
-                    Low Stock
-                  </span>
-                </span>
-                <span style={{ minWidth: "0", display: "flex", alignItems: "center", gap: "8px" }}>
-                  <span style={{ marginLeft: "auto", display: "flex", gap: "6px" }}>
-                    <button onClick={v.openStockAdj} style={{ height: "26px", padding: "0 9px", border: "1px solid #E4E7E2", borderRadius: "6px", background: "#fff", font: "600 11px/1.2 Inter,system-ui,sans-serif", color: "#17201A", cursor: "pointer", whiteSpace: "nowrap" }}>
-                      Update stock
-                    </button>
-                  </span>
-                </span>
-              </div>
-              {" "}
-              <div className="hv3" style={{ display: "grid", gridTemplateColumns: "1.6fr .5fr .6fr .9fr 110px", gap: "14px", padding: "13px 16px", alignItems: "center" }}>
-                <span style={{ minWidth: "0", display: "flex", alignItems: "center", gap: "8px" }}>
-                  <span style={{ display: "flex", flexDirection: "column", gap: "3px", minWidth: "0" }}>
-                    <span style={{ font: "600 12.5px/1.2 Inter,system-ui,sans-serif", color: "#17201A", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
-                      Frozen Paratha 5pk
-                    </span>
-                    <span style={{ font: "400 11px/1.2 Inter,system-ui,sans-serif", color: "#7C8A81", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
-                      Frozen Foods & Vegetables
-                    </span>
-                  </span>
-                </span>
-                <span style={{ minWidth: "0", display: "flex", alignItems: "center", gap: "8px" }}>
-                  <span style={{ font: "700 12.5px/1.2 Inter,system-ui,sans-serif", color: "#17201A", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>31</span>
-                </span>
-                <span style={{ minWidth: "0", display: "flex", alignItems: "center", gap: "8px" }}>
-                  <span style={{ font: "400 11px/1.2 Inter,system-ui,sans-serif", color: "#7C8A81", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>min 45</span>
-                </span>
-                <span style={{ minWidth: "0", display: "flex", alignItems: "center", gap: "8px" }}>
-                  <span style={{ font: "600 10.5px/1.2 Inter,system-ui,sans-serif", color: "#8A6100", background: "#FBF1DE", padding: "5px 8px", borderRadius: "5px", whiteSpace: "nowrap", display: "inline-block" }}>
-                    Low Stock
-                  </span>
-                </span>
-                <span style={{ minWidth: "0", display: "flex", alignItems: "center", gap: "8px" }}>
-                  <span style={{ marginLeft: "auto", display: "flex", gap: "6px" }}>
-                    <button onClick={v.openStockAdj} style={{ height: "26px", padding: "0 9px", border: "1px solid #E4E7E2", borderRadius: "6px", background: "#fff", font: "600 11px/1.2 Inter,system-ui,sans-serif", color: "#17201A", cursor: "pointer", whiteSpace: "nowrap" }}>
-                      Update stock
-                    </button>
-                  </span>
-                </span>
-              </div>
+              <LowStockRows v={v} products={products} />
               {" "}
             </div>
             <div style={{ background: "#FBF6EA", border: "1px solid #E4E7E2", borderRadius: "10px", padding: "13px 14px", display: "flex", alignItems: "center", gap: "11px", borderColor: "#EEE0C2" }}>

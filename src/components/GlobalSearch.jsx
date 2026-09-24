@@ -1,10 +1,11 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
-import { searchConsole } from '../data/searchIndex'
+import { categoryRecords, searchConsole } from '../data/searchIndex'
+import { useCategories } from '../lib/categories'
 
 const font = (weight, size, line = 1.2) => `${weight} ${size}px/${line} Inter,system-ui,sans-serif`
 
 /**
- * Search box with a results dropdown over orders, products, customers, drivers,
+ * Search box with a results dropdown over orders, customers, drivers,
  * categories and pages. Picking a result opens its screen.
  * `align` sets which edge of the box the dropdown lines up with.
  */
@@ -14,7 +15,9 @@ export default function GlobalSearch({ v, placeholder, width, background = '#fff
   const [active, setActive] = useState(0)
   const root = useRef(null)
   const input = useRef(null)
-  const results = useMemo(() => searchConsole(query), [query])
+  const { rows: categories } = useCategories()
+  const categoryIndex = useMemo(() => categoryRecords(categories), [categories])
+  const results = useMemo(() => searchConsole(query, categoryIndex), [query, categoryIndex])
 
   useEffect(() => {
     if (!open) return
@@ -68,7 +71,7 @@ export default function GlobalSearch({ v, placeholder, width, background = '#fff
         <span className="ad-scroll" style={{ position: 'absolute', top: '40px', [align]: '0', zIndex: 80, width: '380px', maxHeight: '440px', overflowY: 'auto', background: '#fff', border: '1px solid #E4E7E2', borderRadius: '11px', boxShadow: '0 16px 38px rgba(16,24,16,.18)', display: 'flex', flexDirection: 'column', padding: '4px 0' }}>
           {results.length === 0 && (
             <span style={{ padding: '18px 14px', font: font(400, 12, 1.5), color: '#7C8A81' }}>
-              No results for “{query.trim()}”. Try an order ID, product, SKU, customer or driver.
+              No results for “{query.trim()}”. Try an order ID, customer, driver, category or page.
             </span>
           )}
           {results.map((r, i) => (
