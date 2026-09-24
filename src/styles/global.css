@@ -1,0 +1,28 @@
+@import './fonts.css';
+
+body{margin:0;background:#E9EAE6;font-family:Inter,system-ui,sans-serif;display:flex;justify-content:flex-start;align-items:flex-start;min-height:100vh;overflow:auto}
+a{color:#17693A;text-decoration:none}a:hover{color:#0B3D1F}
+.ad-scroll::-webkit-scrollbar{width:9px;height:9px}
+.ad-scroll::-webkit-scrollbar-thumb{background:#D6DAD3;border-radius:5px;border:2px solid transparent;background-clip:padding-box}
+.ad-scroll::-webkit-scrollbar-track{background:transparent}
+main > .ad-scroll > *{flex:none;min-height:fit-content;flex:none}
+.sk-nav::-webkit-scrollbar{width:0;display:none}
+.sk-nav{scrollbar-width:none}
+
+/* Hover states, mirrored from the prototype (applied over inline styles). */
+.hv1:hover{border-color:#C9D2C9 !important}
+.hv2:hover{background:#14572A !important}
+.hv3:hover{background:#FAFBF9 !important}
+.hv4:hover{background:#F6F7F4 !important}
+.hv5:hover{background:#FAEDEA !important}
+.hv6:hover{background:#F7F9F4 !important}
+.hv7:hover{background:#F8FAF6 !important}
+.hv8:hover{background:#FDF7F5 !important}
+.hv9:hover{background:rgba(255,255,255,.07) !important}
+
+/* Sign-in and 2FA fields */
+.sk-input::placeholder{color:#A3ADA6}
+.sk-input:focus,.sk-otp:focus{border-color:#8BE000 !important;box-shadow:0 0 0 3px rgba(139,224,0,.18)}
+
+/* The console fills the browser window. */
+#root{width:100%}
