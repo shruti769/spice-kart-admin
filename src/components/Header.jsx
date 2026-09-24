@@ -1,14 +1,10 @@
+import GlobalSearch from './GlobalSearch'
+
 export default function Header({ v }) {
   return (
     <>
       <header style={{ flex: "none", height: "60px", background: "#fff", borderBottom: "1px solid #E4E7E2", display: "flex", alignItems: "center", gap: "14px", padding: "0 26px" }}>
-        <span style={{ display: "flex", alignItems: "center", gap: "8px", height: "34px", width: "300px", padding: "0 11px", border: "1px solid #E4E7E2", borderRadius: "8px", background: "#F6F7F4" }}>
-          <svg width="15" height="15" viewBox="0 0 20 20" fill="none" style={{ flex: "none" }}>
-            <circle cx="9" cy="9" r="6" stroke="#7C8A81" strokeWidth="1.6" />
-            <path d="M13.4 13.4L18 18" stroke="#7C8A81" strokeWidth="1.6" strokeLinecap="round" />
-          </svg>
-          <span style={{ font: "400 12.5px/1.2 Inter,system-ui,sans-serif", color: "#7C8A81", whiteSpace: "nowrap" }}>Search orders, products, customers…</span>
-        </span>
+        <GlobalSearch v={v} placeholder="Search orders, products, customers…" width="300px" background="#F6F7F4" />
         <span style={{ position: "relative", display: "flex", flex: "none" }}>
           <button onClick={v.toggleStore} style={{ display: "flex", alignItems: "center", gap: "7px", height: "34px", padding: "0 11px", border: `1px solid ${v.storeBd}`, borderRadius: "8px", background: v.storeBg, cursor: "pointer" }}>
             <svg width="14" height="14" viewBox="0 0 20 20" fill="none" style={{ flex: "none" }}>

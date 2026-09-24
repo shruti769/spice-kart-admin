@@ -1,3 +1,5 @@
+import GlobalSearch from '../components/GlobalSearch'
+
 export default function Dashboard({ v }) {
   return (
     <>
@@ -9,13 +11,7 @@ export default function Dashboard({ v }) {
           </span>
         </span>
         <span style={{ marginLeft: "auto", display: "flex", alignItems: "center", gap: "8px" }}>
-          <span style={{ display: "flex", alignItems: "center", gap: "8px", height: "34px", width: "210px", padding: "0 11px", border: "1px solid #E4E7E2", borderRadius: "8px", background: "#fff" }}>
-            <svg width="15" height="15" viewBox="0 0 20 20" fill="none" style={{ flex: "none" }}>
-              <circle cx="9" cy="9" r="6" stroke="#7C8A81" strokeWidth="1.6" />
-              <path d="M13.4 13.4L18 18" stroke="#7C8A81" strokeWidth="1.6" strokeLinecap="round" />
-            </svg>
-            <span style={{ font: "400 12.5px/1.2 Inter,system-ui,sans-serif", color: "#7C8A81", whiteSpace: "nowrap" }}>Search anything…</span>
-          </span>
+          <GlobalSearch v={v} placeholder="Search anything…" width="210px" align="right" />
           <button className="hv1" onClick={v.openDateRange} style={{ display: "flex", alignItems: "center", gap: "7px", height: "34px", padding: "0 12px", border: "1px solid #E4E7E2", borderRadius: "8px", background: "#fff", color: "#17201A", font: "600 12.5px/1.2 Inter,system-ui,sans-serif", cursor: "pointer" }}>
             <svg width="15" height="15" viewBox="0 0 20 20" fill="none" style={{ flex: "none" }}>
               <circle cx="10" cy="10" r="7.2" stroke="#4A564E" strokeWidth="1.5" />

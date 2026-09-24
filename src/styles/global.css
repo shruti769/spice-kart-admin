@@ -26,3 +26,8 @@ main > .ad-scroll > *{flex:none;min-height:fit-content;flex:none}
 
 /* The console fills the browser window. */
 #root{width:100%}
+
+/* Global search */
+.sk-search-input::placeholder{color:#7C8A81}
+.sk-search-input::-webkit-search-cancel-button{display:none}
+.sk-search:focus-within{border-color:#8BE000 !important;box-shadow:0 0 0 3px rgba(139,224,0,.18)}
