@@ -1,219 +1,222 @@
-import imgSpiceKartLogo from '../assets/images/spice-kart-logo.png'
+import { useEffect, useState } from 'react'
+import { useCategories } from '../lib/categories'
+import { AUDIENCES, CAMPAIGN_TYPES, LINK_PAGES, campaignReach, saveCampaign, sendCampaignNow } from '../lib/notifications'
+import { isSupabaseConfigured } from '../lib/supabase'
+
+const FONT = 'Inter,system-ui,sans-serif'
+const INK = '#17201A'
+const MUTED = '#7C8A81'
+const BORDER = '#E4E7E2'
+const ERROR_RED = '#B3402F'
+
+const labelStyle = { font: `600 10.5px/1.2 ${FONT}`, letterSpacing: '.4px', color: MUTED, textTransform: 'uppercase', whiteSpace: 'nowrap' }
+const box = { height: '36px', padding: '0 11px', border: `1px solid ${BORDER}`, borderRadius: '8px', background: '#fff', font: `500 12.5px/1.2 ${FONT}`, color: INK, width: '100%', minWidth: '0', boxSizing: 'border-box', outline: 'none' }
+const chevron = `url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='14' height='14' viewBox='0 0 20 20' fill='none'%3E%3Cpath d='M6 8l4 4 4-4' stroke='%237C8A81' stroke-width='1.6' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E")`
+const selectBox = { ...box, appearance: 'none', WebkitAppearance: 'none', paddingRight: '30px', background: `#fff ${chevron} no-repeat right 10px center`, cursor: 'pointer' }
+const withError = (s, e) => (e ? { ...s, borderColor: ERROR_RED } : s)
+const card = { background: '#fff', border: `1px solid ${BORDER}`, borderRadius: '10px', padding: '18px', display: 'flex', flexDirection: 'column', gap: '14px' }
+const cardTitle = { font: `600 13.5px/1.2 ${FONT}`, color: INK }
+const btn = { display: 'flex', alignItems: 'center', gap: '7px', height: '34px', padding: '0 12px', border: `1px solid ${BORDER}`, borderRadius: '8px', background: '#fff', color: INK, font: `600 12.5px/1.2 ${FONT}`, cursor: 'pointer', whiteSpace: 'nowrap' }
+
+function Field({ label, error, hint, span2, children }) {
+  return (
+    <label style={{ display: 'flex', flexDirection: 'column', gap: '6px', minWidth: '0', ...(span2 ? { gridColumn: 'span 2' } : null) }}>
+      <span style={labelStyle}>{label}</span>
+      {children}
+      {error ? <span style={{ font: `500 11px/1.3 ${FONT}`, color: ERROR_RED }}>{error}</span> : hint && <span style={{ font: `400 11px/1.3 ${FONT}`, color: MUTED }}>{hint}</span>}
+    </label>
+  )
+}
+
+/** ISO → value for <input type="datetime-local"> in the browser's time zone. */
+function toLocalInput(iso) {
+  if (!iso) return ''
+  const d = new Date(iso)
+  const p = (n) => String(n).padStart(2, '0')
+  return `${d.getFullYear()}-${p(d.getMonth() + 1)}-${p(d.getDate())}T${p(d.getHours())}:${p(d.getMinutes())}`
+}
+const tz = Intl.DateTimeFormat().resolvedOptions().timeZone
 
 export default function NewNotification({ v }) {
+  const editing = v.editingCampaign?.id ? v.editingCampaign : null
+  const src = v.editingCampaign // also set when duplicating (id '')
+  const { rows: categories } = useCategories()
+  const [title, setTitle] = useState(src?.title ?? '')
+  const [message, setMessage] = useState(src?.message ?? '')
+  const [type, setType] = useState(src?.type ?? 'promotional')
+  const [cta, setCta] = useState(src?.cta_label ?? '')
+  const [link, setLink] = useState(src?.link ?? '')
+  const [audience, setAudience] = useState(src?.audience ?? 'all')
+  const [mode, setMode] = useState(editing?.scheduled_at ? 'scheduled' : 'now')
+  const [when, setWhen] = useState(toLocalInput(editing?.scheduled_at))
+  const [errors, setErrors] = useState({})
+  const [saving, setSaving] = useState(false)
+  const [reach, setReach] = useState(null) // { audience_size, reachable } | { error }
+
+  useEffect(() => {
+    if (!isSupabaseConfigured) return
+    let cancelled = false
+    const t = setTimeout(() => {
+      campaignReach(audience, type)
+        .then((r) => { if (!cancelled) setReach(r) })
+        .catch((e) => { if (!cancelled) setReach({ error: e.message }) })
+    }, 200)
+    return () => { cancelled = true; clearTimeout(t) }
+  }, [audience, type])
+
+  const clear = (k) => setErrors((e) => ({ ...e, [k]: undefined }))
+  const validate = (sending) => {
+    const e = {}
+    if (!title.trim()) e.title = 'Title is required'
+    if (!message.trim()) e.message = 'Message is required'
+    if (sending && mode === 'scheduled') {
+      if (!when) e.when = 'Pick a date and time'
+      else if (new Date(when).getTime() < Date.now() + 60000) e.when = 'Pick a time at least a minute from now'
+    }
+    setErrors(e)
+    return !Object.keys(e).length
+  }
+  const row = (status) => ({
+    title: title.trim(),
+    message: message.trim(),
+    type,
+    cta_label: cta.trim(),
+    link: link || null,
+    audience,
+    scheduled_at: mode === 'scheduled' && when ? new Date(when).toISOString() : null,
+    status,
+  })
+
+  const submit = async (action) => {
+    if (saving || !validate(action !== 'draft')) return
+    if (!isSupabaseConfigured) return v.flash('Supabase keys are missing · add VITE_SUPABASE_URL and VITE_SUPABASE_PUBLISHABLE_KEY to .env and restart the dev server')
+    if (action === 'send' && !window.confirm(`Send “${title.trim()}” to ${AUDIENCES.find(([k]) => k === audience)[1].toLowerCase()} now? This can’t be undone.`)) return
+    setSaving(true)
+    try {
+      if (action === 'draft') {
+        await saveCampaign(editing?.id, row('draft'))
+        v.flash('Saved as a draft')
+      } else if (action === 'schedule') {
+        await saveCampaign(editing?.id, row('scheduled'))
+        v.flash(`Scheduled for ${new Date(when).toLocaleString('en-AU', { dateStyle: 'medium', timeStyle: 'short' })}`)
+      } else {
+        const saved = await saveCampaign(editing?.id, row('draft'))
+        const n = await sendCampaignNow(saved.id)
+        v.flash(n ? `Sent to ${n} customer${n === 1 ? '' : 's'} · push notifications go out within a minute` : 'Sent · no customers matched the audience')
+      }
+      v.campaignDone()
+    } catch (e) {
+      setSaving(false)
+      v.flash(`Could not save · ${e.message}`)
+    }
+  }
+
+  const reachText = !reach ? 'Checking reach…'
+    : reach.error ? reach.error
+      : `${reach.audience_size.toLocaleString('en-AU')} customer${reach.audience_size === 1 ? '' : 's'} · ${reach.reachable.toLocaleString('en-AU')} with push enabled on a device`
+  const primary = mode === 'scheduled' ? ['schedule', 'Schedule send'] : ['send', 'Send now']
+
   return (
     <>
-      <div style={{ display: "flex", alignItems: "flex-end", gap: "18px", padding: "24px 26px 2px" }}>
-        <span style={{ display: "flex", flexDirection: "column", gap: "5px", minWidth: "0" }}>
-          <span style={{ font: "700 20px/1.2 Inter,system-ui,sans-serif", color: "#17201A", whiteSpace: "nowrap" }}>Create notification</span>
-          <span style={{ font: "400 12.5px/1.2 Inter,system-ui,sans-serif", color: "#7C8A81", whiteSpace: "nowrap" }}>Send a push notification to Spice Kart customers</span>
+      <div style={{ display: 'flex', alignItems: 'flex-end', gap: '18px', padding: '24px 26px 2px' }}>
+        <span style={{ display: 'flex', flexDirection: 'column', gap: '5px', minWidth: '0' }}>
+          <span style={{ font: `700 20px/1.2 ${FONT}`, color: INK, whiteSpace: 'nowrap' }}>{editing ? 'Edit notification' : 'Create notification'}</span>
+          <span style={{ font: `400 12.5px/1.2 ${FONT}`, color: MUTED, whiteSpace: 'nowrap' }}>Push notification to the Spice Kart app, also saved in each customer’s inbox</span>
         </span>
-        <span style={{ marginLeft: "auto", display: "flex", alignItems: "center", gap: "8px" }}>
-          <button className="hv1" onClick={v.nav_notif} style={{ display: "flex", alignItems: "center", gap: "7px", height: "34px", padding: "0 12px", border: "1px solid #E4E7E2", borderRadius: "8px", background: "#fff", color: "#17201A", font: "600 12.5px/1.2 Inter,system-ui,sans-serif", cursor: "pointer", whiteSpace: "nowrap" }}>
-            Cancel
-          </button>
-          <button className="hv1" onClick={v.saveDraft} style={{ display: "flex", alignItems: "center", gap: "7px", height: "34px", padding: "0 12px", border: "1px solid #E4E7E2", borderRadius: "8px", background: "#fff", color: "#17201A", font: "600 12.5px/1.2 Inter,system-ui,sans-serif", cursor: "pointer", whiteSpace: "nowrap" }}>
-            Save as draft
-          </button>
-          <button className="hv2" onClick={v.publishItem} style={{ display: "flex", alignItems: "center", gap: "7px", height: "34px", padding: "0 13px", border: "0", borderRadius: "8px", background: "#0B3D1F", color: "#fff", font: "600 12.5px/1.2 Inter,system-ui,sans-serif", cursor: "pointer", whiteSpace: "nowrap" }}>
-            <svg width="15" height="15" viewBox="0 0 20 20" fill="none" style={{ flex: "none" }}>
-              <path d="M4.6 10.4l3.4 3.4 7.4-7.4" stroke="#8BE000" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
-            </svg>
-            Schedule send
+        <span style={{ marginLeft: 'auto', display: 'flex', alignItems: 'center', gap: '8px' }}>
+          <button className="hv1" onClick={v.campaignDone} disabled={saving} style={btn}>Cancel</button>
+          <button className="hv1" onClick={() => submit('draft')} disabled={saving} style={btn}>Save as draft</button>
+          <button className="hv2" onClick={() => submit(primary[0])} disabled={saving} style={{ ...btn, border: '0', background: '#0B3D1F', color: '#fff', opacity: saving ? 0.7 : 1 }}>
+            <svg width="15" height="15" viewBox="0 0 20 20" fill="none"><path d="M4.6 10.4l3.4 3.4 7.4-7.4" stroke="#8BE000" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" /></svg>
+            {saving ? 'Saving…' : primary[1]}
           </button>
         </span>
       </div>
-      <div className="ad-scroll" style={{ flex: "1", minHeight: "0", overflowY: "auto", padding: "20px 26px 30px", display: "flex", flexDirection: "column", gap: "18px" }}>
-        <div style={{ display: "grid", gridTemplateColumns: "1.5fr 1fr", gap: "18px", alignItems: "start" }}>
-          <div style={{ display: "flex", flexDirection: "column", gap: "14px" }}>
-            <div style={{ background: "#fff", border: "1px solid #E4E7E2", borderRadius: "10px", padding: "18px", display: "flex", flexDirection: "column", gap: "14px" }}>
-              <span style={{ font: "600 13.5px/1.2 Inter,system-ui,sans-serif", color: "#17201A", whiteSpace: "nowrap" }}>Message</span>
-              <div style={{ display: "grid", gridTemplateColumns: "repeat(2,1fr)", gap: "11px" }}>
-                <span style={{ display: "flex", flexDirection: "column", gap: "6px" }}>
-                  <span style={{ font: "600 10.5px/1.2 Inter,system-ui,sans-serif", letterSpacing: ".4px", color: "#7C8A81", textTransform: "uppercase", whiteSpace: "nowrap" }}>
-                    TITLE
-                  </span>
-                  <span style={{ display: "flex", alignItems: "center", height: "36px", padding: "0 11px", border: "1px solid #E4E7E2", borderRadius: "8px", background: "#fff", font: "500 12.5px/1.2 Inter,system-ui,sans-serif", color: "#17201A", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
-                    20% off fresh produce
-                  </span>
-                </span>
-                <span style={{ display: "flex", flexDirection: "column", gap: "6px" }}>
-                  <span style={{ font: "600 10.5px/1.2 Inter,system-ui,sans-serif", letterSpacing: ".4px", color: "#7C8A81", textTransform: "uppercase", whiteSpace: "nowrap" }}>
-                    NOTIFICATION TYPE
-                  </span>
-                  <span style={{ display: "flex", alignItems: "center", height: "36px", padding: "0 11px", border: "1px solid #E4E7E2", borderRadius: "8px", background: "#fff", font: "500 12.5px/1.2 Inter,system-ui,sans-serif", color: "#17201A", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
-                    Promotional
-                  </span>
-                </span>
-                <span style={{ display: "flex", flexDirection: "column", gap: "6px", gridColumn: "span 2" }}>
-                  <span style={{ font: "600 10.5px/1.2 Inter,system-ui,sans-serif", letterSpacing: ".4px", color: "#7C8A81", textTransform: "uppercase", whiteSpace: "nowrap" }}>
-                    MESSAGE
-                  </span>
-                  <span style={{ display: "block", minHeight: "60px", padding: "10px 11px", border: "1px solid #E4E7E2", borderRadius: "8px", background: "#fff", font: "400 12.5px/1.6 Inter,system-ui,sans-serif", color: "#4A564E" }}>
-                    Stock up on Victorian-grown veg this week — 20% off everything in the Fresh Produce aisle. Min spend $25.
-                  </span>
-                </span>
-                <span style={{ display: "flex", flexDirection: "column", gap: "6px" }}>
-                  <span style={{ font: "600 10.5px/1.2 Inter,system-ui,sans-serif", letterSpacing: ".4px", color: "#7C8A81", textTransform: "uppercase", whiteSpace: "nowrap" }}>
-                    CTA LABEL
-                  </span>
-                  <span style={{ display: "flex", alignItems: "center", height: "36px", padding: "0 11px", border: "1px solid #E4E7E2", borderRadius: "8px", background: "#fff", font: "500 12.5px/1.2 Inter,system-ui,sans-serif", color: "#17201A", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
-                    Shop now
-                  </span>
-                </span>
-                <span style={{ display: "flex", flexDirection: "column", gap: "6px" }}>
-                  <span style={{ font: "600 10.5px/1.2 Inter,system-ui,sans-serif", letterSpacing: ".4px", color: "#7C8A81", textTransform: "uppercase", whiteSpace: "nowrap" }}>
-                    DESTINATION
-                  </span>
-                  <span style={{ display: "flex", alignItems: "center", height: "36px", padding: "0 11px", border: "1px solid #E4E7E2", borderRadius: "8px", background: "#fff", font: "500 12.5px/1.2 Inter,system-ui,sans-serif", color: "#17201A", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
-                    Category → Fresh Produce
-                  </span>
-                </span>
+      <div className="ad-scroll" style={{ flex: '1', minHeight: '0', overflowY: 'auto', padding: '20px 26px 30px' }}>
+        <div style={{ display: 'grid', gridTemplateColumns: 'minmax(0,1.5fr) minmax(280px,1fr)', gap: '18px', alignItems: 'start' }}>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
+            <div style={card}>
+              <span style={cardTitle}>Message</span>
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
+                <Field label="Title" error={errors.title} hint={`${title.length}/65`}>
+                  <input value={title} maxLength={65} placeholder="e.g. 20% off fresh produce" onChange={(e) => { setTitle(e.target.value); clear('title') }} style={withError(box, errors.title)} />
+                </Field>
+                <Field label="Notification type" hint={type === 'promotional' ? 'Only reaches customers who opted in to marketing' : 'Reaches everyone with push notifications on'}>
+                  <select value={type} onChange={(e) => setType(e.target.value)} style={selectBox}>
+                    {CAMPAIGN_TYPES.map(([k, l]) => <option key={k} value={k}>{l}</option>)}
+                  </select>
+                </Field>
+                <Field label="Message" span2 error={errors.message} hint={`${message.length}/178`}>
+                  <textarea value={message} maxLength={178} rows={3} placeholder="What should customers know?" onChange={(e) => { setMessage(e.target.value); clear('message') }} style={withError({ ...box, height: 'auto', padding: '10px 11px', font: `400 12.5px/1.55 ${FONT}`, resize: 'vertical' }, errors.message)} />
+                </Field>
+                <Field label="CTA label" hint="Shown in the app inbox">
+                  <input value={cta} maxLength={20} placeholder="e.g. Shop now" onChange={(e) => setCta(e.target.value)} style={box} />
+                </Field>
+                <Field label="Destination" hint="Opens when the notification is tapped">
+                  <select value={link} onChange={(e) => setLink(e.target.value)} style={selectBox}>
+                    <option value="">Inbox only</option>
+                    <optgroup label="Screen">
+                      {LINK_PAGES.map((p) => <option key={p} value={`page:${p}`}>{p}</option>)}
+                    </optgroup>
+                    {categories.length > 0 && (
+                      <optgroup label="Category">
+                        {categories.map((c) => <option key={c.id} value={`category:${c.id}`}>Category → {c.name}</option>)}
+                      </optgroup>
+                    )}
+                  </select>
+                </Field>
               </div>
             </div>
-            <div style={{ background: "#fff", border: "1px solid #E4E7E2", borderRadius: "10px", padding: "18px", display: "flex", flexDirection: "column", gap: "14px" }}>
-              <span style={{ font: "600 13.5px/1.2 Inter,system-ui,sans-serif", color: "#17201A" }}>Audience</span>
-              <div style={{ display: "grid", gridTemplateColumns: "repeat(3,1fr)", gap: "8px" }}>
-                <span style={{ padding: "11px 10px", border: "1px solid #C7E88A", background: "#F1F9DF", borderRadius: "8px", font: "600 11.5px/1.35 Inter,system-ui,sans-serif", color: "#0B3D1F" }}>
-                  All customers
-                </span>
-                <span style={{ padding: "11px 10px", border: "1px solid #E4E7E2", background: "#fff", borderRadius: "8px", font: "600 11.5px/1.35 Inter,system-ui,sans-serif", color: "#4A564E" }}>
-                  New customers
-                </span>
-                <span style={{ padding: "11px 10px", border: "1px solid #E4E7E2", background: "#fff", borderRadius: "8px", font: "600 11.5px/1.35 Inter,system-ui,sans-serif", color: "#4A564E" }}>
-                  Inactive customers
-                </span>
-                <span style={{ padding: "11px 10px", border: "1px solid #E4E7E2", background: "#fff", borderRadius: "8px", font: "600 11.5px/1.35 Inter,system-ui,sans-serif", color: "#4A564E" }}>
-                  Frequent customers
-                </span>
-                <span style={{ padding: "11px 10px", border: "1px solid #E4E7E2", background: "#fff", borderRadius: "8px", font: "600 11.5px/1.35 Inter,system-ui,sans-serif", color: "#4A564E" }}>
-                  Melbourne metro
-                </span>
-                <span style={{ padding: "11px 10px", border: "1px solid #E4E7E2", background: "#fff", borderRadius: "8px", font: "600 11.5px/1.35 Inter,system-ui,sans-serif", color: "#4A564E" }}>
-                  Custom segment
-                </span>
-              </div>
-              <span style={{ display: "flex", alignItems: "center", gap: "9px", padding: "11px", borderRadius: "8px", background: "#F6F7F4", border: "1px solid #E4E7E2" }}>
-                <svg width="15" height="15" viewBox="0 0 20 20" fill="none" style={{ flex: "none" }}>
-                  <circle cx="8.4" cy="7.4" r="2.8" stroke="#4A564E" strokeWidth="1.5" />
-                  <path d="M3.4 16.5c.8-2.9 2.6-4.3 5-4.3s4.2 1.4 5 4.3" stroke="#4A564E" strokeWidth="1.5" strokeLinecap="round" />
-                  <path d="M14 5.3a2.6 2.6 0 010 4.8M15.5 16.5c-.3-1.8-.9-3.1-1.8-4" stroke="#4A564E" strokeWidth="1.5" strokeLinecap="round" />
-                </svg>
-                <span style={{ font: "500 12px/1.2 Inter,system-ui,sans-serif", color: "#17201A", whiteSpace: "nowrap" }}>Estimated reach: 486,204 customers</span>
-                <span style={{ marginLeft: "auto" }}>
-                  <span style={{ font: "400 11px/1.2 Inter,system-ui,sans-serif", color: "#7C8A81", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
-                    92% push-enabled
-                  </span>
-                </span>
+
+            <div style={card}>
+              <span style={{ display: 'flex', alignItems: 'center' }}>
+                <span style={{ ...cardTitle, flex: '1' }}>Audience</span>
+                <span style={{ font: `500 11.5px/1.3 ${FONT}`, color: reach?.error ? ERROR_RED : MUTED }}>{reachText}</span>
+              </span>
+              <span style={{ display: 'flex', flexWrap: 'wrap', gap: '8px' }}>
+                {AUDIENCES.map(([k, l, sub]) => {
+                  const on = audience === k
+                  return (
+                    <button key={k} type="button" aria-pressed={on} onClick={() => setAudience(k)} title={sub} style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-start', gap: '3px', padding: '9px 12px', border: `1px solid ${on ? '#9FD35A' : BORDER}`, borderRadius: '9px', background: on ? '#F1F9DF' : '#fff', cursor: 'pointer' }}>
+                      <span style={{ font: `600 12.5px/1.2 ${FONT}`, color: on ? '#0B3D1F' : INK }}>{l}</span>
+                      {sub && <span style={{ font: `400 10.5px/1.2 ${FONT}`, color: MUTED }}>{sub}</span>}
+                    </button>
+                  )
+                })}
               </span>
             </div>
-            <div style={{ background: "#fff", border: "1px solid #E4E7E2", borderRadius: "10px", padding: "18px", display: "flex", flexDirection: "column", gap: "14px" }}>
-              <span style={{ font: "600 13.5px/1.2 Inter,system-ui,sans-serif", color: "#17201A", whiteSpace: "nowrap" }}>Schedule</span>
-              <div style={{ display: "grid", gridTemplateColumns: "repeat(2,1fr)", gap: "11px" }}>
-                <span style={{ display: "flex", flexDirection: "column", gap: "6px" }}>
-                  <span style={{ font: "600 10.5px/1.2 Inter,system-ui,sans-serif", letterSpacing: ".4px", color: "#7C8A81", textTransform: "uppercase", whiteSpace: "nowrap" }}>
-                    SEND
-                  </span>
-                  <span style={{ display: "flex", alignItems: "center", height: "36px", padding: "0 11px", border: "1px solid #E4E7E2", borderRadius: "8px", background: "#fff", font: "500 12.5px/1.2 Inter,system-ui,sans-serif", color: "#17201A", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
-                    Scheduled
-                  </span>
-                </span>
-                <span style={{ display: "flex", flexDirection: "column", gap: "6px" }}>
-                  <span style={{ font: "600 10.5px/1.2 Inter,system-ui,sans-serif", letterSpacing: ".4px", color: "#7C8A81", textTransform: "uppercase", whiteSpace: "nowrap" }}>
-                    DATE & TIME
-                  </span>
-                  <span style={{ display: "flex", alignItems: "center", height: "36px", padding: "0 11px", border: "1px solid #E4E7E2", borderRadius: "8px", background: "#fff", font: "500 12.5px/1.2 Inter,system-ui,sans-serif", color: "#17201A", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
-                    22 Sep 2026, 8:00 AM AEST
-                  </span>
-                </span>
-                <span style={{ display: "flex", flexDirection: "column", gap: "6px" }}>
-                  <span style={{ font: "600 10.5px/1.2 Inter,system-ui,sans-serif", letterSpacing: ".4px", color: "#7C8A81", textTransform: "uppercase", whiteSpace: "nowrap" }}>
-                    TIME ZONE
-                  </span>
-                  <span style={{ display: "flex", alignItems: "center", height: "36px", padding: "0 11px", border: "1px solid #E4E7E2", borderRadius: "8px", background: "#fff", font: "500 12.5px/1.2 Inter,system-ui,sans-serif", color: "#17201A", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
-                    Customer local time
-                  </span>
-                </span>
-                <span style={{ display: "flex", flexDirection: "column", gap: "6px" }}>
-                  <span style={{ font: "600 10.5px/1.2 Inter,system-ui,sans-serif", letterSpacing: ".4px", color: "#7C8A81", textTransform: "uppercase", whiteSpace: "nowrap" }}>
-                    FREQUENCY CAP
-                  </span>
-                  <span style={{ display: "flex", alignItems: "center", height: "36px", padding: "0 11px", border: "1px solid #E4E7E2", borderRadius: "8px", background: "#fff", font: "500 12.5px/1.2 Inter,system-ui,sans-serif", color: "#17201A", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
-                    Max 1 promo per day
-                  </span>
-                </span>
-              </div>
+
+            <div style={card}>
+              <span style={cardTitle}>Send</span>
+              <span style={{ display: 'flex', gap: '3px', padding: '3px', background: '#EEF0EC', borderRadius: '9px', alignSelf: 'flex-start' }}>
+                {[['now', 'Send now'], ['scheduled', 'Schedule']].map(([k, l]) => (
+                  <button key={k} type="button" onClick={() => { setMode(k); clear('when') }} style={{ height: '30px', padding: '0 16px', border: '0', borderRadius: '7px', background: mode === k ? '#fff' : 'transparent', boxShadow: mode === k ? '0 1px 2px rgba(0,0,0,.12)' : 'none', font: `600 12.5px/1.2 ${FONT}`, color: mode === k ? INK : MUTED, cursor: 'pointer' }}>{l}</button>
+                ))}
+              </span>
+              {mode === 'scheduled' && (
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
+                  <Field label="Date & time" error={errors.when} hint={`Your time zone (${tz})`}>
+                    <input type="datetime-local" value={when} onChange={(e) => { setWhen(e.target.value); clear('when') }} style={withError(box, errors.when)} />
+                  </Field>
+                  <span style={{ font: `400 11.5px/1.5 ${FONT}`, color: MUTED, alignSelf: 'center' }}>Goes out within a minute of this time. You can edit or cancel it until then.</span>
+                </div>
+              )}
             </div>
           </div>
-          <div style={{ display: "flex", flexDirection: "column", gap: "14px" }}>
-            <div style={{ background: "#fff", border: "1px solid #E4E7E2", borderRadius: "10px", padding: "18px", display: "flex", flexDirection: "column", gap: "13px" }}>
-              <span style={{ font: "600 13.5px/1.2 Inter,system-ui,sans-serif", color: "#17201A" }}>Device preview</span>
-              <span style={{ borderRadius: "12px", background: "#F6F7F4", border: "1px solid #E4E7E2", padding: "14px", display: "flex", flexDirection: "column", gap: "10px" }}>
-                <span style={{ background: "#fff", border: "1px solid #E4E7E2", borderRadius: "12px", padding: "11px", display: "flex", gap: "10px", boxShadow: "0 4px 12px rgba(16,24,16,.06)" }}>
-                  <img src={imgSpiceKartLogo} alt="" style={{ width: "32px", height: "32px", borderRadius: "8px", flex: "none" }} />
-                  <span style={{ display: "flex", flexDirection: "column", gap: "4px", minWidth: "0" }}>
-                    <span style={{ display: "flex", alignItems: "center", gap: "7px" }}>
-                      <span style={{ font: "700 11.5px/1.2 Inter,system-ui,sans-serif", color: "#17201A", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
-                        Spice Kart
-                      </span>
-                      <span style={{ marginLeft: "auto" }}>
-                        <span style={{ font: "400 11px/1.2 Inter,system-ui,sans-serif", color: "#7C8A81", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>now</span>
-                      </span>
-                    </span>
-                    <span style={{ font: "600 12px/1.2 Inter,system-ui,sans-serif", color: "#17201A", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
-                      20% off fresh produce
-                    </span>
-                    <span style={{ font: "400 11px/1.45 Inter,system-ui,sans-serif", color: "#4A564E" }}>Stock up on Victorian-grown veg this week — min spend $25.</span>
-                  </span>
-                </span>
-                <span style={{ font: "400 10.5px/1.2 Inter,system-ui,sans-serif", color: "#7C8A81", textAlign: "center" }}>iOS lock screen</span>
-              </span>
-            </div>
-            <div style={{ background: "#fff", border: "1px solid #E4E7E2", borderRadius: "10px", padding: "18px", display: "flex", flexDirection: "column", gap: "2px" }}>
-              <span style={{ font: "600 13.5px/1.2 Inter,system-ui,sans-serif", color: "#17201A", paddingBottom: "6px" }}>Channels</span>
-              <span style={{ display: "flex", alignItems: "center", gap: "11px", padding: "10px 0", borderBottom: "1px solid #EFF1ED" }}>
-                <span style={{ display: "flex", flexDirection: "column", gap: "3px", flex: "1", minWidth: "0" }}>
-                  <span style={{ font: "500 12.5px/1.2 Inter,system-ui,sans-serif", color: "#17201A", whiteSpace: "nowrap" }}>Push notification</span>
-                </span>
-                <span style={{ width: "38px", height: "22px", borderRadius: "11px", background: "#8BE000", position: "relative", flex: "none", display: "block" }}>
-                  {" "}
-                  <span style={{ position: "absolute", top: "2.5px", left: "18px", width: "17px", height: "17px", borderRadius: "9px", background: "#fff", boxShadow: "0 1px 3px rgba(0,0,0,.2)", display: "block" }} />
-                  {" "}
+
+          <div style={{ ...card, position: 'sticky', top: '0' }}>
+            <span style={cardTitle}>Preview</span>
+            <span style={{ borderRadius: '22px', background: 'linear-gradient(160deg,#1B3C22,#2E5A34)', padding: '26px 14px 60px', display: 'flex', flexDirection: 'column', gap: '10px' }}>
+              <span style={{ font: `300 34px/1 ${FONT}`, color: '#fff', textAlign: 'center' }}>9:41</span>
+              <span style={{ background: 'rgba(255,255,255,.88)', borderRadius: '14px', padding: '11px 12px', display: 'flex', gap: '10px', marginTop: '14px' }}>
+                <span style={{ width: '28px', height: '28px', borderRadius: '7px', background: '#0B3D1F', color: '#8BE000', font: `700 11px/28px ${FONT}`, textAlign: 'center', flex: 'none' }}>SK</span>
+                <span style={{ display: 'flex', flexDirection: 'column', gap: '3px', minWidth: '0' }}>
+                  <span style={{ display: 'flex', font: `500 10.5px/1.2 ${FONT}`, color: MUTED }}><span style={{ flex: '1' }}>SPICE KART</span>now</span>
+                  <span style={{ font: `600 12.5px/1.3 ${FONT}`, color: title.trim() ? INK : MUTED }}>{title.trim() || 'Notification title'}</span>
+                  <span style={{ font: `400 12px/1.4 ${FONT}`, color: '#3A443D' }}>{message.trim() || 'Your message will appear here.'}</span>
                 </span>
               </span>
-              <span style={{ display: "flex", alignItems: "center", gap: "11px", padding: "10px 0", borderBottom: "1px solid #EFF1ED" }}>
-                <span style={{ display: "flex", flexDirection: "column", gap: "3px", flex: "1", minWidth: "0" }}>
-                  <span style={{ font: "500 12.5px/1.2 Inter,system-ui,sans-serif", color: "#17201A", whiteSpace: "nowrap" }}>In-app inbox</span>
-                </span>
-                <span style={{ width: "38px", height: "22px", borderRadius: "11px", background: "#8BE000", position: "relative", flex: "none", display: "block" }}>
-                  {" "}
-                  <span style={{ position: "absolute", top: "2.5px", left: "18px", width: "17px", height: "17px", borderRadius: "9px", background: "#fff", boxShadow: "0 1px 3px rgba(0,0,0,.2)", display: "block" }} />
-                  {" "}
-                </span>
-              </span>
-              <span style={{ display: "flex", alignItems: "center", gap: "11px", padding: "10px 0", borderBottom: "1px solid #EFF1ED" }}>
-                <span style={{ display: "flex", flexDirection: "column", gap: "3px", flex: "1", minWidth: "0" }}>
-                  <span style={{ font: "500 12.5px/1.2 Inter,system-ui,sans-serif", color: "#17201A", whiteSpace: "nowrap" }}>Email</span>
-                  <span style={{ font: "400 11px/1.2 Inter,system-ui,sans-serif", color: "#7C8A81" }}>Also send as an email campaign</span>
-                </span>
-                <span style={{ width: "38px", height: "22px", borderRadius: "11px", background: "#DCDDD8", position: "relative", flex: "none", display: "block" }}>
-                  {" "}
-                  <span style={{ position: "absolute", top: "2.5px", left: "2.5px", width: "17px", height: "17px", borderRadius: "9px", background: "#fff", boxShadow: "0 1px 3px rgba(0,0,0,.2)", display: "block" }} />
-                  {" "}
-                </span>
-              </span>
-              <span style={{ display: "flex", alignItems: "center", gap: "11px", padding: "10px 0", borderBottom: "1px solid #EFF1ED" }}>
-                <span style={{ display: "flex", flexDirection: "column", gap: "3px", flex: "1", minWidth: "0" }}>
-                  <span style={{ font: "500 12.5px/1.2 Inter,system-ui,sans-serif", color: "#17201A", whiteSpace: "nowrap" }}>SMS</span>
-                  <span style={{ font: "400 11px/1.2 Inter,system-ui,sans-serif", color: "#7C8A81" }}>Charges apply per message</span>
-                </span>
-                <span style={{ width: "38px", height: "22px", borderRadius: "11px", background: "#DCDDD8", position: "relative", flex: "none", display: "block" }}>
-                  {" "}
-                  <span style={{ position: "absolute", top: "2.5px", left: "2.5px", width: "17px", height: "17px", borderRadius: "9px", background: "#fff", boxShadow: "0 1px 3px rgba(0,0,0,.2)", display: "block" }} />
-                  {" "}
-                </span>
-              </span>
-            </div>
+            </span>
           </div>
         </div>
       </div>

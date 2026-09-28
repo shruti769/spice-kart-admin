@@ -73,9 +73,9 @@ export default function App() {
         {v.p_refunds && <Refunds v={v} />}
         {v.p_rev && <Reviews v={v} />}
         {v.p_content && <Content v={v} />}
-        {v.p_bannernew && <NewBanner v={v} />}
+        {v.p_bannernew && <NewBanner key={v.editingBanner?.id ?? 'new'} v={v} />}
         {v.p_notif && <Notifications v={v} />}
-        {v.p_notifnew && <NewNotification v={v} />}
+        {v.p_notifnew && <NewNotification key={v.editingCampaign?.id ?? 'new'} v={v} />}
         {v.p_analytics && <Analytics v={v} />}
         {v.p_staff && <Staff v={v} />}
         {v.p_settings && <Settings v={v} />}

@@ -1,4 +1,5 @@
 import { useMemo, useState } from 'react'
+import OfferTilesCard from '../components/OfferTilesCard'
 import { useCategoryNames } from '../lib/categories'
 import {
   STATUS_PILL, couponStatus, deleteCoupon, discountSummary, minSpendLabel, periodLabel, periodTitle, setCouponActive, typeLabel, useCoupons,
@@ -305,6 +306,7 @@ export default function Promotions({ v }) {
             </div>
           )}
         </div>
+        <OfferTilesCard v={v} />
       </div>
       {menu && menuCoupon && (
         <>

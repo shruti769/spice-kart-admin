@@ -106,6 +106,7 @@ export function useAdminState() {
       v[key + 'Bg'] = on ? '#F1F9DF' : '#fff';
     }
   });
+  v.contentTab = tabState._content ?? 0;
   // Active sub-tab indexes the catalogue uses to filter its Supabase product lists.
   v.catProductTab = tabState._catalogue ?? 0;
   v.catStockTab = tabState._catalogue2 ?? 0;
@@ -177,9 +178,6 @@ export function useAdminState() {
   v.duplicateRecord = () => { setState({ modal: null }); flash('Duplicated as a draft · edit before publishing'); };
   v.archiveRecord = () => { setState({ modal: null }); flash('Archived · sales history retained'); };
   // ---- alerts ----
-  v.markRead = () => flash('Alert marked as read');
-  v.markAllRead = () => flash('All 7 alerts marked as read');
-  v.loadOlder = () => flash('Loaded 20 older alerts');
   v.autoReassign = () => flash('4 orders reassigned · 2 drivers notified');
   v.notifyCustomers = () => flash('Delay notice sent to 4 customers');
   // ---- forms ----
@@ -342,8 +340,18 @@ export function useAdminState() {
   v.editCoupon = (row) => setState({ page: 'promonew', editingCoupon: isCouponRow(row) ? row : null, modal: null, rowMenu: null, storeOpen: false });
   v.editingCoupon = s.editingCoupon || null;
   v.couponDone = () => setState({ page: 'promo', editingCoupon: null, modal: null, rowMenu: null });
-  v.openBannerNew = () => go('bannernew');
-  v.openNotifNew = () => go('notifnew');
+  // Banners (Supabase `public.banners`): NewBanner reads `v.editingBanner` (null → create).
+  const isBannerRow = (row) => !!row && typeof row === 'object' && typeof row.id === 'string' && 'placement' in row;
+  v.openBannerNew = () => setState({ page: 'bannernew', editingBanner: null, modal: null, rowMenu: null, storeOpen: false });
+  v.editBanner = (row) => setState({ page: 'bannernew', editingBanner: isBannerRow(row) ? row : null, modal: null, rowMenu: null, storeOpen: false });
+  v.editingBanner = s.editingBanner || null;
+  v.bannerDone = () => setState({ page: 'content', editingBanner: null, modal: null, rowMenu: null });
+  // Push campaigns (Supabase `public.push_campaigns`): NewNotification reads `v.editingCampaign` (null → create).
+  const isCampaignRow = (row) => !!row && typeof row === 'object' && typeof row.id === 'string' && 'audience' in row;
+  v.openNotifNew = () => setState({ page: 'notifnew', editingCampaign: null, modal: null, rowMenu: null, storeOpen: false });
+  v.editCampaign = (row) => setState({ page: 'notifnew', editingCampaign: isCampaignRow(row) ? row : null, modal: null, rowMenu: null, storeOpen: false });
+  v.editingCampaign = s.editingCampaign || null;
+  v.campaignDone = () => setState({ page: 'notif', editingCampaign: null, modal: null, rowMenu: null });
   // Auth: Login.jsx signs in with Supabase and checks `public.admins`, then calls signedIn.
   const authEmail = s.authEmail || 'aarav.kapoor@spicekart.com.au';
   const user = userFromEmail(authEmail);
@@ -362,7 +370,7 @@ export function useAdminState() {
   v.logout = async () => {
     let error = null;
     if (isSupabaseConfigured) ({ error } = await supabase.auth.signOut());
-    setState({ page: 'login', modal: null, rowMenu: null, storeOpen: false, catTab: 'products', tabs: {}, ranges: {}, chips: {}, store: 0, editingProduct: null, actionProduct: null, editingCoupon: null });
+    setState({ page: 'login', modal: null, rowMenu: null, storeOpen: false, catTab: 'products', tabs: {}, ranges: {}, chips: {}, store: 0, editingProduct: null, actionProduct: null, editingCoupon: null, editingBanner: null, editingCampaign: null });
     flash(error ? `Signed out locally · ${error.message}` : 'Signed out of the operations console');
   };
   v.openCancel = () => setState({ modal: 'cancel' });

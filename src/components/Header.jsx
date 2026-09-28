@@ -1,4 +1,16 @@
 import GlobalSearch from './GlobalSearch'
+import { useUnreadAlerts } from '../lib/notifications'
+
+/** Live count of unread, unresolved admin alerts (hidden at zero). */
+function BellBadge() {
+  const n = useUnreadAlerts().data?.total ?? 0
+  if (!n) return null
+  return (
+    <span style={{ position: "absolute", top: "-4px", right: "-4px", minWidth: "16px", height: "16px", padding: "0 4px", borderRadius: "8px", background: "#C4452F", color: "#fff", font: "700 9px/1.2 Inter,system-ui,sans-serif", lineHeight: "16px", textAlign: "center" }}>
+      {n > 99 ? '99+' : n}
+    </span>
+  )
+}
 
 export default function Header({ v }) {
   return (
@@ -187,9 +199,7 @@ export default function Header({ v }) {
               <path d="M6 8.8a4 4 0 118 0v2.9l1.32 2.14a.6.6 0 01-.51.91H5.19a.6.6 0 01-.51-.91L6 11.7V8.8z" stroke="#4A564E" strokeWidth="1.5" strokeLinejoin="round" />
               <path d="M8.4 16.4a1.7 1.7 0 003.2 0" stroke="#4A564E" strokeWidth="1.5" strokeLinecap="round" />
             </svg>
-            <span style={{ position: "absolute", top: "-4px", right: "-4px", minWidth: "16px", height: "16px", padding: "0 4px", borderRadius: "8px", background: "#C4452F", color: "#fff", font: "700 9px/1.2 Inter,system-ui,sans-serif", lineHeight: "16px", textAlign: "center" }}>
-              7
-            </span>
+            <BellBadge />
           </button>
           <span style={{ width: "1px", height: "24px", background: "#E4E7E2" }} />
           <span style={{ display: "flex", alignItems: "center", gap: "9px" }}>
