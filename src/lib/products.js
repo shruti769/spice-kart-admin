@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react'
 import { isSupabaseConfigured, supabase } from './supabase'
+import { downloadCsv, fileDate, useLiveQuery } from './customers'
 
 /** Low-stock threshold: the product's own minimum, or 10 when none is set. */
 const threshold = (p) => (p.min_stock != null ? p.min_stock : 10)
@@ -145,4 +146,128 @@ export async function adjustProductStock(id, mode, qty) {
   if (error) throw error
   if (!data?.length) throw new Error('Stock changed while you were editing · try again')
   return next
+}
+
+/** Copies a product as an unpublished draft ("… (copy)", no SKU/barcode, same image). Returns the new row. */
+export async function duplicateProduct(row) {
+  const { data: full, error: readError } = await supabase.from('products').select('*').eq('id', row.id).maybeSingle()
+  if (readError) throw readError
+  if (!full) throw new Error('This product no longer exists')
+  // eslint-disable-next-line no-unused-vars
+  const { id, created_at, updated_at, sku, barcode, ...rest } = full
+  const { data, error } = await supabase
+    .from('products')
+    .insert({ ...rest, name: `${full.name} (copy)`.slice(0, 200), sku: null, barcode: null, published: false })
+    .select()
+    .single()
+  if (error) throw error
+  notifyProductsChanged()
+  return data
+}
+
+/** Publishes or archives (hides from the app) a product. Sales history is kept either way. */
+export async function setProductPublished(id, published) {
+  const { data, error } = await supabase.from('products').update({ published }).eq('id', id).select('id')
+  if (error) throw error
+  if (!data?.length) throw new Error('This product no longer exists or you don’t have permission to change it')
+  notifyProductsChanged()
+}
+
+// ─── Product detail page ─────────────────────────────────────────────────────────────────
+const DAY_MS = 864e5
+const PAGE = 1000
+
+/** Every page of a PostgREST query (built fresh by `build(from, to)`), up to `max` rows. */
+async function fetchAll(build, max = 20000) {
+  const out = []
+  for (let from = 0; from < max; from += PAGE) {
+    const { data, error } = await build(from, from + PAGE - 1)
+    if (error) throw error
+    out.push(...(data ?? []))
+    if (!data || data.length < PAGE) break
+  }
+  return out
+}
+
+const salesError = (e) => (e?.code === '42P01' || e?.code === 'PGRST205' || e?.code === 'PGRST200'
+  ? 'Order data isn’t set up yet · run supabase/orders.sql in the Supabase SQL Editor'
+  : e?.message || 'Unknown error')
+
+/**
+ * Everything the Product detail page shows for one product, live (products, order_items,
+ * orders and reviews changes refetch it, debounced):
+ * `{ product, sales: { units30, revenue30, unitsPrev, revenuePrev, daily: [{ day, units, revenue }×14] },
+ *    recent: orders (newest first, each with this product's order_items), rating: { avg, count },
+ *    salesError, reviewsError }` or `null` when the product doesn't exist.
+ * Sales exclude cancelled orders; the recent list shows every status.
+ */
+export function useProductDetail(id, recentLimit = 6) {
+  return useLiveQuery(async () => {
+    if (!id) return null
+    const now = Date.now()
+    const since = new Date(now - 60 * DAY_MS).toISOString()
+    const [prod, sales, recent, reviews] = await Promise.allSettled([
+      supabase.from('products').select('*').eq('id', id).maybeSingle(),
+      fetchAll((from, to) => supabase.from('orders')
+        .select('id, placed_at, order_items!inner(qty, line_total)')
+        .eq('order_items.product_id', id).neq('status', 'cancelled').gte('placed_at', since)
+        .order('placed_at', { ascending: false }).order('id').range(from, to)),
+      supabase.from('orders')
+        .select('id, number, status, placed_at, customer_id, customer:customers(first_name, last_name), order_items!inner(qty, line_total)')
+        .eq('order_items.product_id', id).order('placed_at', { ascending: false }).limit(recentLimit),
+      fetchAll((from, to) => supabase.from('reviews').select('id, rating').eq('product_id', id).eq('status', 'published').order('id').range(from, to)),
+    ])
+    if (prod.status === 'rejected') throw prod.reason
+    if (prod.value.error) throw new Error(prod.value.error.message)
+    if (!prod.value.data) return null
+
+    // 14 local calendar days ending today, then the two 30-day windows.
+    const today = new Date(now)
+    const daily = Array.from({ length: 14 }, (_, i) => {
+      const d = new Date(today.getFullYear(), today.getMonth(), today.getDate() - 13 + i)
+      return { day: d.getTime(), units: 0, revenue: 0 }
+    })
+    const s = { units30: 0, revenue30: 0, unitsPrev: 0, revenuePrev: 0, daily }
+    if (sales.status === 'fulfilled') {
+      for (const o of sales.value) {
+        const t = new Date(o.placed_at).getTime()
+        const units = (o.order_items ?? []).reduce((n, i) => n + Number(i.qty || 0), 0)
+        const revenue = (o.order_items ?? []).reduce((n, i) => n + Number(i.line_total || 0), 0)
+        if (t >= now - 30 * DAY_MS) { s.units30 += units; s.revenue30 += revenue } else { s.unitsPrev += units; s.revenuePrev += revenue }
+        for (let i = daily.length - 1; i >= 0; i--) {
+          if (t >= daily[i].day) { daily[i].units += units; daily[i].revenue += revenue; break }
+        }
+      }
+    }
+    const recentRes = recent.status === 'fulfilled' ? recent.value : { error: recent.reason }
+    const ratings = reviews.status === 'fulfilled' ? reviews.value.map((r) => Number(r.rating)) : []
+    return {
+      id,
+      product: prod.value.data,
+      sales: s,
+      recent: recentRes.error ? [] : recentRes.data ?? [],
+      salesError: sales.status === 'rejected' ? salesError(sales.reason) : recentRes.error ? salesError(recentRes.error) : '',
+      rating: { count: ratings.length, avg: ratings.length ? ratings.reduce((a, b) => a + b, 0) / ratings.length : null },
+      reviewsError: reviews.status === 'rejected' ? salesError(reviews.reason) : '',
+    }
+  }, ['products', 'order_items', 'orders', 'reviews'], [id, recentLimit])
+}
+
+// ─── CSV export ──────────────────────────────────────────────────────────────────────────
+export { downloadCsv, fileDate }
+
+const csvMoney = (n) => (n == null || n === '' ? '' : Number(n).toFixed(2))
+
+/** Downloads `rows` (products rows) as a CSV; `categoryNames` maps category_id → name. */
+export function exportProductsCsv(rows, categoryNames, filename = `products-${fileDate()}.csv`) {
+  downloadCsv(filename,
+    ['Name', 'Brand', 'SKU', 'Barcode', 'Category', 'Subcategory', 'Price (AUD)', 'Compare at (AUD)', 'Cost (AUD)', 'Stock tracked', 'On hand', 'Min stock', 'Max stock', 'Stock status', 'Warehouse', 'Weight', 'Unit', 'Size', 'Origin', 'Attributes', 'Published', 'Express delivery', 'Scheduled delivery', 'Created', 'Updated'],
+    rows.map((p) => [
+      p.name, p.brand, p.sku, p.barcode, categoryNames[p.category_id] || p.category_id, p.subcategory,
+      csvMoney(p.price), csvMoney(p.compare_at_price), csvMoney(p.cost_price),
+      p.track_inventory ? 'Yes' : 'No', p.track_inventory ? p.stock_qty : '', p.min_stock ?? '', p.max_stock ?? '', stockPill(p)[0],
+      p.warehouse, p.weight, p.unit, p.size, p.country_of_origin, (p.attributes ?? []).join('; '),
+      p.published ? 'Yes' : 'No', p.express_delivery ? 'Yes' : 'No', p.scheduled_delivery ? 'Yes' : 'No',
+      p.created_at ? new Date(p.created_at).toLocaleString('en-AU') : '', p.updated_at ? new Date(p.updated_at).toLocaleString('en-AU') : '',
+    ]))
 }

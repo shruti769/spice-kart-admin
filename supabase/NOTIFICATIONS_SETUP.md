@@ -5,15 +5,25 @@ The steps to take the admin's notifications live on the Spice Kart Supabase proj
 
 ## 1. Database (SQL Editor)
 
-Run these in order. Each file is safe to run again.
+Run these in order. Each file is safe to run again. `app/` means the customer app's
+`~/Desktop/Spice-kart/supabase/migrations/`; its earlier migrations (catalogue, categories, coupons,
+delivery) are assumed to be run already.
 
 1. `banners.sql`
 2. `announcements.sql`
 3. `content.sql`
 4. `orders.sql`: customers, orders, order items, payments, reviews, refund requests
-5. `notifications.sql`: admin alerts, campaigns, customer inbox, push tokens, minutely job
+5. `stores.sql`: the store customers order from (then add it in Admin → Settings → General)
+6. `order_admin.sql`: cancel an order (puts stock back) and the order status timeline
+7. `app/20260928130000_offers_live.sql` and `app/20260928140000_banners_live.sql`, if not run yet
+8. `app/20260929000000_profiles.sql`, `app/20260929120000_orders.sql`, `app/20260930000000_delivery_area.sql`: the app's checkout (`place_order`) and delivery area
+9. `notifications.sql`: admin alerts, campaigns, customer inbox, push tokens, minutely job
+10. `business_settings.sql`: Settings → minimum order, payments & tax, notifications (email / SMS / Slack / digest), store hours and security. It replaces `public.is_admin()`; if you ever re-run the app's `20260924000000_catalogue.sql`, run this file again afterwards.
+11. `admin_data.sql`: staff and invites, drivers, customer suspension and stats, review replies, payment references and refunds, Dashboard / Analytics numbers
 
-Before step 5, turn on **Database → Extensions → `pg_cron`** and **`pg_net`**. If you forget,
+Also turn on **Authentication → Sign In / Providers → Allow anonymous sign-ins** (the app signs customers in anonymously for now).
+
+Before step 9, turn on **Database → Extensions → `pg_cron`** and **`pg_net`**. If you forget,
 `notifications.sql` prints a notice. Turn them on and run it again.
 
 After that, the admin works end to end:
@@ -79,3 +89,42 @@ The app still has to:
 
 Promotional campaigns only reach customers with `marketing_opt_in = true`, as the Spam Act requires.
 All pushes also need `push_opt_in = true`.
+
+## 6. Email, SMS and Slack (Settings → Notifications)
+
+These go through the same `send-push` function, so redeploy it after pulling these changes:
+
+```bash
+SUPABASE_ACCESS_TOKEN=sbp_XXXX supabase functions deploy send-push --no-verify-jwt --use-api --project-ref posbkqkzkyehmanrbqcj
+```
+
+Then set whichever providers you use:
+
+```bash
+# Email (resend.com): verify your domain there first
+supabase secrets set --project-ref posbkqkzkyehmanrbqcj RESEND_API_KEY=re_... RESEND_FROM="Spice Kart <orders@yourdomain.com.au>"
+# SMS (twilio.com)
+supabase secrets set --project-ref posbkqkzkyehmanrbqcj TWILIO_ACCOUNT_SID=AC... TWILIO_AUTH_TOKEN=... TWILIO_FROM=+61...
+```
+
+Slack needs no secret. Paste the channel's incoming-webhook URL in Settings → Notifications.
+Until a provider is set, its messages show as failed in Settings, with the reason.
+
+## 7. Security (Settings → Security)
+
+- **Two-factor:** each admin turns it on for their own account (authenticator app). "Require for all admins" can only be switched on from a session that used 2FA.
+- **Google sign-in:** also enable Google in Supabase → Authentication → Sign In / Providers, and add the admin site's URL under Authentication → URL Configuration → Redirect URLs.
+- **Locked out** by the IP allowlist or 2FA? In the SQL Editor run:
+  `update public.business_settings set ip_allowlist_enabled = false, require_2fa = false;`
+- **Admin lost their authenticator?** In the SQL Editor run:
+  `delete from auth.mfa_factors where user_id = (select id from auth.users where email = 'them@example.com');`
+
+## 8. Staff invites (Staff & Admins → Invite member)
+
+Deploy the second Edge Function (it uses the signed-in admin's login, so keep JWT checks on):
+
+```bash
+SUPABASE_ACCESS_TOKEN=sbp_XXXX supabase functions deploy invite-admin --use-api --project-ref posbkqkzkyehmanrbqcj
+```
+
+Also add the admin site's URL under Authentication → URL Configuration → Redirect URLs, so the invite link can open the admin.

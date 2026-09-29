@@ -155,7 +155,7 @@ export default function Sidebar({ v }) {
           </span>
           <span style={{ display: "flex", flexDirection: "column", gap: "2px", minWidth: "0", flex: "1" }}>
             <span style={{ font: "600 11.5px/1.2 Inter,system-ui,sans-serif", color: "#fff", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{v.userName}</span>
-            <span style={{ font: "400 10px/1.2 Inter,system-ui,sans-serif", color: "rgba(255,255,255,.5)", whiteSpace: "nowrap" }}>Super Admin</span>
+            <span style={{ font: "400 10px/1.2 Inter,system-ui,sans-serif", color: "rgba(255,255,255,.5)", whiteSpace: "nowrap" }}>{v.userRole}</span>
           </span>
           <button onClick={v.logout} aria-label="Log out" style={{ width: "26px", height: "26px", border: "0", borderRadius: "7px", background: "rgba(255,255,255,.08)", display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer", flex: "none" }}>
             <svg width="14" height="14" viewBox="0 0 20 20" fill="none" style={{ flex: "none" }}>

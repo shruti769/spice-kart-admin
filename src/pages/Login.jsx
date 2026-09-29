@@ -1,7 +1,9 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import imgSpiceKartLogo from '../assets/images/spice-kart-logo.png'
 import { isSupabaseConfigured, supabase } from '../lib/supabase'
 import { fetchIsAdmin } from '../lib/adminAuth'
+import { fetchStoreConfig, nextSignInStep } from '../lib/businessSettings'
+import { useStore } from '../lib/stores'
 
 const inputStyle = { height: "36px", padding: "0 11px", border: "1px solid #E4E7E2", borderRadius: "8px", background: "#fff", font: "500 12.5px/1.2 Inter,system-ui,sans-serif", color: "#17201A", width: "100%", boxSizing: "border-box", outline: "none" }
 
@@ -12,6 +14,21 @@ export default function Login({ v }) {
 
   const [pending, setPending] = useState(false)
   const [error, setError] = useState('')
+  const [googleOn, setGoogleOn] = useState(false)
+  const { store } = useStore()
+
+  // "Continue with Google" only when it's switched on in Settings → Security.
+  useEffect(() => {
+    let cancelled = false
+    fetchStoreConfig().then((c) => { if (!cancelled) setGoogleOn(!!c?.allow_google_sso) })
+    return () => { cancelled = true }
+  }, [])
+
+  const google = async () => {
+    setError('')
+    const { error: e } = await supabase.auth.signInWithOAuth({ provider: 'google', options: { redirectTo: `${window.location.origin}/` } })
+    if (e) setError(/provider is not enabled/i.test(e.message) ? 'Google sign-in isn’t turned on in Supabase yet · Authentication → Sign In / Providers → Google' : e.message)
+  }
 
   // Supabase email/password sign-in, then require a row in `public.admins`.
   const submit = async () => {
@@ -31,6 +48,15 @@ export default function Login({ v }) {
         setPending(false)
         return
       }
+      // IP allowlist and two-factor (Settings → Security).
+      const step = await nextSignInStep()
+      if (step.blocked) {
+        await supabase.auth.signOut()
+        setError(step.blocked)
+        setPending(false)
+        return
+      }
+      if (step === 'mfa' || step === 'enroll') return v.startTwoFactor(step, data.user.email)
       v.signedIn(data.user.email)
     } catch (e) {
       if (signedIn) await supabase.auth.signOut()
@@ -133,26 +159,28 @@ export default function Login({ v }) {
           <button className="hv2" onClick={submit} disabled={pending} aria-busy={pending} style={{ height: "44px", border: "0", borderRadius: "9px", background: "#0B3D1F", color: "#fff", font: "700 13.5px/1.2 Inter,system-ui,sans-serif", cursor: pending ? "default" : "pointer", opacity: pending ? ".75" : "1", boxShadow: "0 6px 16px rgba(11,61,31,.2)" }}>
             {pending ? 'Signing in…' : 'Sign in'}
           </button>
+          {googleOn && <>
           <span style={{ display: "flex", alignItems: "center", gap: "10px" }}>
             <span style={{ flex: "1", height: "1px", background: "#E4E7E2", display: "block" }} />
             <span style={{ font: "500 10.5px/1.2 Inter,system-ui,sans-serif", color: "#7C8A81", whiteSpace: "nowrap" }}>or</span>
             <span style={{ flex: "1", height: "1px", background: "#E4E7E2", display: "block" }} />
           </span>
-          <button onClick={v.ssoUnavailable} style={{ height: "42px", border: "1px solid #E4E7E2", borderRadius: "9px", background: "#fff", font: "600 12.5px/1.2 Inter,system-ui,sans-serif", color: "#17201A", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", gap: "9px" }}>
+          <button onClick={google} style={{ height: "42px", border: "1px solid #E4E7E2", borderRadius: "9px", background: "#fff", font: "600 12.5px/1.2 Inter,system-ui,sans-serif", color: "#17201A", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", gap: "9px" }}>
             <svg width="15" height="15" viewBox="0 0 18 18" fill="none">
               <path d="M9 7.4v3.1h4.3c-.2 1-1.2 3-4.3 3a4.5 4.5 0 010-9c1.3 0 2.2.6 2.7 1l2.1-2A7.4 7.4 0 009 1.5a7.5 7.5 0 100 15c4.3 0 7.2-3 7.2-7.3 0-.6 0-1-.1-1.4H9z" fill="#3F3F3B" />
             </svg>
-            {"Continue with Google SSO "}
+            Continue with Google
           </button>
+          </>}
           <span style={{ display: "flex", alignItems: "center", gap: "9px", padding: "11px 12px", borderRadius: "9px", background: "#F6F7F4", border: "1px solid #E4E7E2", marginTop: "4px" }}>
             <svg width="15" height="15" viewBox="0 0 20 20" fill="none" style={{ flex: "none" }}>
               <rect x="4.6" y="8.6" width="10.8" height="8" rx="2" stroke="#17693A" strokeWidth="1.5" />
               <path d="M7.2 8.6V6.8a2.8 2.8 0 015.6 0v1.8" stroke="#17693A" strokeWidth="1.5" />
             </svg>
-            <span style={{ font: "500 11px/1.45 Inter,system-ui,sans-serif", color: "#4A564E" }}>Two-factor authentication is required for all admin accounts.</span>
+            <span style={{ font: "500 11px/1.45 Inter,system-ui,sans-serif", color: "#4A564E" }}>Admin accounts only. Two-factor and IP rules from Settings → Security apply at sign-in.</span>
           </span>
           <span style={{ font: "400 10.5px/1.6 Inter,system-ui,sans-serif", color: "#7C8A81", marginTop: "auto" }}>
-            Spice Kart Pty Ltd · ABN 41 998 220 117. Access is logged and monitored. Contact it@spicekart.com.au for help.
+            {[store?.name ?? "Spice Kart", store?.abn && `ABN ${store.abn}`].filter(Boolean).join(" · ")}. Access is logged.{store?.support_email ? ` Contact ${store.support_email} for help.` : ""}
           </span>
         </div>
       </div>

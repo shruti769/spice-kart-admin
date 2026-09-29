@@ -14,7 +14,7 @@ function ActionItem({ className = "hv3", onClick, icon, title, subtitle, danger 
   )
 }
 
-/** Actions for one real product row (from Supabase): edit, adjust stock, delete. */
+/** Actions for one real product row (from Supabase): view, edit, adjust stock, duplicate, archive/publish, delete. */
 function ProductActions({ v, product }) {
   return (
     <div onClick={v.closeModal} style={{ position: "absolute", inset: "0", zIndex: "90", background: "rgba(14,22,16,.45)", display: "flex", alignItems: "center", justifyContent: "center", padding: "40px" }}>
@@ -35,6 +35,12 @@ function ProductActions({ v, product }) {
         </div>
         <div style={{ display: "flex", flexDirection: "column" }}>
           <ActionItem
+            onClick={v.viewRecord}
+            title="View details"
+            subtitle="Sales, stock and recent orders"
+            icon={<svg width="15" height="15" viewBox="0 0 20 20" fill="none" style={{ flex: "none" }}><path d="M2.4 10S5.3 5.4 10 5.4 17.6 10 17.6 10 14.7 14.6 10 14.6 2.4 10 2.4 10z" stroke="#4A564E" strokeWidth="1.5" strokeLinejoin="round" /><circle cx="10" cy="10" r="2.2" stroke="#4A564E" strokeWidth="1.5" /></svg>}
+          />
+          <ActionItem
             onClick={() => v.editProduct(product)}
             title="Edit"
             subtitle="Change fields and save"
@@ -51,6 +57,18 @@ function ProductActions({ v, product }) {
                 <rect x="7" y="3.4" width="6" height="4.6" rx="1.4" stroke="#4A564E" strokeWidth="1.5" />
               </svg>
             }
+          />
+          <ActionItem
+            onClick={() => v.duplicateRecord(product)}
+            title="Duplicate"
+            subtitle="Create a copy as a draft"
+            icon={<svg width="15" height="15" viewBox="0 0 20 20" fill="none" style={{ flex: "none" }}><rect x="6.6" y="6.6" width="9" height="9" rx="2" stroke="#4A564E" strokeWidth="1.5" /><path d="M13 6.6V5.4a1.4 1.4 0 00-1.4-1.4H5.8A1.4 1.4 0 004.4 5.4v5.8A1.4 1.4 0 005.8 12.6H7" stroke="#4A564E" strokeWidth="1.5" strokeLinejoin="round" /></svg>}
+          />
+          <ActionItem
+            onClick={() => v.archiveRecord(product)}
+            title={product.published === false ? "Publish" : "Archive"}
+            subtitle={product.published === false ? "Show in the app again" : "Hide from the app, keep history"}
+            icon={<svg width="15" height="15" viewBox="0 0 20 20" fill="none" style={{ flex: "none" }}><rect x="3.2" y="4.4" width="13.6" height="3.4" rx="1.2" stroke="#4A564E" strokeWidth="1.5" /><path d="M4.6 7.8h10.8v7.4a1.4 1.4 0 01-1.4 1.4H6a1.4 1.4 0 01-1.4-1.4V7.8z" stroke="#4A564E" strokeWidth="1.5" strokeLinejoin="round" /><path d="M8.2 11h3.6" stroke="#4A564E" strokeWidth="1.5" strokeLinecap="round" /></svg>}
           />
           <ActionItem
             className="hv8"
@@ -147,8 +165,8 @@ export default function RowActionsModal({ v }) {
                 </svg>
               </span>
               <span style={{ display: "flex", flexDirection: "column", gap: "3px", flex: "1", minWidth: "0" }}>
-                <span style={{ font: "600 12.5px/1.2 Inter,system-ui,sans-serif", color: "#17201A", whiteSpace: "nowrap" }}>Archive</span>
-                <span style={{ font: "400 10.5px/1.2 Inter,system-ui,sans-serif", color: "#7C8A81", whiteSpace: "nowrap" }}>Hide from lists, keep history</span>
+                <span style={{ font: "600 12.5px/1.2 Inter,system-ui,sans-serif", color: "#17201A", whiteSpace: "nowrap" }}>{v.actionProduct?.published === false ? "Publish" : "Archive"}</span>
+                <span style={{ font: "400 10.5px/1.2 Inter,system-ui,sans-serif", color: "#7C8A81", whiteSpace: "nowrap" }}>{v.actionProduct?.published === false ? "Show in the app again" : "Hide from lists, keep history"}</span>
               </span>
             </button>
             <button className="hv8" onClick={v.openDelete} style={{ display: "flex", alignItems: "center", gap: "11px", width: "100%", border: "0", borderBottom: "1px solid #EFF1ED", background: "transparent", padding: "12px 16px", cursor: "pointer", textAlign: "left" }}>

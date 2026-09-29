@@ -1,97 +1,78 @@
+import { useCallback, useEffect, useState } from 'react'
+import { fetchMySessions, signOutOtherSessions } from '../lib/businessSettings'
+import { BORDER, FONT, INK, MUTED, btnPrimary, btnSecondary } from '../components/content/styles'
+import { Modal } from '../components/content/ui'
+
+/** "Chrome on macOS" from a user-agent string. */
+function device(ua) {
+  if (!ua) return 'Unknown device'
+  const browser = /Edg\//.test(ua) ? 'Edge' : /Chrome\//.test(ua) ? 'Chrome' : /Firefox\//.test(ua) ? 'Firefox' : /Safari\//.test(ua) ? 'Safari' : 'Browser'
+  const os = /iPhone|iPad/.test(ua) ? 'iOS' : /Android/.test(ua) ? 'Android' : /Mac OS X/.test(ua) ? 'macOS' : /Windows/.test(ua) ? 'Windows' : /Linux/.test(ua) ? 'Linux' : ''
+  return os ? `${browser} on ${os}` : browser
+}
+const when = (iso) => (iso ? new Date(iso).toLocaleString('en-AU', { day: 'numeric', month: 'short', year: 'numeric', hour: 'numeric', minute: '2-digit' }) : '—')
+
 export default function SessionsModal({ v }) {
+  const [rows, setRows] = useState(null)
+  const [error, setError] = useState('')
+  const [busy, setBusy] = useState(false)
+
+  const load = useCallback(() => {
+    fetchMySessions().then(setRows).catch((e) => setError(e.message))
+  }, [])
+  useEffect(() => { load() }, [load])
+
+  const others = (rows ?? []).filter((r) => !r.current).length
+  const signOutOthers = async () => {
+    setBusy(true)
+    try {
+      await signOutOtherSessions()
+      v.flash(`Signed out of ${others} other session${others === 1 ? '' : 's'}`)
+      load()
+    } catch (e) {
+      v.flash(e.message)
+    } finally {
+      setBusy(false)
+    }
+  }
+
   return (
-    <>
-      <div onClick={v.closeModal} style={{ position: "absolute", inset: "0", zIndex: "90", background: "rgba(14,22,16,.45)", display: "flex", alignItems: "center", justifyContent: "center", padding: "40px" }}>
-        <div style={{ width: "500px", maxWidth: "100%", background: "#fff", borderRadius: "14px", boxShadow: "0 26px 60px rgba(10,18,12,.3)", overflow: "hidden", display: "flex", flexDirection: "column" }}>
-          <div style={{ padding: "16px 18px 14px", display: "flex", alignItems: "flex-start", gap: "11px", borderBottom: "1px solid #EFF1ED" }}>
-            <span style={{ width: "34px", height: "34px", borderRadius: "9px", background: "#E8F1F8", display: "flex", alignItems: "center", justifyContent: "center", flex: "none" }}>
-              <svg width="17" height="17" viewBox="0 0 20 20" fill="none" style={{ flex: "none" }}>
-                <circle cx="10" cy="10" r="7.2" stroke="#1F5C8B" strokeWidth="1.5" />
-                <path d="M10 5.8V10l3 1.8" stroke="#1F5C8B" strokeWidth="1.5" strokeLinecap="round" />
-              </svg>
-            </span>
-            <span style={{ display: "flex", flexDirection: "column", gap: "4px", minWidth: "0" }}>
-              <span style={{ font: "700 15px/1.2 Inter,system-ui,sans-serif", color: "#17201A" }}>Login history</span>
-              <span style={{ font: "400 11.5px/1.55 Inter,system-ui,sans-serif", color: "#7C8A81" }}>
-                Last 30 days for {v.authEmail}. Anything unfamiliar should be reported to IT.
-              </span>
-            </span>
-          </div>
-          <div style={{ display: "flex", flexDirection: "column" }}>
-            <span style={{ display: "flex", alignItems: "center", gap: "11px", padding: "12px 16px", borderBottom: "1px solid #EFF1ED" }}>
-              <span style={{ width: "30px", height: "30px", borderRadius: "8px", background: "#F6F7F4", border: "1px solid #E4E7E2", display: "flex", alignItems: "center", justifyContent: "center", flex: "none" }}>
-                <svg width="15" height="15" viewBox="0 0 20 20" fill="none" style={{ flex: "none" }}>
-                  <rect x="4.6" y="8.6" width="10.8" height="8" rx="2" stroke="#4A564E" strokeWidth="1.5" />
-                  <path d="M7.2 8.6V6.8a2.8 2.8 0 015.6 0v1.8" stroke="#4A564E" strokeWidth="1.5" />
-                </svg>
-              </span>
-              <span style={{ display: "flex", flexDirection: "column", gap: "3px", flex: "1", minWidth: "0" }}>
-                <span style={{ font: "600 12px/1.2 Inter,system-ui,sans-serif", color: "#17201A", whiteSpace: "nowrap" }}>Chrome · macOS</span>
-                <span style={{ font: "400 10.5px/1.2 Inter,system-ui,sans-serif", color: "#7C8A81", whiteSpace: "nowrap" }}>Melbourne VIC · 203.0.113.41</span>
-              </span>
-              <span style={{ display: "flex", flexDirection: "column", gap: "4px", alignItems: "flex-end", flex: "none" }}>
-                <span style={{ font: "400 10.5px/1.2 Inter,system-ui,sans-serif", color: "#7C8A81", whiteSpace: "nowrap" }}>Now · current session</span>
-                <span style={{ font: "600 9.5px/1.2 Inter,system-ui,sans-serif", color: "#0B6B33", background: "#E9F6E3", padding: "4px 6px", borderRadius: "4px", whiteSpace: "nowrap" }}>
-                  THIS DEVICE
+    <Modal
+      title="Login history"
+      sub="Where your account is signed in. Sessions end when they sign out or expire."
+      width={560}
+      busy={busy}
+      onClose={v.closeModal}
+      footer={(
+        <span style={{ marginLeft: 'auto', display: 'flex', gap: '9px' }}>
+          <button type="button" onClick={v.closeModal} disabled={busy} style={btnSecondary}>Close</button>
+          <button type="button" onClick={signOutOthers} disabled={busy || !others} style={{ ...btnPrimary, opacity: busy || !others ? 0.5 : 1 }}>
+            {busy ? 'Signing out…' : `Sign out other sessions${others ? ` (${others})` : ''}`}
+          </button>
+        </span>
+      )}
+    >
+      {error && <span style={{ font: `400 12.5px/1.5 ${FONT}`, color: '#B3402F' }}>{error}</span>}
+      {!error && rows == null && <span style={{ font: `400 12.5px/1.5 ${FONT}`, color: MUTED }}>Loading…</span>}
+      {rows?.length === 0 && <span style={{ font: `400 12.5px/1.5 ${FONT}`, color: MUTED }}>No sessions found.</span>}
+      {rows?.length > 0 && (
+        <div style={{ border: `1px solid ${BORDER}`, borderRadius: '9px', overflow: 'hidden' }}>
+          {rows.map((r, i) => (
+            <div key={r.id} style={{ display: 'flex', alignItems: 'center', gap: '12px', padding: '11px 14px', borderTop: i ? '1px solid #EFF1ED' : '0', background: r.current ? '#F7FCEE' : '#fff' }}>
+              <span style={{ display: 'flex', flexDirection: 'column', gap: '4px', flex: '1', minWidth: '0' }}>
+                <span style={{ font: `600 12.5px/1.2 ${FONT}`, color: INK }}>
+                  {device(r.user_agent)}
+                  {r.current && <span style={{ marginLeft: '8px', font: `600 10.5px/1.2 ${FONT}`, color: '#0B6B33', background: '#E9F6E3', padding: '3px 7px', borderRadius: '5px' }}>This device</span>}
+                </span>
+                <span style={{ font: `400 11.5px/1.3 ${FONT}`, color: MUTED }}>
+                  {r.ip || 'Unknown IP'} · signed in {when(r.created_at)}{r.aal === 'aal2' ? ' · with 2FA' : ''}
                 </span>
               </span>
-            </span>
-            <span style={{ display: "flex", alignItems: "center", gap: "11px", padding: "12px 16px", borderBottom: "1px solid #EFF1ED" }}>
-              <span style={{ width: "30px", height: "30px", borderRadius: "8px", background: "#F6F7F4", border: "1px solid #E4E7E2", display: "flex", alignItems: "center", justifyContent: "center", flex: "none" }}>
-                <svg width="15" height="15" viewBox="0 0 20 20" fill="none" style={{ flex: "none" }}>
-                  <rect x="4.6" y="8.6" width="10.8" height="8" rx="2" stroke="#4A564E" strokeWidth="1.5" />
-                  <path d="M7.2 8.6V6.8a2.8 2.8 0 015.6 0v1.8" stroke="#4A564E" strokeWidth="1.5" />
-                </svg>
-              </span>
-              <span style={{ display: "flex", flexDirection: "column", gap: "3px", flex: "1", minWidth: "0" }}>
-                <span style={{ font: "600 12px/1.2 Inter,system-ui,sans-serif", color: "#17201A", whiteSpace: "nowrap" }}>Chrome · macOS</span>
-                <span style={{ font: "400 10.5px/1.2 Inter,system-ui,sans-serif", color: "#7C8A81", whiteSpace: "nowrap" }}>Melbourne VIC · 203.0.113.41</span>
-              </span>
-              <span style={{ display: "flex", flexDirection: "column", gap: "4px", alignItems: "flex-end", flex: "none" }}>
-                <span style={{ font: "400 10.5px/1.2 Inter,system-ui,sans-serif", color: "#7C8A81", whiteSpace: "nowrap" }}>Today 8:02 AM</span>
-              </span>
-            </span>
-            <span style={{ display: "flex", alignItems: "center", gap: "11px", padding: "12px 16px", borderBottom: "1px solid #EFF1ED" }}>
-              <span style={{ width: "30px", height: "30px", borderRadius: "8px", background: "#F6F7F4", border: "1px solid #E4E7E2", display: "flex", alignItems: "center", justifyContent: "center", flex: "none" }}>
-                <svg width="15" height="15" viewBox="0 0 20 20" fill="none" style={{ flex: "none" }}>
-                  <rect x="4.6" y="8.6" width="10.8" height="8" rx="2" stroke="#4A564E" strokeWidth="1.5" />
-                  <path d="M7.2 8.6V6.8a2.8 2.8 0 015.6 0v1.8" stroke="#4A564E" strokeWidth="1.5" />
-                </svg>
-              </span>
-              <span style={{ display: "flex", flexDirection: "column", gap: "3px", flex: "1", minWidth: "0" }}>
-                <span style={{ font: "600 12px/1.2 Inter,system-ui,sans-serif", color: "#17201A", whiteSpace: "nowrap" }}>Safari · iPhone</span>
-                <span style={{ font: "400 10.5px/1.2 Inter,system-ui,sans-serif", color: "#7C8A81", whiteSpace: "nowrap" }}>Melbourne VIC · 49.195.20.8</span>
-              </span>
-              <span style={{ display: "flex", flexDirection: "column", gap: "4px", alignItems: "flex-end", flex: "none" }}>
-                <span style={{ font: "400 10.5px/1.2 Inter,system-ui,sans-serif", color: "#7C8A81", whiteSpace: "nowrap" }}>Yesterday 6:41 PM</span>
-              </span>
-            </span>
-            <span style={{ display: "flex", alignItems: "center", gap: "11px", padding: "12px 16px", borderBottom: "1px solid #EFF1ED" }}>
-              <span style={{ width: "30px", height: "30px", borderRadius: "8px", background: "#F6F7F4", border: "1px solid #E4E7E2", display: "flex", alignItems: "center", justifyContent: "center", flex: "none" }}>
-                <svg width="15" height="15" viewBox="0 0 20 20" fill="none" style={{ flex: "none" }}>
-                  <rect x="4.6" y="8.6" width="10.8" height="8" rx="2" stroke="#4A564E" strokeWidth="1.5" />
-                  <path d="M7.2 8.6V6.8a2.8 2.8 0 015.6 0v1.8" stroke="#4A564E" strokeWidth="1.5" />
-                </svg>
-              </span>
-              <span style={{ display: "flex", flexDirection: "column", gap: "3px", flex: "1", minWidth: "0" }}>
-                <span style={{ font: "600 12px/1.2 Inter,system-ui,sans-serif", color: "#17201A", whiteSpace: "nowrap" }}>Chrome · Windows</span>
-                <span style={{ font: "400 10.5px/1.2 Inter,system-ui,sans-serif", color: "#7C8A81", whiteSpace: "nowrap" }}>Sydney NSW · 139.130.4.5</span>
-              </span>
-              <span style={{ display: "flex", flexDirection: "column", gap: "4px", alignItems: "flex-end", flex: "none" }}>
-                <span style={{ font: "400 10.5px/1.2 Inter,system-ui,sans-serif", color: "#7C8A81", whiteSpace: "nowrap" }}>19 Sep, 9:12 AM</span>
-              </span>
-            </span>
-          </div>
-          <div style={{ padding: "13px 18px 16px", display: "flex", alignItems: "center", gap: "9px", borderTop: "1px solid #EFF1ED", background: "#F6F7F4" }}>
-            <button onClick={v.confirmModal} style={{ height: "36px", padding: "0 14px", border: "1px solid #EEDAD5", borderRadius: "8px", background: "#FDF7F5", font: "600 12.5px/1.2 Inter,system-ui,sans-serif", color: "#A93826", cursor: "pointer", whiteSpace: "nowrap" }}>
-              Sign out other sessions
-            </button>
-            <button onClick={v.closeModal} style={{ marginLeft: "auto", height: "36px", padding: "0 14px", border: "1px solid #E4E7E2", borderRadius: "8px", background: "#fff", font: "600 12.5px/1.2 Inter,system-ui,sans-serif", color: "#17201A", cursor: "pointer" }}>
-              Close
-            </button>
-          </div>
+              <span style={{ font: `400 11.5px/1.3 ${FONT}`, color: MUTED, textAlign: 'right' }}>Last active<br />{when(r.updated_at)}</span>
+            </div>
+          ))}
         </div>
-      </div>
-    </>
+      )}
+    </Modal>
   )
 }

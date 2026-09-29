@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
-import { categoryRecords, searchConsole } from '../data/searchIndex'
+import { categoryRecords, liveSearch, searchConsole } from '../data/searchIndex'
+import { isSupabaseConfigured } from '../lib/supabase'
 import { useCategories } from '../lib/categories'
 
 const font = (weight, size, line = 1.2) => `${weight} ${size}px/${line} Inter,system-ui,sans-serif`
@@ -17,7 +18,24 @@ export default function GlobalSearch({ v, placeholder, width, background = '#fff
   const input = useRef(null)
   const { rows: categories } = useCategories()
   const categoryIndex = useMemo(() => categoryRecords(categories), [categories])
-  const results = useMemo(() => searchConsole(query, categoryIndex), [query, categoryIndex])
+  // Live records for the query they were fetched for (debounced).
+  const [live, setLive] = useState({ q: '', rows: [] })
+  useEffect(() => {
+    const q = query.trim()
+    if (!isSupabaseConfigured || q.length < 2) return
+    let cancelled = false
+    const t = setTimeout(() => {
+      liveSearch(q).then((rows) => { if (!cancelled) setLive({ q, rows }) }, () => { if (!cancelled) setLive({ q, rows: [] }) })
+    }, 250)
+    return () => { cancelled = true; clearTimeout(t) }
+  }, [query])
+  const searching = isSupabaseConfigured && query.trim().length >= 2 && live.q !== query.trim()
+  const results = useMemo(() => {
+    const local = searchConsole(query, categoryIndex)
+    const liveRows = live.q === query.trim() ? live.rows : []
+    // Records first, then categories and pages.
+    return [...liveRows, ...local.filter((r) => r.group !== 'Pages'), ...local.filter((r) => r.group === 'Pages')]
+  }, [query, categoryIndex, live])
 
   useEffect(() => {
     if (!open) return
@@ -30,7 +48,8 @@ export default function GlobalSearch({ v, placeholder, width, background = '#fff
     setOpen(false)
     setQuery('')
     input.current?.blur()
-    v[r.go]()
+    if (r.open) r.open(v)
+    else v[r.go]()
   }
   const onKeyDown = (e) => {
     if (e.key === 'Escape') { setOpen(false); input.current?.blur() }
@@ -71,8 +90,11 @@ export default function GlobalSearch({ v, placeholder, width, background = '#fff
         <span className="ad-scroll" style={{ position: 'absolute', top: '40px', [align]: '0', zIndex: 80, width: '380px', maxHeight: '440px', overflowY: 'auto', background: '#fff', border: '1px solid #E4E7E2', borderRadius: '11px', boxShadow: '0 16px 38px rgba(16,24,16,.18)', display: 'flex', flexDirection: 'column', padding: '4px 0' }}>
           {results.length === 0 && (
             <span style={{ padding: '18px 14px', font: font(400, 12, 1.5), color: '#7C8A81' }}>
-              No results for “{query.trim()}”. Try an order ID, customer, driver, category or page.
+              {searching ? 'Searching…' : `No results for “${query.trim()}”. Try an order number, customer, product, driver, category or page.`}
             </span>
+          )}
+          {searching && results.length > 0 && (
+            <span style={{ padding: '6px 13px 2px', font: font(400, 11), color: '#7C8A81' }}>Searching orders, customers, products and drivers…</span>
           )}
           {results.map((r, i) => (
             <SearchRow key={r.group + r.title} r={r} first={i === 0 || results[i - 1].group !== r.group} active={i === active} onHover={() => setActive(i)} onPick={() => pick(r)} />

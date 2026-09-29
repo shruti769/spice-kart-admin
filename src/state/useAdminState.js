@@ -1,8 +1,11 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
-import { isSupabaseConfigured, supabase } from '../lib/supabase'
+import { authLinkType, isSupabaseConfigured, supabase } from '../lib/supabase'
 import { fetchIsAdmin } from '../lib/adminAuth'
+import { nextSignInStep } from '../lib/businessSettings'
+import { duplicateProduct, setProductPublished } from '../lib/products'
 
-const INITIAL_STATE = { page: 'login', modal: null, toast: '', catTab: 'products', rowMenu: null, store: 0, storeOpen: false }
+// Opened from an invite / password-reset email: start on the set-password screen.
+const INITIAL_STATE = { page: authLinkType ? 'forgot' : 'login', passwordMode: authLinkType ? 'set' : 'request', modal: null, toast: '', catTab: 'products', rowMenu: null }
 
 // Pages that "Back" returns to from a create/edit flow.
 const BACK_TO = { promonew: 'promo', bannernew: 'content', notifnew: 'notif', addproduct: 'catalogue', editproduct: 'catalogue' }
@@ -10,7 +13,7 @@ const BACK_TO = { promonew: 'promo', bannernew: 'content', notifnew: 'notif', ad
 // Display name for the signed-in admin, derived from their email:
 // "aarav.kapoor@…" -> "Aarav Kapoor" (AK), "test@…" -> "Test" (T).
 function userFromEmail(email) {
-  const words = email.split('@')[0].split(/[._+\-\s\d]+/).filter(Boolean)
+  const words = (email || '').split('@')[0].split(/[._+\-\s\d]+/).filter(Boolean)
   if (!words.length) return { name: 'Admin', firstName: 'Admin', initials: 'A' }
   const cap = (w) => w.charAt(0).toUpperCase() + w.slice(1).toLowerCase()
   return {
@@ -35,6 +38,26 @@ export function useAdminState() {
 
   useEffect(() => () => clearTimeout(toastTimer.current), [])
 
+  // Signed-in admin's name and role for the header / sidebar.
+  const onLoginPage = s.page === 'login'
+  useEffect(() => {
+    if (!isSupabaseConfigured || !s.authEmail || onLoginPage) return
+    let cancelled = false
+    supabase.auth.getUser().then(async ({ data }) => {
+      const id = data.user?.id
+      if (!id) return
+      const { data: row } = await supabase.from('admins').select('*').eq('user_id', id).maybeSingle()
+      if (!cancelled && row) setFullState((st) => ({ ...st, authName: row.name || null, authRole: row.role || null }))
+    })
+    return () => { cancelled = true }
+  }, [s.authEmail, onLoginPage])
+
+  const flash = useCallback((msg) => {
+    clearTimeout(toastTimer.current)
+    setState({ toast: msg })
+    toastTimer.current = setTimeout(() => setState({ toast: '' }), 2600)
+  }, [setState])
+
   // Restore a saved Supabase session: admins skip the login page. If the session later ends
   // (sign-out elsewhere, refresh token revoked) the console returns to the login page.
   useEffect(() => {
@@ -42,10 +65,25 @@ export function useAdminState() {
     let cancelled = false
     supabase.auth.getSession().then(async ({ data }) => {
       const sessionUser = data.session?.user
-      if (!sessionUser || cancelled) return
+      // The set-password screen continues the sign-in itself once the password is saved.
+      if (!sessionUser || cancelled || authLinkType) return
       try {
         const isAdmin = await fetchIsAdmin(sessionUser.id)
-        if (isAdmin && !cancelled) {
+        if (cancelled) return
+        if (!isAdmin) {
+          // e.g. a Google account that isn't in public.admins.
+          await supabase.auth.signOut()
+          flash(`${sessionUser.email} isn't an admin account`)
+          return
+        }
+        const step = await nextSignInStep()
+        if (cancelled) return
+        if (step.blocked) {
+          await supabase.auth.signOut()
+          flash(step.blocked)
+        } else if (step === 'mfa' || step === 'enroll') {
+          setState({ page: 'twofa', twofaMode: step, authEmail: sessionUser.email })
+        } else {
           setState((st) => (st.page === 'login' ? { page: 'dash', authEmail: sessionUser.email } : {}))
         }
       } catch {
@@ -53,23 +91,18 @@ export function useAdminState() {
       }
     })
     const { data: sub } = supabase.auth.onAuthStateChange((event) => {
-      if (event === 'SIGNED_OUT') setState((st) => (st.page === 'login' ? {} : { page: 'login', modal: null, rowMenu: null, storeOpen: false, editingProduct: null, actionProduct: null }))
+      if (event === 'SIGNED_OUT') setState((st) => (st.page === 'login' ? {} : { page: 'login', modal: null, rowMenu: null, editingProduct: null, actionProduct: null }))
     })
     return () => {
       cancelled = true
       sub.subscription.unsubscribe()
     }
-  }, [setState])
+  }, [setState, flash])
 
-  const go = (p) => setState({ page: p, modal: null, rowMenu: null, storeOpen: false })
+  const go = (p) => setState({ page: p, modal: null, rowMenu: null })
   const goBackModule = () => {
     const t = BACK_TO[s.page]
     if (t) go(t)
-  }
-  const flash = (msg) => {
-    clearTimeout(toastTimer.current)
-    setState({ toast: msg })
-    toastTimer.current = setTimeout(() => setState({ toast: '' }), 2600)
   }
 
   const active = {"orderdetail":"orders","addproduct":"catalogue","editproduct":"catalogue","proddetail":"catalogue","driver":"del","promonew":"promo","refunds":"pay","bannernew":"content","notifnew":"notif","notifcentre":"notif"}[s.page] || s.page;
@@ -141,7 +174,7 @@ export function useAdminState() {
   });
   // ---- row actions & dialogs ----
   // Generic (sample-data) modals: never tied to a real product row.
-  const openM = (k) => () => setState({ modal: k, rowMenu: null, storeOpen: false, actionProduct: null });
+  const openM = (k) => () => setState({ modal: k, rowMenu: null, actionProduct: null });
   v.openRowActions = openM('rowactions');
   v.openStatus = openM('status');
   v.openAssign = openM('assign');
@@ -173,10 +206,30 @@ export function useAdminState() {
   v.m_zones = s.modal === 'zones';
   v.m_editcustomer = s.modal === 'editcustomer';
   // ---- record actions from the row menu ----
-  v.viewRecord = () => { setState({ modal: null }); go('proddetail'); };
-  v.editRecord = () => { setState({ modal: null }); go('editproduct'); };
-  v.duplicateRecord = () => { setState({ modal: null }); flash('Duplicated as a draft · edit before publishing'); };
-  v.archiveRecord = () => { setState({ modal: null }); flash('Archived · sales history retained'); };
+  // Product detail reads `v.productId`; the row menu acts on `v.actionProduct` (a real products row).
+  v.openProduct = (rowOrId) => setState({ page: 'proddetail', productId: typeof rowOrId === 'string' ? rowOrId : rowOrId?.id ?? null, modal: null, rowMenu: null });
+  v.productId = s.productId || null;
+  v.viewRecord = () => setState((st) => ({ page: 'proddetail', productId: st.actionProduct?.id ?? st.productId ?? null, modal: null }));
+  v.editRecord = () => setState((st) => ({ page: 'editproduct', editingProduct: st.actionProduct ?? null, modal: null, actionProduct: null }));
+  v.duplicateRecord = async (row) => {
+    const p = isProductRow(row) ? row : s.actionProduct;
+    if (!p) return flash('Pick a product first');
+    setState({ modal: null });
+    try {
+      const copy = await duplicateProduct(p);
+      setState({ page: 'editproduct', editingProduct: copy, actionProduct: null });
+      flash('Duplicated as an unpublished draft · edit it before publishing');
+    } catch (e) { flash(e.message); }
+  };
+  v.archiveRecord = async (row) => {
+    const p = isProductRow(row) ? row : s.actionProduct;
+    if (!p) return flash('Pick a product first');
+    setState({ modal: null });
+    try {
+      await setProductPublished(p.id, !p.published);
+      flash(p.published ? 'Archived · hidden from the app, sales history kept' : 'Published · visible in the app again');
+    } catch (e) { flash(e.message); }
+  };
   // ---- alerts ----
   v.autoReassign = () => flash('4 orders reassigned · 2 drivers notified');
   v.notifyCustomers = () => flash('Delay notice sent to 4 customers');
@@ -185,33 +238,16 @@ export function useAdminState() {
   v.publishItem = () => { flash('Published and live in the app'); goBackModule(); };
   v.flash = flash;
   v.go = go;
-  v.saveSettings = () => flash('Settings saved for Spice Kart Australia');
+  v.saveSettings = () => flash('Nothing to save · no changes');
   v.discardChanges = () => flash('Changes discarded');
   v.previewApp = () => flash('Opening the customer app preview…');
   v.clearFilters = () => { setState({ modal: null, chips: { cho: [], chp: [], chi: [], cha: [], chs: [] } }); flash('Filters cleared'); };
   // ---- auth ----
-  v.nav_forgot = () => go('forgot');
-  v.recoveryCode = () => flash('Enter one of your 10 saved recovery codes');
-  v.sendReset = () => flash('Reset link emailed · expires in 30 minutes');
+  v.nav_forgot = () => setState({ page: 'forgot', passwordMode: 'request', modal: null, rowMenu: null });
+  v.passwordMode = s.passwordMode || 'request';
   v.toast_calling = () => { setState({ modal: null }); flash('Calling +61 412 663 208 from the store line…'); };
   v.toast_sms = () => { setState({ modal: null }); flash('SMS sent to the customer'); };
   v.toast_email = () => { setState({ modal: null }); flash('Email sent to the customer'); };
-  const STORE_NAMES = ['Collingwood store','Richmond store','Carlton store','South Yarra store','All stores'];
-  const si = s.store === undefined ? 0 : s.store;
-  v.storeOpen = !!s.storeOpen;
-  v.storeName = STORE_NAMES[si];
-  v.storeRot = s.storeOpen ? '270deg' : '90deg';
-  v.storeBd = s.storeOpen ? '#0B3D1F' : '#E4E7E2';
-  v.storeBg = s.storeOpen ? '#F1F9DF' : '#fff';
-  v.toggleStore = () => setState(st => ({ storeOpen: !st.storeOpen, rowMenu: null }));
-  for (let i = 0; i < 5; i++) {
-    const idx = i;
-    v['pickStore' + idx] = () => { setState({ store: idx, storeOpen: false }); flash('Switched to ' + STORE_NAMES[idx]); };
-    v['storeSel' + idx] = si === idx;
-    v['storeRowBg' + idx] = si === idx ? '#F7FCEE' : '#fff';
-    v['storeIconBg' + idx] = si === idx ? '#F1F9DF' : '#F6F7F4';
-    v['storeIconBd' + idx] = si === idx ? '#C7E88A' : '#E4E7E2';
-  }
   v.p_productform = (s.page === 'addproduct' || s.page === 'editproduct');
   // ---- real products (rows from Supabase `public.products`) ----
   // A product row, as opposed to a click event or nothing.
@@ -220,7 +256,7 @@ export function useAdminState() {
   v.editProduct = (row) => setState({ page: 'editproduct', editingProduct: isProductRow(row) ? row : null, modal: null, rowMenu: null, actionProduct: null });
   v.editingProduct = s.editingProduct || null;
   // Modals acting on one real product (row actions, delete, stock adjustment) read `v.actionProduct`.
-  v.openProductActions = (row) => setState({ modal: 'rowactions', actionProduct: isProductRow(row) ? row : null, rowMenu: null, storeOpen: false });
+  v.openProductActions = (row) => setState({ modal: 'rowactions', actionProduct: isProductRow(row) ? row : null, rowMenu: null });
   v.openDeleteProduct = (row) => setState({ modal: 'delete', actionProduct: isProductRow(row) ? row : null, rowMenu: null });
   v.openStockAdjust = (row) => setState({ modal: 'stockadj', actionProduct: isProductRow(row) ? row : null, rowMenu: null });
   v.actionProduct = s.actionProduct || null;
@@ -330,31 +366,41 @@ export function useAdminState() {
   v.nav_proddetail = () => go('proddetail');
   v.nav_custdetail = () => go('custdetail');
   v.nav_driver = () => go('driver');
+  // Detail pages read the Supabase id: v.custId (customers.id) / v.driverId (drivers.id).
+  const idOf = (x) => (typeof x === 'string' ? x : x && typeof x === 'object' && typeof x.id === 'string' ? x.id : null);
+  v.openCustomer = (rowOrId) => setState({ page: 'custdetail', custId: idOf(rowOrId), modal: null, rowMenu: null });
+  v.custId = s.custId || null;
+  v.openDriver = (rowOrId) => setState({ page: 'driver', driverId: idOf(rowOrId), modal: null, rowMenu: null });
+  v.driverId = s.driverId || null;
   v.nav_refunds = () => go('refunds');
   v.nav_login = () => go('login');
-  v.openOrder = () => go('orderdetail');
+  // Order detail reads `v.orderId` (a Supabase orders.id); without one it shows a pointer back to Orders.
+  v.openOrder = (row) => setState({ page: 'orderdetail', orderId: row && typeof row === 'object' && typeof row.id === 'string' ? row.id : null, modal: null, rowMenu: null });
+  v.orderId = s.orderId || null;
   // Coupons (Supabase `public.coupons`): NewPromotion reads `v.editingCoupon` (null → create).
   const isCouponRow = (row) => !!row && typeof row === 'object' && typeof row.id === 'string' && 'discount_type' in row;
-  v.openPromoNew = () => setState({ page: 'promonew', editingCoupon: null, modal: null, rowMenu: null, storeOpen: false });
+  v.openPromoNew = () => setState({ page: 'promonew', editingCoupon: null, modal: null, rowMenu: null });
   v.nav_newpromo = v.openPromoNew;
-  v.editCoupon = (row) => setState({ page: 'promonew', editingCoupon: isCouponRow(row) ? row : null, modal: null, rowMenu: null, storeOpen: false });
+  v.editCoupon = (row) => setState({ page: 'promonew', editingCoupon: isCouponRow(row) ? row : null, modal: null, rowMenu: null });
   v.editingCoupon = s.editingCoupon || null;
   v.couponDone = () => setState({ page: 'promo', editingCoupon: null, modal: null, rowMenu: null });
   // Banners (Supabase `public.banners`): NewBanner reads `v.editingBanner` (null → create).
   const isBannerRow = (row) => !!row && typeof row === 'object' && typeof row.id === 'string' && 'placement' in row;
-  v.openBannerNew = () => setState({ page: 'bannernew', editingBanner: null, modal: null, rowMenu: null, storeOpen: false });
-  v.editBanner = (row) => setState({ page: 'bannernew', editingBanner: isBannerRow(row) ? row : null, modal: null, rowMenu: null, storeOpen: false });
+  v.openBannerNew = () => setState({ page: 'bannernew', editingBanner: null, modal: null, rowMenu: null });
+  v.editBanner = (row) => setState({ page: 'bannernew', editingBanner: isBannerRow(row) ? row : null, modal: null, rowMenu: null });
   v.editingBanner = s.editingBanner || null;
   v.bannerDone = () => setState({ page: 'content', editingBanner: null, modal: null, rowMenu: null });
   // Push campaigns (Supabase `public.push_campaigns`): NewNotification reads `v.editingCampaign` (null → create).
   const isCampaignRow = (row) => !!row && typeof row === 'object' && typeof row.id === 'string' && 'audience' in row;
-  v.openNotifNew = () => setState({ page: 'notifnew', editingCampaign: null, modal: null, rowMenu: null, storeOpen: false });
-  v.editCampaign = (row) => setState({ page: 'notifnew', editingCampaign: isCampaignRow(row) ? row : null, modal: null, rowMenu: null, storeOpen: false });
+  v.openNotifNew = () => setState({ page: 'notifnew', editingCampaign: null, modal: null, rowMenu: null });
+  v.editCampaign = (row) => setState({ page: 'notifnew', editingCampaign: isCampaignRow(row) ? row : null, modal: null, rowMenu: null });
   v.editingCampaign = s.editingCampaign || null;
   v.campaignDone = () => setState({ page: 'notif', editingCampaign: null, modal: null, rowMenu: null });
   // Auth: Login.jsx signs in with Supabase and checks `public.admins`, then calls signedIn.
-  const authEmail = s.authEmail || 'aarav.kapoor@spicekart.com.au';
-  const user = userFromEmail(authEmail);
+  const authEmail = s.authEmail || '';
+  // Name and role from Staff & Admins (public.admins) once loaded; the email is the fallback.
+  const user = s.authName ? userFromEmail(s.authName.replace(/\s+/g, '.') + '@x') : userFromEmail(authEmail);
+  v.userRole = s.authRole || 'Admin';
   v.authEmail = authEmail;
   v.userName = user.name;
   v.userFirstName = user.firstName;
@@ -364,13 +410,14 @@ export function useAdminState() {
     go('dash');
     flash(`Signed in as ${userFromEmail(email || authEmail).name} · Admin`);
   };
-  v.ssoUnavailable = () => flash('Google SSO is not enabled yet · sign in with your email and password');
-  v.verify2fa = () => { go('dash'); flash(`Signed in as ${user.name} · Super Admin`); };
+  // After password / Google sign-in when a code (or 2FA set-up) is needed: TwoFactor reads v.twofaMode.
+  v.startTwoFactor = (mode, email) => setState({ page: 'twofa', twofaMode: mode, authEmail: email || authEmail });
+  v.twofaMode = s.twofaMode || 'mfa';
   v.authError = (msg) => flash(msg);
   v.logout = async () => {
     let error = null;
     if (isSupabaseConfigured) ({ error } = await supabase.auth.signOut());
-    setState({ page: 'login', modal: null, rowMenu: null, storeOpen: false, catTab: 'products', tabs: {}, ranges: {}, chips: {}, store: 0, editingProduct: null, actionProduct: null, editingCoupon: null, editingBanner: null, editingCampaign: null });
+    setState({ page: 'login', modal: null, rowMenu: null, catTab: 'products', tabs: {}, ranges: {}, chips: {}, editingProduct: null, actionProduct: null, editingCoupon: null, editingBanner: null, editingCampaign: null, authName: null, authRole: null });
     flash(error ? `Signed out locally · ${error.message}` : 'Signed out of the operations console');
   };
   v.openCancel = () => setState({ modal: 'cancel' });
@@ -396,7 +443,6 @@ export function useAdminState() {
   v.m_catedit = s.modal === 'catedit';
   v.toast_saved = () => flash('Changes saved successfully');
   v.toast_export = () => flash('Export started · CSV will be emailed to you');
-  v.toast_help = () => flash('Support: it@spicekart.com.au · 1800 774 235');
   v.toast_notif = () => go('notifcentre');
   v.hideToast = () => setState({ toast: '' });
   v.toast = s.toast;

@@ -1,6 +1,7 @@
 import { useMemo, useState } from 'react'
 import OfferTilesCard from '../components/OfferTilesCard'
 import { useCategoryNames } from '../lib/categories'
+import { downloadCsv, fileDate } from '../lib/customers'
 import {
   STATUS_PILL, couponStatus, deleteCoupon, discountSummary, minSpendLabel, periodLabel, periodTitle, setCouponActive, typeLabel, useCoupons,
 } from '../lib/coupons'
@@ -76,6 +77,24 @@ export default function Promotions({ v }) {
     (!tabStatus || status === tabStatus)
     && (!q || [c.code, c.title, c.description].some((s) => (s || '').toLowerCase().includes(q)))
   ))
+
+  // Real CSV of the coupons this view lists (tab + search).
+  const exportCsv = () => {
+    if (coupons.status !== 'ready' && !total) return v.flash('Coupons are still loading')
+    if (!shown.length) return v.flash('No coupons to export in this view')
+    const when = (iso) => (iso ? new Date(iso).toLocaleString('en-AU') : '')
+    const amount = (n) => (n == null || n === '' ? '' : Number(n).toFixed(2))
+    downloadCsv(`coupons-${fileDate()}.csv`,
+      ['Code', 'Title', 'Description', 'Type', 'Value', 'Max discount (AUD)', 'Min spend (AUD)', 'Applies to', 'Starts', 'Ends', 'Status', 'Created'],
+      shown.map(({ c, status }) => [
+        c.code, c.title, c.description, typeLabel(c.discount_type),
+        c.discount_type === 'free_delivery' ? '' : c.discount_type === 'percent' ? `${Number(c.value)}%` : amount(c.value),
+        amount(c.max_discount), amount(c.min_spend),
+        c.category_id ? categoryNames[c.category_id] || c.category_id : 'All products',
+        when(c.starts_at), when(c.ends_at), STATUS_PILL[status][0], when(c.created_at),
+      ]))
+    v.flash(`Exported ${shown.length} coupon${shown.length === 1 ? '' : 's'} to CSV`)
+  }
 
   const closeMenu = () => { setMenu(null); setConfirmDeleteId(null) }
   const openMenu = (e, id) => {
@@ -222,7 +241,7 @@ export default function Promotions({ v }) {
               style={{ flex: "1", minWidth: "0", height: "32px", border: "0", outline: "none", background: "transparent", padding: "0", font: "400 12.5px/1.2 Inter,system-ui,sans-serif", color: "#17201A" }}
             />
           </span>
-          <button className="hv1" onClick={v.toast_export} style={{ display: "flex", alignItems: "center", gap: "7px", height: "34px", padding: "0 12px", border: "1px solid #E4E7E2", borderRadius: "8px", background: "#fff", color: "#17201A", font: "600 12.5px/1.2 Inter,system-ui,sans-serif", cursor: "pointer", whiteSpace: "nowrap" }}>
+          <button className="hv1" onClick={exportCsv} title="Download the coupons in this view as CSV" style={{ display: "flex", alignItems: "center", gap: "7px", height: "34px", padding: "0 12px", border: "1px solid #E4E7E2", borderRadius: "8px", background: "#fff", color: "#17201A", font: "600 12.5px/1.2 Inter,system-ui,sans-serif", cursor: "pointer", whiteSpace: "nowrap" }}>
             <svg width="15" height="15" viewBox="0 0 20 20" fill="none" style={{ flex: "none" }}>
               <path d="M10 3.6v9M6.4 9.2L10 12.8l3.6-3.6M3.6 16.4h12.8" stroke="#4A564E" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
             </svg>

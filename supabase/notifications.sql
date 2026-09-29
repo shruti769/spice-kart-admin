@@ -262,10 +262,17 @@ grant execute on function public.campaign_reach(text, text) to authenticated;
 /** Fans a campaign out to its audience's inboxes and marks it sent. */
 create or replace function public.dispatch_campaign(p_id uuid) returns int
 language plpgsql security definer set search_path = public as $$
-declare c public.push_campaigns; n int;
+declare c public.push_campaigns; n int; allowed boolean;
 begin
   select * into c from public.push_campaigns where id = p_id for update;
   if c.id is null or c.status in ('sent', 'cancelled') then return 0; end if;
+  -- Settings → Notifications → Promotional push (business_settings.sql; dynamic so this file runs first).
+  if c.type = 'promotional' and to_regproc('public.promo_push_allowed') is not null then
+    execute 'select public.promo_push_allowed()' into allowed;
+    if not allowed then
+      raise exception 'Promotional notifications are turned off in Settings → Notifications' using errcode = 'P0001';
+    end if;
+  end if;
   insert into public.customer_notifications (customer_id, campaign_id, kind, title, body, link)
   select a, c.id, c.type, c.title, c.message, c.link from public.campaign_audience(c.audience, c.type) a;
   get diagnostics n = row_count;
@@ -324,9 +331,14 @@ end $$;
 /** Asks the send-push Edge Function to deliver pending rows (no-op until the Vault secrets exist). */
 create or replace function public.kick_push_sender() returns void
 language plpgsql security definer set search_path = public as $$
-declare base text; secret text;
+declare base text; secret text; has_messages boolean;
 begin
-  if not exists (select 1 from public.customer_notifications where push_status = 'pending') then return; end if;
+  if not exists (select 1 from public.customer_notifications where push_status = 'pending') then
+    -- Queued emails / SMS / Slack messages (business_settings.sql) go through the same function.
+    if to_regclass('public.outbound_messages') is null then return; end if;
+    execute 'select exists (select 1 from public.outbound_messages where status = ''pending'')' into has_messages;
+    if not has_messages then return; end if;
+  end if;
   begin
     select decrypted_secret into base   from vault.decrypted_secrets where name = 'project_url';
     select decrypted_secret into secret from vault.decrypted_secrets where name = 'push_dispatch_secret';
@@ -372,7 +384,13 @@ language plpgsql security definer set search_path = public as $$
 declare c uuid;
 begin
   for c in select id from public.push_campaigns where status = 'scheduled' and scheduled_at <= now() order by scheduled_at loop
-    perform public.dispatch_campaign(c);
+    begin
+      perform public.dispatch_campaign(c);
+    exception when others then
+      -- e.g. promotional push switched off: keep it scheduled and tell the admins.
+      perform public.raise_alert('campaign:blocked:' || c, 'system', 'warning', 'A scheduled campaign couldn’t be sent',
+        sqlerrm || '. It stays scheduled and goes out once that’s fixed.', 'notif', 'View campaigns');
+    end;
   end loop;
   -- Rows claimed by a run that died are retried.
   update public.customer_notifications set push_status = 'pending', push_claimed_at = null

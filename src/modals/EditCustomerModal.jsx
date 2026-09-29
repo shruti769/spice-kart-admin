@@ -1,102 +1,96 @@
-export default function EditCustomerModal({ v }) {
+import { useState } from 'react'
+import { Modal } from '../components/content/ui'
+import { FONT, MUTED, btnPrimary, btnSecondary, errorText, hintText, inputStyle, labelStyle, withError } from '../components/content/styles'
+import { monthYear, parseMobile, updateCustomer } from '../lib/customers'
+import { customerName } from '../lib/orders'
+
+const EMAIL = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
+
+/** Edit a customer's name, email and mobile. Props: `customer` (customer_stats row), `onClose`, `onSaved`, `flash`. */
+export default function EditCustomerModal({ customer, onClose, onSaved, flash }) {
+  if (!customer || !onClose) return null
+  return <EditCustomerForm key={customer.id} customer={customer} onClose={onClose} onSaved={onSaved} flash={flash} />
+}
+
+function EditCustomerForm({ customer, onClose, onSaved, flash }) {
+  const [form, setForm] = useState(() => ({
+    first_name: customer.first_name ?? '',
+    last_name: customer.last_name ?? '',
+    email: customer.email ?? '',
+    mobile: customer.mobile ?? '',
+  }))
+  const [busy, setBusy] = useState(false)
+  const [error, setError] = useState('')
+  const [tried, setTried] = useState(false)
+  const set = (k) => (e) => setForm((f) => ({ ...f, [k]: e.target.value }))
+
+  const mobile = parseMobile(form.mobile)
+  const errs = {
+    first_name: form.first_name.trim().length > 60 ? 'Up to 60 characters' : '',
+    last_name: form.last_name.trim().length > 60 ? 'Up to 60 characters' : '',
+    email: form.email.trim() && !EMAIL.test(form.email.trim()) ? 'Enter a valid email' : '',
+    mobile: mobile === null ? 'Enter an Australian mobile, e.g. 0412 345 678' : '',
+  }
+  if (!form.first_name.trim() && !form.last_name.trim()) errs.first_name = 'Enter a name'
+  const invalid = Object.values(errs).some(Boolean)
+
+  const save = async () => {
+    setTried(true)
+    if (invalid || busy) return
+    setBusy(true)
+    setError('')
+    try {
+      await updateCustomer(customer.id, { ...form, mobile })
+      flash?.('Customer details saved')
+      onSaved?.()
+      onClose()
+    } catch (e) {
+      setError(e.message)
+      setBusy(false)
+    }
+  }
+
+  const field = (k, label, props = {}) => (
+    <label style={{ display: 'flex', flexDirection: 'column', gap: '6px', minWidth: '0' }}>
+      <span style={labelStyle}>{label}</span>
+      <input value={form[k]} onChange={set(k)} disabled={busy} style={withError(inputStyle, tried && errs[k])} {...props} />
+      {tried && errs[k] && <span style={errorText}>{errs[k]}</span>}
+    </label>
+  )
+
   return (
-    <>
-      <div onClick={v.closeModal} style={{ position: "absolute", inset: "0", zIndex: "90", background: "rgba(14,22,16,.45)", display: "flex", alignItems: "center", justifyContent: "center", padding: "40px" }}>
-        <div style={{ width: "520px", maxWidth: "100%", background: "#fff", borderRadius: "14px", boxShadow: "0 26px 60px rgba(10,18,12,.3)", overflow: "hidden", display: "flex", flexDirection: "column" }}>
-          <div style={{ padding: "16px 18px 14px", display: "flex", alignItems: "flex-start", gap: "11px", borderBottom: "1px solid #EFF1ED" }}>
-            <span style={{ width: "34px", height: "34px", borderRadius: "9px", background: "#F1F9DF", display: "flex", alignItems: "center", justifyContent: "center", flex: "none" }}>
-              <svg width="17" height="17" viewBox="0 0 20 20" fill="none" style={{ flex: "none" }}>
-                <circle cx="10" cy="7.4" r="3" stroke="#0B3D1F" strokeWidth="1.5" />
-                <path d="M4.6 16.5c.9-3 3-4.3 5.4-4.3s4.5 1.3 5.4 4.3" stroke="#0B3D1F" strokeWidth="1.5" strokeLinecap="round" />
-              </svg>
+    <Modal
+      width={520}
+      busy={busy}
+      onClose={onClose}
+      title={(
+        <span style={{ display: 'flex', alignItems: 'flex-start', gap: '11px' }}>
+          <span style={{ width: '34px', height: '34px', borderRadius: '9px', background: '#F1F9DF', display: 'flex', alignItems: 'center', justifyContent: 'center', flex: 'none' }}>
+            <svg width="17" height="17" viewBox="0 0 20 20" fill="none"><circle cx="10" cy="7.4" r="3" stroke="#0B3D1F" strokeWidth="1.5" /><path d="M4.6 16.5c.9-3 3-4.3 5.4-4.3s4.5 1.3 5.4 4.3" stroke="#0B3D1F" strokeWidth="1.5" strokeLinecap="round" /></svg>
+          </span>
+          <span style={{ display: 'flex', flexDirection: 'column', gap: '4px', minWidth: '0' }}>
+            <span>Edit customer</span>
+            <span style={{ font: `400 11.5px/1.55 ${FONT}`, color: MUTED }}>
+              {customerName(customer)} · customer since {monthYear(customer.created_at)}. Changes show in the app straight away.
             </span>
-            <span style={{ display: "flex", flexDirection: "column", gap: "4px", minWidth: "0" }}>
-              <span style={{ font: "700 15px/1.2 Inter,system-ui,sans-serif", color: "#17201A" }}>Edit customer</span>
-              <span style={{ font: "400 11.5px/1.55 Inter,system-ui,sans-serif", color: "#7C8A81" }}>
-                John Smith · #CU-20418 · customer since March 2026. Changes sync to the app immediately.
-              </span>
-            </span>
-          </div>
-          <div style={{ padding: "15px 18px", display: "flex", flexDirection: "column", gap: "12px" }}>
-            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "11px" }}>
-              <span style={{ display: "flex", flexDirection: "column", gap: "6px" }}>
-                <span style={{ font: "600 10.5px/1.2 Inter,system-ui,sans-serif", letterSpacing: ".4px", color: "#7C8A81", textTransform: "uppercase", whiteSpace: "nowrap" }}>
-                  FIRST NAME
-                </span>
-                <span style={{ display: "flex", alignItems: "center", height: "36px", padding: "0 11px", border: "1px solid #E4E7E2", borderRadius: "8px", background: "#fff", font: "500 12.5px/1.2 Inter,system-ui,sans-serif", color: "#17201A", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
-                  John
-                </span>
-              </span>
-              <span style={{ display: "flex", flexDirection: "column", gap: "6px" }}>
-                <span style={{ font: "600 10.5px/1.2 Inter,system-ui,sans-serif", letterSpacing: ".4px", color: "#7C8A81", textTransform: "uppercase", whiteSpace: "nowrap" }}>
-                  LAST NAME
-                </span>
-                <span style={{ display: "flex", alignItems: "center", height: "36px", padding: "0 11px", border: "1px solid #E4E7E2", borderRadius: "8px", background: "#fff", font: "500 12.5px/1.2 Inter,system-ui,sans-serif", color: "#17201A", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
-                  Smith
-                </span>
-              </span>
-              <span style={{ display: "flex", flexDirection: "column", gap: "6px" }}>
-                <span style={{ font: "600 10.5px/1.2 Inter,system-ui,sans-serif", letterSpacing: ".4px", color: "#7C8A81", textTransform: "uppercase", whiteSpace: "nowrap" }}>
-                  EMAIL
-                </span>
-                <span style={{ display: "flex", alignItems: "center", height: "36px", padding: "0 11px", border: "1px solid #E4E7E2", borderRadius: "8px", background: "#fff", font: "500 12.5px/1.2 Inter,system-ui,sans-serif", color: "#17201A", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
-                  john.smith@outlook.com.au
-                </span>
-              </span>
-              <span style={{ display: "flex", flexDirection: "column", gap: "6px" }}>
-                <span style={{ font: "600 10.5px/1.2 Inter,system-ui,sans-serif", letterSpacing: ".4px", color: "#7C8A81", textTransform: "uppercase", whiteSpace: "nowrap" }}>
-                  MOBILE
-                </span>
-                <span style={{ display: "flex", alignItems: "center", height: "36px", padding: "0 11px", border: "1px solid #E4E7E2", borderRadius: "8px", background: "#fff", font: "500 12.5px/1.2 Inter,system-ui,sans-serif", color: "#17201A", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
-                  +61 412 663 208
-                </span>
-              </span>
-              <span style={{ display: "flex", flexDirection: "column", gap: "6px" }}>
-                <span style={{ font: "600 10.5px/1.2 Inter,system-ui,sans-serif", letterSpacing: ".4px", color: "#7C8A81", textTransform: "uppercase", whiteSpace: "nowrap" }}>
-                  DEFAULT ADDRESS
-                </span>
-                <span style={{ display: "flex", alignItems: "center", height: "36px", padding: "0 11px", border: "1px solid #E4E7E2", borderRadius: "8px", background: "#fff", font: "500 12.5px/1.2 Inter,system-ui,sans-serif", color: "#17201A", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
-                  12/240 Collins Street, Melbourne
-                </span>
-              </span>
-              <span style={{ display: "flex", flexDirection: "column", gap: "6px" }}>
-                <span style={{ font: "600 10.5px/1.2 Inter,system-ui,sans-serif", letterSpacing: ".4px", color: "#7C8A81", textTransform: "uppercase", whiteSpace: "nowrap" }}>
-                  CUSTOMER TIER
-                </span>
-                <span style={{ display: "flex", alignItems: "center", height: "36px", padding: "0 11px", border: "1px solid #E4E7E2", borderRadius: "8px", background: "#fff", font: "500 12.5px/1.2 Inter,system-ui,sans-serif", color: "#17201A", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
-                  Loyal · 24 orders
-                </span>
-              </span>
-            </div>
-            <span style={{ display: "flex", flexDirection: "column", gap: "7px" }}>
-              <span style={{ font: "600 10.5px/1.2 Inter,system-ui,sans-serif", letterSpacing: ".4px", color: "#7C8A81", textTransform: "uppercase", whiteSpace: "nowrap" }}>
-                INTERNAL NOTE
-              </span>
-              <span style={{ display: "block", minHeight: "52px", padding: "10px 11px", border: "1px solid #E4E7E2", borderRadius: "8px", background: "#fff", font: "400 12px/1.6 Inter,system-ui,sans-serif", color: "#4A564E" }}>
-                Prefers contactless drop at the concierge desk. Has had two missing-item refunds — check packing.
-              </span>
-            </span>
-            <span style={{ display: "flex", alignItems: "center", gap: "9px", padding: "10px 11px", borderRadius: "8px", background: "#F6F7F4", border: "1px solid #E4E7E2" }}>
-              <span style={{ width: "19px", height: "19px", borderRadius: "5px", background: "#8BE000", display: "flex", alignItems: "center", justifyContent: "center", flex: "none" }}>
-                <svg width="13" height="13" viewBox="0 0 20 20" fill="none" style={{ flex: "none" }}>
-                  <path d="M4.6 10.4l3.4 3.4 7.4-7.4" stroke="#0B3D1F" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
-                </svg>
-              </span>
-              <span style={{ font: "500 11.5px/1.2 Inter,system-ui,sans-serif", color: "#17201A", whiteSpace: "nowrap" }}>Notify the customer that their details changed</span>
-            </span>
-          </div>
-          <div style={{ padding: "13px 18px 16px", display: "flex", alignItems: "center", gap: "9px", borderTop: "1px solid #EFF1ED", background: "#F6F7F4" }}>
-            <span style={{ marginLeft: "auto", display: "flex", gap: "9px" }}>
-              <button onClick={v.closeModal} style={{ height: "36px", padding: "0 14px", border: "1px solid #E4E7E2", borderRadius: "8px", background: "#fff", font: "600 12.5px/1.2 Inter,system-ui,sans-serif", color: "#17201A", cursor: "pointer", whiteSpace: "nowrap" }}>
-                Cancel
-              </button>
-              <button onClick={v.confirmModal} style={{ height: "36px", padding: "0 15px", border: "0", borderRadius: "8px", background: "#0B3D1F", color: "#fff", font: "600 12.5px/1.2 Inter,system-ui,sans-serif", cursor: "pointer", whiteSpace: "nowrap" }}>
-                Save customer
-              </button>
-            </span>
-          </div>
-        </div>
+          </span>
+        </span>
+      )}
+      footer={(
+        <span style={{ marginLeft: 'auto', display: 'flex', gap: '9px' }}>
+          <button type="button" onClick={onClose} disabled={busy} style={btnSecondary}>Cancel</button>
+          <button type="button" onClick={save} disabled={busy} style={{ ...btnPrimary, opacity: busy ? 0.6 : 1 }}>{busy ? 'Saving…' : 'Save customer'}</button>
+        </span>
+      )}
+    >
+      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '11px' }}>
+        {field('first_name', 'First name', { autoFocus: true, maxLength: 60 })}
+        {field('last_name', 'Last name', { maxLength: 60 })}
+        {field('email', 'Email', { type: 'email', maxLength: 254 })}
+        {field('mobile', 'Mobile', { inputMode: 'tel', placeholder: '0412 345 678' })}
       </div>
-    </>
+      <span style={hintText}>This updates their profile only · it doesn’t change the email or number they sign in with.</span>
+      {error && <span style={{ ...errorText, font: `500 12px/1.4 ${FONT}` }}>{error}</span>}
+    </Modal>
   )
 }

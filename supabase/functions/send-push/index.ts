@@ -4,8 +4,13 @@
 // Expo Push API (which forwards to FCM / APNs). Called every minute by public.notifications_tick()
 // (pg_cron + pg_net) and straight after "Send now" / an order status change.
 //
+// It also delivers public.outbound_messages (business_settings.sql): order-confirmation emails
+// (Resend), delivery SMS (Twilio), Slack low-stock alerts (incoming webhook) and the daily digest.
+//
 // Auth: the `x-dispatch-secret` header must equal the DISPATCH_SECRET function secret.
-// Env (set with `supabase secrets set`): DISPATCH_SECRET, optional EXPO_ACCESS_TOKEN.
+// Env (set with `supabase secrets set`): DISPATCH_SECRET, optional EXPO_ACCESS_TOKEN,
+//   RESEND_API_KEY + RESEND_FROM (e.g. "Spice Kart <orders@yourdomain.com.au>") for email,
+//   TWILIO_ACCOUNT_SID + TWILIO_AUTH_TOKEN + TWILIO_FROM (e.g. +61…) for SMS.
 // SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY are provided by Supabase automatically.
 //
 // Deploy: supabase functions deploy send-push --no-verify-jwt --project-ref <ref>
@@ -41,6 +46,69 @@ async function mark(ids: number[], push_status: string, push_error: string | nul
   if (!ids.length) return
   const { error } = await db.from('customer_notifications').update({ push_status, push_error }).in('id', ids)
   if (error) throw error
+}
+
+// ─── Email / SMS / Slack ─────────────────────────────────────────────────────────────────
+type Message = { id: number; channel: 'email' | 'sms' | 'slack'; recipient: string; subject: string | null; body: string }
+
+async function deliver(m: Message): Promise<void> {
+  if (m.channel === 'slack') {
+    const res = await fetch(m.recipient, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ text: m.body }) })
+    if (!res.ok) throw new Error(`Slack ${res.status}: ${(await res.text()).slice(0, 200)}`)
+    return
+  }
+  if (m.channel === 'email') {
+    const key = Deno.env.get('RESEND_API_KEY'), from = Deno.env.get('RESEND_FROM')
+    if (!key || !from) throw new Error('Email provider not set up · add RESEND_API_KEY and RESEND_FROM to the function secrets')
+    const res = await fetch('https://api.resend.com/emails', {
+      method: 'POST',
+      headers: { Authorization: `Bearer ${key}`, 'Content-Type': 'application/json' },
+      body: JSON.stringify({ from, to: [m.recipient], subject: m.subject ?? 'Spice Kart', text: m.body }),
+    })
+    if (!res.ok) throw new Error(`Resend ${res.status}: ${(await res.text()).slice(0, 200)}`)
+    return
+  }
+  const sid = Deno.env.get('TWILIO_ACCOUNT_SID'), token = Deno.env.get('TWILIO_AUTH_TOKEN'), from = Deno.env.get('TWILIO_FROM')
+  if (!sid || !token || !from) throw new Error('SMS provider not set up · add TWILIO_ACCOUNT_SID, TWILIO_AUTH_TOKEN and TWILIO_FROM to the function secrets')
+  const res = await fetch(`https://api.twilio.com/2010-04-01/Accounts/${sid}/Messages.json`, {
+    method: 'POST',
+    headers: { Authorization: `Basic ${btoa(`${sid}:${token}`)}`, 'Content-Type': 'application/x-www-form-urlencoded' },
+    body: new URLSearchParams({ To: m.recipient, From: from, Body: m.body }),
+  })
+  if (!res.ok) throw new Error(`Twilio ${res.status}: ${(await res.text()).slice(0, 200)}`)
+}
+
+/** Delivers queued outbound messages; returns [sent, failed]. */
+async function sendMessages(): Promise<[number, number]> {
+  let sent = 0, failed = 0
+  for (let round = 0; round < 10; round++) {
+    const { data, error } = await db.rpc('claim_pending_messages', { p_limit: 100 })
+    if (error) {
+      // business_settings.sql not run yet: nothing to do.
+      if (/claim_pending_messages/.test(error.message)) return [sent, failed]
+      throw error
+    }
+    if (!data?.length) break
+    for (const m of data as Message[]) {
+      try {
+        await deliver(m)
+        await db.from('outbound_messages').update({ status: 'sent', sent_at: new Date().toISOString(), error: null }).eq('id', m.id)
+        sent++
+      } catch (e) {
+        await db.from('outbound_messages').update({ status: 'failed', error: String((e as Error).message).slice(0, 300) }).eq('id', m.id)
+        failed++
+      }
+    }
+    if (data.length < 100) break
+  }
+  if (failed) {
+    await db.rpc('raise_alert_service', {
+      p_key: 'messages:failed',
+      p_title: `${failed} email / SMS / Slack message${failed === 1 ? '' : 's'} failed to send`,
+      p_body: 'Check the provider keys in the send-push function secrets. Details are in Settings → Notifications.',
+    })
+  }
+  return [sent, failed]
 }
 
 Deno.serve(async (req) => {
@@ -127,5 +195,6 @@ Deno.serve(async (req) => {
     })
   }
 
-  return json({ processed, sent, failed, skipped, removedTokens: deadTokens.size })
+  const [messagesSent, messagesFailed] = await sendMessages()
+  return json({ processed, sent, failed, skipped, removedTokens: deadTokens.size, messagesSent, messagesFailed })
 })

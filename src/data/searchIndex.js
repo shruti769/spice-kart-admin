@@ -1,45 +1,6 @@
-// Records shown across the console, collected for the global search.
-// `go` names the view-model handler that opens the matching screen.
-
-const ORDERS = [
-  ['#SK10482', 'John Smith', '8 items · $84.50 · Express', 'Preparing'],
-  ['#SK10481', 'Priya Nair', '12 items · $132.20 · Express', 'Out for Delivery'],
-  ['#SK10480', 'Liam O’Brien', '4 items · $36.90 · Scheduled', 'Confirmed'],
-  ['#SK10479', 'Mei Chen', '9 items · $97.40 · Express', 'Delivered'],
-  ['#SK10478', 'Daniel Cruz', '3 items · $24.50 · Scheduled', 'Cancelled'],
-  ['#SK10477', 'Ava Thompson', '15 items · $164.80 · Express', 'Delivered'],
-  ['#SK10476', 'Rohit Sharma', '6 items · $58.20 · Scheduled', 'Ready'],
-  ['#SK10475', 'Emily Nguyen', '11 items · $118.60 · Express', 'Delivered'],
-].map(([id, customer, detail, status]) => ({
-  group: 'Orders', title: `${id} · ${customer}`, subtitle: detail, meta: status, badge: 'OR', go: 'openOrder',
-}))
-
-const CUSTOMERS = [
-  ['John Smith', 'john.smith@outlook.com.au', '+61 412 663 208', 24],
-  ['Priya Nair', 'priya.nair@gmail.com', '+61 431 908 552', 38],
-  ['Liam O’Brien', 'liam.obrien@bigpond.com', '+61 402 771 340', 12],
-  ['Mei Chen', 'mei.chen@icloud.com', '+61 466 220 118', 52],
-  ['Daniel Cruz', 'dcruz@hotmail.com', '+61 419 553 907', 3],
-  ['Ava Thompson', 'ava.t@gmail.com', '+61 421 664 802', 29],
-  ['Rohit Sharma', 'rohit.sharma@gmail.com', '+61 438 112 664', 17],
-].map(([name, email, phone, orders]) => ({
-  group: 'Customers', title: name, subtitle: `${email} · ${phone}`, meta: `${orders} orders`,
-  keywords: `${phone.replace(/\s/g, '')} obrien`, badge: initials(name), go: 'nav_custdetail',
-}))
-
-const DRIVERS = [
-  ['Michael Ryan', '+61 412 887 001', 'Melbourne CBD', 'Delivering'],
-  ['Sofia Almeida', '+61 431 220 664', 'Fitzroy', 'Delivering'],
-  ['Tom Fletcher', '+61 402 118 559', 'Carlton', 'Delayed'],
-  ['Aisha Khan', '+61 466 773 210', 'South Yarra', 'Delivering'],
-  ['Jay Patel', '+61 419 664 803', 'Richmond', 'Delayed'],
-  ['Chloe Baker', '+61 438 002 176', 'Melbourne CBD', 'Available'],
-  ['Noah Brooks', '+61 427 118 903', 'Fitzroy', 'Available'],
-  ['Ruby Carter', '+61 414 552 018', '—', 'Offline'],
-].map(([name, phone, zone, status]) => ({
-  group: 'Drivers', title: name, subtitle: `Driver · ${zone} · ${phone}`, meta: status,
-  keywords: phone.replace(/\s/g, ''), badge: initials(name), go: 'nav_driver',
-}))
+// Global search: static pages plus live Supabase records (orders, customers, products, drivers).
+// A record opens its screen with `open(v)` when present, else the view-model handler named `go`.
+import { supabase } from '../lib/supabase'
 
 const PAGES = [
   ['Dashboard', 'nav_dash', 'home overview'], ['Analytics', 'nav_analytics', 'reports'],
@@ -61,7 +22,7 @@ const withHaystack = (r) => ({
   haystack: [r.title, r.subtitle, r.meta, r.keywords].filter(Boolean).join(' ').toLowerCase().replace(/[#’']/g, ''),
 })
 
-const INDEX = [...PAGES, ...ORDERS, ...CUSTOMERS, ...DRIVERS].map(withHaystack)
+const INDEX = PAGES.map(withHaystack)
 
 /** Search records for live categories (rows from useCategories). */
 export function categoryRecords(categories) {
@@ -86,4 +47,46 @@ export function searchConsole(query, extra = []) {
     counts[r.group] = (counts[r.group] || 0) + 1
     return counts[r.group] <= GROUP_LIMIT
   })
+}
+
+const STATUS = { placed: 'Placed', confirmed: 'Confirmed', picking: 'Picking', packed: 'Packed', out_for_delivery: 'Out for delivery', delivered: 'Delivered', cancelled: 'Cancelled' }
+const money = (n) => `$${Number(n || 0).toFixed(2)}`
+const nameOf = (c) => [c?.first_name, c?.last_name].filter(Boolean).join(' ') || 'Guest customer'
+const phoneOf = (m) => (m ? `+61 ${m.slice(0, 3)} ${m.slice(3, 6)} ${m.slice(6)}` : '')
+// Characters PostgREST's or() filter treats specially.
+const clean = (q) => q.replace(/[,()*%\\]/g, ' ').trim()
+
+/** Live matches from Supabase, grouped Orders → Customers → Products → Drivers (4 each). */
+export async function liveSearch(query) {
+  const q = clean(query.replace(/^#/, ''))
+  if (q.length < 2) return []
+  const like = `%${q}%`
+  const digits = q.replace(/\D/g, '').replace(/^61/, '').replace(/^0/, '')
+  const [orders, customers, products, drivers] = await Promise.all([
+    supabase.from('orders').select('id, number, status, total, delivery_type, customer:customers(first_name, last_name)')
+      .ilike('number', `%${q.replace(/^sk/i, '')}%`).order('placed_at', { ascending: false }).limit(GROUP_LIMIT),
+    supabase.from('customer_stats').select('id, first_name, last_name, email, mobile, orders')
+      .or([`first_name.ilike.${like}`, `last_name.ilike.${like}`, `email.ilike.${like}`, ...(digits.length >= 3 ? [`mobile.ilike.%${digits}%`] : [])].join(','))
+      .order('last_order_at', { ascending: false, nullsFirst: false }).limit(GROUP_LIMIT),
+    supabase.from('products').select('id, name, price, stock_qty, image_url, published').ilike('name', like).limit(GROUP_LIMIT),
+    supabase.from('drivers').select('id, name, phone, zone, status').or(`name.ilike.${like},phone.ilike.${like}`).limit(GROUP_LIMIT),
+  ])
+  const out = []
+  for (const o of orders.data ?? []) out.push({
+    group: 'Orders', title: `#${o.number} · ${nameOf(o.customer)}`, subtitle: `${money(o.total)} · ${o.delivery_type === 'express' ? 'Express' : 'Scheduled'}`,
+    meta: STATUS[o.status] ?? o.status, badge: 'OR', open: (v) => v.openOrder(o),
+  })
+  for (const c of customers.data ?? []) out.push({
+    group: 'Customers', title: nameOf(c), subtitle: [c.email, phoneOf(c.mobile)].filter(Boolean).join(' · ') || 'No contact details',
+    meta: `${c.orders} order${c.orders === 1 ? '' : 's'}`, badge: initials(nameOf(c)), open: (v) => v.openCustomer(c.id),
+  })
+  for (const p of products.data ?? []) out.push({
+    group: 'Products', title: p.name, subtitle: `${money(p.price)} · ${p.stock_qty} in stock${p.published ? '' : ' · unpublished'}`,
+    image: p.image_url || undefined, badge: 'PR', open: (v) => v.openProduct(p.id),
+  })
+  for (const d of drivers.data ?? []) out.push({
+    group: 'Drivers', title: d.name, subtitle: ['Driver', d.zone, d.phone].filter(Boolean).join(' · '),
+    meta: d.status === 'active' ? 'Active' : 'Inactive', badge: initials(d.name), open: (v) => v.openDriver(d.id),
+  })
+  return out
 }

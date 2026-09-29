@@ -195,28 +195,25 @@ drop policy if exists "Customers update own profile" on public.customers;
 create policy "Customers update own profile" on public.customers for update to authenticated
   using (id = (select auth.uid())) with check (id = (select auth.uid()));
 
--- Orders: read own; place new ones as 'placed' + unpaid (status changes are admin-only).
+-- Orders: customers read their own. They can't insert orders or items directly (they could set
+-- any price or total): the app places orders through the customer app's `place_order()` RPC,
+-- which prices the cart on the server. Status changes are admin-only.
 drop policy if exists "Customers read own orders" on public.orders;
 create policy "Customers read own orders" on public.orders for select to authenticated using (customer_id = (select auth.uid()));
 drop policy if exists "Customers place orders" on public.orders;
-create policy "Customers place orders" on public.orders for insert to authenticated
-  with check (customer_id = (select auth.uid()) and status = 'placed' and payment_status = 'pending');
 
 -- Line items and payments hang off an order the customer owns.
 drop policy if exists "Customers read own order items" on public.order_items;
 create policy "Customers read own order items" on public.order_items for select to authenticated
   using (exists (select 1 from public.orders o where o.id = order_id and o.customer_id = (select auth.uid())));
 drop policy if exists "Customers add own order items" on public.order_items;
-create policy "Customers add own order items" on public.order_items for insert to authenticated
-  with check (exists (select 1 from public.orders o where o.id = order_id and o.customer_id = (select auth.uid()) and o.status = 'placed'));
 
 drop policy if exists "Customers read own payments" on public.payments;
 create policy "Customers read own payments" on public.payments for select to authenticated
   using (exists (select 1 from public.orders o where o.id = order_id and o.customer_id = (select auth.uid())));
+-- Customers can't record payments: a 'succeeded' row marks the order paid (payments_sync_order),
+-- so only the server (the payment provider's webhook, service role) or an admin writes them.
 drop policy if exists "Customers record own payments" on public.payments;
-create policy "Customers record own payments" on public.payments for insert to authenticated
-  with check (status in ('succeeded', 'failed')
-              and exists (select 1 from public.orders o where o.id = order_id and o.customer_id = (select auth.uid())));
 
 -- Reviews: anyone reads published ones; customers read and write their own.
 drop policy if exists "Anyone reads published reviews" on public.reviews;

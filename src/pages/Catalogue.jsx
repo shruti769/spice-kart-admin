@@ -1,7 +1,8 @@
+import { useState } from 'react'
 import CategoryTile from '../components/CategoryTile'
 import LiveProductRows, { InventoryRows, ListFooter } from '../components/LiveProductRows'
 import { useCategories } from '../lib/categories'
-import { isCriticalStock, isLowStock, isOutOfStock, isOverstocked, productStats, timeAgo, useProducts } from '../lib/products'
+import { downloadCsv, exportProductsCsv, fileDate, isCriticalStock, isLowStock, isOutOfStock, isOverstocked, productStats, stockPill, timeAgo, useProducts } from '../lib/products'
 
 // Product-list sub-tabs, in the same order as the tab buttons.
 const PRODUCT_TABS = [
@@ -20,6 +21,51 @@ const INV_TABS = [
   { filter: isOverstocked, emptyTitle: 'Nothing is overstocked', emptyText: 'Products above their maximum stock appear here.' },
 ]
 const num = (n) => n.toLocaleString('en-AU')
+
+// Local list filters (products tab chips + search, inventory tab chips). '' = any.
+const NO_FILTERS = { q: '', category: '', brand: '', stock: '', attribute: '', price: '' }
+const NO_INV_FILTERS = { warehouse: '', category: '' }
+const STOCK_FILTERS = [
+  ['in', 'In stock', (p) => p.track_inventory && p.stock_qty > 0 && !isLowStock(p)],
+  ['low', 'Low', isLowStock],
+  ['out', 'Out of stock', isOutOfStock],
+  ['untracked', 'Not tracked', (p) => !p.track_inventory],
+]
+const PRICE_FILTERS = [
+  ['u5', 'Under $5', (x) => x < 5],
+  ['5-10', '$5 – $10', (x) => x >= 5 && x < 10],
+  ['10-25', '$10 – $25', (x) => x >= 10 && x < 25],
+  ['25+', '$25 and over', (x) => x >= 25],
+]
+const uniqueSorted = (values) => [...new Set(values.map((x) => (x || '').trim()).filter(Boolean))].sort((a, b) => a.localeCompare(b, 'en-AU'))
+
+function matchesFilters(p, f) {
+  if (f.category && p.category_id !== f.category) return false
+  if (f.brand && (p.brand || '').trim() !== f.brand) return false
+  if (f.stock && !STOCK_FILTERS.find(([k]) => k === f.stock)[2](p)) return false
+  if (f.attribute && !(p.attributes ?? []).includes(f.attribute)) return false
+  if (f.price && !PRICE_FILTERS.find(([k]) => k === f.price)[2](Number(p.price))) return false
+  const q = f.q.trim().toLowerCase()
+  if (q && ![p.name, p.sku, p.brand, p.barcode].some((x) => (x || '').toLowerCase().includes(q))) return false
+  return true
+}
+
+/** A filter chip that is a native select: "Label: All" until a value is picked (then highlighted). */
+function FilterChip({ label, value, onChange, options, anyLabel = 'All' }) {
+  const on = value !== ''
+  return (
+    <select
+      value={value}
+      onChange={(e) => onChange(e.target.value)}
+      aria-label={`Filter by ${label.toLowerCase()}`}
+      style={{ appearance: "none", WebkitAppearance: "none", font: "600 11.5px/1.2 Inter,system-ui,sans-serif", color: on ? "#0B3D1F" : "#4A564E", background: on ? "#F1F9DF" : "#fff", border: `1px solid ${on ? "#C7E88A" : "#E4E7E2"}`, padding: "7px 10px", borderRadius: "7px", whiteSpace: "nowrap", cursor: "pointer", outline: "none", maxWidth: "220px" }}
+    >
+      <option value="">{label}: {anyLabel}</option>
+      {on && !options.some(([k]) => k === value) && <option value={value}>{label}: {value}</option>}
+      {options.map(([k, text]) => <option key={k} value={k}>{label}: {text}</option>)}
+    </select>
+  )
+}
 
 function CategoryRow({ v, c, index, count, last }) {
   const disabled = !c.enabled
@@ -91,12 +137,49 @@ export default function Catalogue({ v }) {
   const stats = productStats(products.rows)
   const stat = (n) => (loaded ? num(n) : '—')
   const mapped = products.rows.filter((p) => categoryIds.has(p.category_id)).length
+  const [filters, setFilters] = useState(NO_FILTERS)
+  const [invFilters, setInvFilters] = useState(NO_INV_FILTERS)
+  const setFilter = (k) => (val) => setFilters((f) => ({ ...f, [k]: val }))
+  const setInvFilter = (k) => (val) => setInvFilters((f) => ({ ...f, [k]: val }))
+  const filtering = Object.keys(NO_FILTERS).some((k) => filters[k].trim() !== '')
+  const categoryNames = Object.fromEntries(categories.map((c) => [c.id, c.name]))
+  const categoryOptions = categories.map((c) => [c.id, c.name])
+  const brandOptions = uniqueSorted(products.rows.map((p) => p.brand)).map((b) => [b, b])
+  const attributeOptions = uniqueSorted(products.rows.flatMap((p) => p.attributes ?? [])).map((a) => [a, a])
+  const warehouseOptions = uniqueSorted(products.rows.filter((p) => p.track_inventory).map((p) => p.warehouse)).map((w) => [w, w])
   const productTab = PRODUCT_TABS[v.catProductTab] ? v.catProductTab : 0
   const invTab = INV_TABS[v.catStockTab] ? v.catStockTab : 0
-  const productRows = products.rows.filter(PRODUCT_TABS[productTab].filter)
+  const productRows = products.rows.filter((p) => PRODUCT_TABS[productTab].filter(p) && matchesFilters(p, filters))
+  const invMatches = (p) => (!invFilters.warehouse || (p.warehouse || '').trim() === invFilters.warehouse) && (!invFilters.category || p.category_id === invFilters.category)
   const invRows = products.rows
-    .filter((p) => p.track_inventory && INV_TABS[invTab].filter(p))
+    .filter((p) => p.track_inventory && INV_TABS[invTab].filter(p) && invMatches(p))
     .sort((a, b) => a.stock_qty - b.stock_qty)
+  const invFiltering = invFilters.warehouse !== '' || invFilters.category !== ''
+
+  // Real CSV downloads of what each tab currently lists.
+  const exportCurrent = () => {
+    if (v.isCats) {
+      if (!catsLoaded) return v.flash('Categories are still loading')
+      if (!categories.length) return v.flash('No categories to export')
+      downloadCsv(`categories-${fileDate()}.csv`, ['Order', 'Category', 'ID', 'Subcategories', 'Products', 'Status'],
+        categories.map((c, i) => [c.sort ?? i + 1, c.name, c.id, c.subcategories.join('; '), loaded ? stats.byCategory[c.id] || 0 : '', c.enabled ? 'Enabled' : 'Disabled']))
+      return v.flash(`Exported ${num(categories.length)} categor${categories.length === 1 ? 'y' : 'ies'} to CSV`)
+    }
+    if (!loaded) return v.flash('Products are still loading')
+    const rows = v.isInv ? invRows : productRows
+    if (!rows.length) return v.flash('Nothing to export in this view')
+    exportProductsCsv(rows, categoryNames, `${v.isInv ? 'inventory' : 'products'}-${fileDate()}.csv`)
+    v.flash(`Exported ${num(rows.length)} product${rows.length === 1 ? '' : 's'} to CSV`)
+  }
+  // Tracked products at or below their minimum (or out), in the current warehouse / category filter.
+  const exportReorder = () => {
+    if (!loaded) return v.flash('Products are still loading')
+    const rows = products.rows.filter((p) => p.track_inventory && (isLowStock(p) || isOutOfStock(p)) && invMatches(p)).sort((a, b) => a.stock_qty - b.stock_qty)
+    if (!rows.length) return v.flash(invFiltering ? 'Nothing needs reordering in this filter' : 'Nothing needs reordering')
+    downloadCsv(`reorder-report-${fileDate()}.csv`, ['Name', 'Brand', 'SKU', 'Category', 'Warehouse', 'On hand', 'Min stock', 'Max stock', 'Status', 'Reorder to max'],
+      rows.map((p) => [p.name, p.brand, p.sku, categoryNames[p.category_id] || p.category_id, p.warehouse, p.stock_qty, p.min_stock ?? '', p.max_stock ?? '', stockPill(p)[0], p.max_stock != null ? Math.max(0, p.max_stock - p.stock_qty) : '']))
+    v.flash(`Reorder report · ${num(rows.length)} product${rows.length === 1 ? '' : 's'}`)
+  }
   return (
     <>
       <div style={{ display: "flex", alignItems: "flex-end", gap: "18px", padding: "24px 26px 2px" }}>
@@ -116,7 +199,7 @@ export default function Catalogue({ v }) {
               {v.catSearch}
             </span>
           </span>
-          <button onClick={v.toast_export} style={{ display: "flex", alignItems: "center", gap: "7px", height: "34px", padding: "0 12px", border: "1px solid #E4E7E2", borderRadius: "8px", background: "#fff", color: "#17201A", font: "600 12.5px/1.2 Inter,system-ui,sans-serif", cursor: "pointer", whiteSpace: "nowrap" }}>
+          <button onClick={exportCurrent} title="Download what this tab lists as CSV" style={{ display: "flex", alignItems: "center", gap: "7px", height: "34px", padding: "0 12px", border: "1px solid #E4E7E2", borderRadius: "8px", background: "#fff", color: "#17201A", font: "600 12.5px/1.2 Inter,system-ui,sans-serif", cursor: "pointer", whiteSpace: "nowrap" }}>
             <svg width="15" height="15" viewBox="0 0 20 20" fill="none" style={{ flex: "none" }}>
               <path d="M10 3.6v9M6.4 9.2L10 12.8l3.6-3.6M3.6 16.4h12.8" stroke="#4A564E" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
             </svg>
@@ -200,36 +283,32 @@ export default function Catalogue({ v }) {
               </button>
             </div>
             <div style={{ display: "flex", alignItems: "center", gap: "8px", flexWrap: "wrap" }}>
-              <button onClick={v.chp_0} style={{ font: "600 11.5px/1.2 Inter,system-ui,sans-serif", color: v.chp_0Fg, background: v.chp_0Bg, border: `1px solid ${v.chp_0Bd}`, padding: "7px 10px", borderRadius: "7px", whiteSpace: "nowrap", cursor: "pointer" }}>
-                Category: All
-              </button>
-              <button onClick={v.chp_1} style={{ font: "600 11.5px/1.2 Inter,system-ui,sans-serif", color: v.chp_1Fg, background: v.chp_1Bg, border: `1px solid ${v.chp_1Bd}`, padding: "7px 10px", borderRadius: "7px", whiteSpace: "nowrap", cursor: "pointer" }}>
-                Brand: All
-              </button>
-              <button onClick={v.chp_2} style={{ font: "600 11.5px/1.2 Inter,system-ui,sans-serif", color: v.chp_2Fg, background: v.chp_2Bg, border: `1px solid ${v.chp_2Bd}`, padding: "7px 10px", borderRadius: "7px", whiteSpace: "nowrap", cursor: "pointer" }}>
-                Stock: Low
-              </button>
-              <button onClick={v.chp_3} style={{ font: "600 11.5px/1.2 Inter,system-ui,sans-serif", color: v.chp_3Fg, background: v.chp_3Bg, border: `1px solid ${v.chp_3Bd}`, padding: "7px 10px", borderRadius: "7px", whiteSpace: "nowrap", cursor: "pointer" }}>
-                Dietary: any
-              </button>
-              <button onClick={v.chp_4} style={{ font: "600 11.5px/1.2 Inter,system-ui,sans-serif", color: v.chp_4Fg, background: v.chp_4Bg, border: `1px solid ${v.chp_4Bd}`, padding: "7px 10px", borderRadius: "7px", whiteSpace: "nowrap", cursor: "pointer" }}>
-                Price: any
-              </button>
+              <FilterChip label="Category" value={filters.category} onChange={setFilter('category')} options={categoryOptions} />
+              <FilterChip label="Brand" value={filters.brand} onChange={setFilter('brand')} options={brandOptions} />
+              <FilterChip label="Stock" value={filters.stock} onChange={setFilter('stock')} options={STOCK_FILTERS.map(([k, t]) => [k, t])} anyLabel="any" />
+              <FilterChip label="Attribute" value={filters.attribute} onChange={setFilter('attribute')} options={attributeOptions} anyLabel="any" />
+              <FilterChip label="Price" value={filters.price} onChange={setFilter('price')} options={PRICE_FILTERS.map(([k, t]) => [k, t])} anyLabel="any" />
             </div>
             <div style={{ background: "#fff", border: "1px solid #E4E7E2", borderRadius: "10px", overflow: "hidden", flex: "none" }}>
               {" "}
               <div style={{ display: "flex", alignItems: "center", gap: "9px", padding: "12px 16px", borderBottom: "1px solid #E4E7E2", flexWrap: "wrap" }}>
-                <span style={{ display: "flex", alignItems: "center", gap: "8px", height: "34px", width: "200px", padding: "0 11px", border: "1px solid #E4E7E2", borderRadius: "8px", background: "#fff" }}>
+                <span className="sk-input-wrap" style={{ display: "flex", alignItems: "center", gap: "8px", height: "34px", width: "200px", padding: "0 11px", border: "1px solid #E4E7E2", borderRadius: "8px", background: "#fff", boxSizing: "border-box" }}>
                   <svg width="15" height="15" viewBox="0 0 20 20" fill="none" style={{ flex: "none" }}>
                     <circle cx="9" cy="9" r="6" stroke="#7C8A81" strokeWidth="1.6" />
                     <path d="M13.4 13.4L18 18" stroke="#7C8A81" strokeWidth="1.6" strokeLinecap="round" />
                   </svg>
-                  <span style={{ font: "400 12.5px/1.2 Inter,system-ui,sans-serif", color: "#7C8A81", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
-                    Filter this list…
-                  </span>
+                  <input
+                    className="sk-input sk-input-bare"
+                    type="search"
+                    value={filters.q}
+                    onChange={(e) => setFilter('q')(e.target.value)}
+                    placeholder="Filter this list…"
+                    aria-label="Filter products by name, SKU, brand or barcode"
+                    style={{ flex: "1", minWidth: "0", height: "32px", border: "0", outline: "none", background: "transparent", padding: "0", font: "400 12.5px/1.2 Inter,system-ui,sans-serif", color: "#17201A" }}
+                  />
                 </span>
-                <button className="hv1" onClick={v.openFilterDrawer} style={{ display: "flex", alignItems: "center", gap: "7px", height: "34px", padding: "0 12px", border: "1px solid #E4E7E2", borderRadius: "8px", background: "#fff", color: "#17201A", font: "600 12.5px/1.2 Inter,system-ui,sans-serif", cursor: "pointer", whiteSpace: "nowrap" }}>
-                  Bulk edit
+                <button className="hv1" onClick={() => setFilters(NO_FILTERS)} disabled={!filtering} style={{ display: "flex", alignItems: "center", gap: "7px", height: "34px", padding: "0 12px", border: "1px solid #E4E7E2", borderRadius: "8px", background: "#fff", color: filtering ? "#17201A" : "#A3ADA6", font: "600 12.5px/1.2 Inter,system-ui,sans-serif", cursor: filtering ? "pointer" : "default", whiteSpace: "nowrap" }}>
+                  Clear filters
                 </button>
                 <button className="hv1" onClick={() => v.flash('Bulk category assignment coming soon')} style={{ display: "flex", alignItems: "center", gap: "7px", height: "34px", padding: "0 12px", border: "1px solid #E4E7E2", borderRadius: "8px", background: "#fff", color: "#17201A", font: "600 12.5px/1.2 Inter,system-ui,sans-serif", cursor: "pointer", whiteSpace: "nowrap" }}>
                   Assign category
@@ -264,7 +343,7 @@ export default function Catalogue({ v }) {
                 </span>
               </div>
               {" "}
-              <LiveProductRows v={v} products={products} rows={productRows} emptyTitle={PRODUCT_TABS[productTab].emptyTitle} emptyText={PRODUCT_TABS[productTab].emptyText} />
+              <LiveProductRows v={v} products={products} rows={productRows} emptyTitle={filtering ? 'No products match these filters' : PRODUCT_TABS[productTab].emptyTitle} emptyText={filtering ? 'Change or clear the filters to see more products.' : PRODUCT_TABS[productTab].emptyText} />
               <ListFooter shown={productRows.length} total={stats.total} noun="products" />
               {" "}
             </div>
@@ -492,13 +571,9 @@ export default function Catalogue({ v }) {
             <div style={{ background: "#fff", border: "1px solid #E4E7E2", borderRadius: "10px", overflow: "hidden", flex: "none" }}>
               {" "}
               <div style={{ display: "flex", alignItems: "center", gap: "9px", padding: "12px 16px", borderBottom: "1px solid #E4E7E2", flexWrap: "wrap" }}>
-                <button onClick={v.chi_0} style={{ font: "600 11.5px/1.2 Inter,system-ui,sans-serif", color: v.chi_0Fg, background: v.chi_0Bg, border: `1px solid ${v.chi_0Bd}`, padding: "7px 10px", borderRadius: "7px", whiteSpace: "nowrap", cursor: "pointer" }}>
-                  Warehouse: Collingwood DC
-                </button>
-                <button onClick={v.chi_1} style={{ font: "600 11.5px/1.2 Inter,system-ui,sans-serif", color: v.chi_1Fg, background: v.chi_1Bg, border: `1px solid ${v.chi_1Bd}`, padding: "7px 10px", borderRadius: "7px", whiteSpace: "nowrap", cursor: "pointer" }}>
-                  Category: All
-                </button>
-                <button className="hv1" onClick={v.toast_export} style={{ display: "flex", alignItems: "center", gap: "7px", height: "34px", padding: "0 12px", border: "1px solid #E4E7E2", borderRadius: "8px", background: "#fff", color: "#17201A", font: "600 12.5px/1.2 Inter,system-ui,sans-serif", cursor: "pointer", whiteSpace: "nowrap" }}>
+                <FilterChip label="Warehouse" value={invFilters.warehouse} onChange={setInvFilter('warehouse')} options={warehouseOptions} />
+                <FilterChip label="Category" value={invFilters.category} onChange={setInvFilter('category')} options={categoryOptions} />
+                <button className="hv1" onClick={exportReorder} title="Download tracked products at or below their minimum stock as CSV" style={{ display: "flex", alignItems: "center", gap: "7px", height: "34px", padding: "0 12px", border: "1px solid #E4E7E2", borderRadius: "8px", background: "#fff", color: "#17201A", font: "600 12.5px/1.2 Inter,system-ui,sans-serif", cursor: "pointer", whiteSpace: "nowrap" }}>
                   Reorder report
                 </button>
                 <span style={{ marginLeft: "auto", font: "400 11.5px/1.2 Inter,system-ui,sans-serif", color: "#7C8A81", whiteSpace: "nowrap" }}>{products.fetchedAt ? `Last sync ${timeAgo(products.fetchedAt).toLowerCase()}` : "Syncing…"}</span>
@@ -534,7 +609,7 @@ export default function Catalogue({ v }) {
                 </span>
               </div>
               {" "}
-              <InventoryRows v={v} products={products} rows={invRows} emptyTitle={INV_TABS[invTab].emptyTitle} emptyText={INV_TABS[invTab].emptyText} />
+              <InventoryRows v={v} products={products} rows={invRows} emptyTitle={invFiltering ? 'No tracked products match these filters' : INV_TABS[invTab].emptyTitle} emptyText={invFiltering ? 'Change the warehouse or category filter to see more.' : INV_TABS[invTab].emptyText} />
               <ListFooter shown={invRows.length} total={stats.tracked} noun="tracked products" />
               {" "}
             </div>

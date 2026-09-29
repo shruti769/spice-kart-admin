@@ -1,730 +1,351 @@
+import { useMemo, useState } from 'react'
+import { PAYMENT_LABEL, customerName, placedLabel } from '../lib/orders'
+import {
+  PAY_STATUSES, REFUND_REASONS, TX_LIMIT, aud, downloadTransactionsCsv, methodLabel, payStatus, txDate, txReference,
+  useNow, usePaymentSummary, useRefundRequests, useTransactions,
+} from '../lib/payments'
+import RefundModal from '../modals/RefundModal'
+
+const FONT = 'Inter,system-ui,sans-serif'
+const INK = '#17201A'
+const MUTED = '#7C8A81'
+const BORDER = '#E4E7E2'
+const PAGE_SIZE = 25
+const COLS = '1.1fr .9fr 1.2fr .8fr 1.3fr minmax(96px,1fr) 1.1fr 76px'
+const RCOLS = '.9fr .9fr 1.1fr .7fr 1.1fr 1.3fr minmax(84px,.9fr) .9fr 96px'
+const TABS = [['all', 'All transactions'], ...PAY_STATUSES.map(([k, label]) => [k, label])]
+const PERIODS = [['all', 'Any date'], ['today', 'Today'], ['7', 'Last 7 days'], ['30', 'Last 30 days']]
+
+const head = { font: `600 10.5px/1.2 ${FONT}`, letterSpacing: '.5px', color: MUTED, textTransform: 'uppercase', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }
+const ell = { whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }
+const cellWrap = { minWidth: '0', display: 'flex', alignItems: 'center', gap: '8px' }
+const strong = { font: `700 12.5px/1.2 ${FONT}`, color: INK, ...ell }
+const soft = { font: `400 11px/1.2 ${FONT}`, color: MUTED, ...ell }
+const link = { font: `500 12px/1.2 ${FONT}`, color: '#17693A', ...ell }
+const pill = (fg, bg) => ({ font: `600 10.5px/1.2 ${FONT}`, color: fg, background: bg, padding: '5px 8px', borderRadius: '5px', whiteSpace: 'nowrap', display: 'inline-block' })
+const smallBtn = { height: '26px', padding: '0 9px', border: `1px solid ${BORDER}`, borderRadius: '6px', background: '#fff', font: `600 11px/1.2 ${FONT}`, color: INK, cursor: 'pointer', whiteSpace: 'nowrap' }
+const topBtn = { display: 'flex', alignItems: 'center', gap: '7px', height: '34px', padding: '0 12px', border: `1px solid ${BORDER}`, borderRadius: '8px', background: '#fff', color: INK, font: `600 12.5px/1.2 ${FONT}`, cursor: 'pointer', whiteSpace: 'nowrap' }
+const selectBox = { height: '32px', padding: '0 10px', border: `1px solid ${BORDER}`, borderRadius: '8px', background: '#fff', font: `500 12px/1.2 ${FONT}`, color: INK, cursor: 'pointer' }
+
+const GREEN = ['#0B6B33', '#E9F6E3']
+const RED = ['#A93826', '#FAEDEA']
+const GREY = ['#7C8A81', '#EEF0EC']
+const AMBER = ['#8A6100', '#FBF1DE']
+
+const ICONS = {
+  revenue: (
+    <>
+      <circle cx="10" cy="10" r="7.2" stroke="#4A564E" strokeWidth="1.5" />
+      <path d="M10 5.6v8.8" stroke="#4A564E" strokeWidth="1.5" strokeLinecap="round" />
+      <path d="M12.3 7.9c0-1.05-1.03-1.75-2.3-1.75s-2.3.7-2.3 1.75 1.03 1.55 2.3 1.85 2.3.8 2.3 1.85-1.03 1.75-2.3 1.75-2.3-.7-2.3-1.75" stroke="#4A564E" strokeWidth="1.5" strokeLinecap="round" />
+    </>
+  ),
+  ok: <path d="M4.6 10.4l3.4 3.4 7.4-7.4" stroke="#4A564E" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />,
+  failed: (
+    <>
+      <path d="M10 3.6l7 12.2H3l7-12.2z" stroke="#4A564E" strokeWidth="1.5" strokeLinejoin="round" />
+      <path d="M10 8v3.4" stroke="#4A564E" strokeWidth="1.6" strokeLinecap="round" />
+      <circle cx="10" cy="13.6" r=".9" fill="#4A564E" />
+    </>
+  ),
+  refund: (
+    <>
+      <path d="M4 10a6 6 0 1 1 2 4.5" stroke="#4A564E" strokeWidth="1.5" strokeLinecap="round" />
+      <path d="M4 6.4V10h3.6" stroke="#4A564E" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
+    </>
+  ),
+  pending: (
+    <>
+      <circle cx="10" cy="10" r="7.2" stroke="#4A564E" strokeWidth="1.5" />
+      <path d="M10 5.8V10l3 1.8" stroke="#4A564E" strokeWidth="1.5" strokeLinecap="round" />
+    </>
+  ),
+}
+
+function Kpi({ icon, label, value, note }) {
+  const [text, fg, bg] = note
+  return (
+    <div style={{ background: '#fff', border: `1px solid ${BORDER}`, borderRadius: '10px', padding: '15px 16px', display: 'flex', flexDirection: 'column', gap: '10px', minWidth: '0' }}>
+      <span style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+        <span style={{ width: '26px', height: '26px', borderRadius: '7px', background: '#F6F7F4', border: `1px solid ${BORDER}`, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+          <svg width="14" height="14" viewBox="0 0 20 20" fill="none" style={{ flex: 'none' }}>{ICONS[icon]}</svg>
+        </span>
+        <span style={{ font: `500 11.5px/1.2 ${FONT}`, color: MUTED, whiteSpace: 'nowrap' }}>{label}</span>
+      </span>
+      <span style={{ font: `700 23px/1.2 ${FONT}`, color: INK, letterSpacing: '-.4px', ...ell }}>{value}</span>
+      <span style={{ font: `600 10.5px/1.2 ${FONT}`, color: fg, background: bg, padding: '4px 7px', borderRadius: '5px', alignSelf: 'flex-start', ...ell, maxWidth: '100%', boxSizing: 'border-box' }}>{text}</span>
+    </div>
+  )
+}
+
+function Pager({ page, pages, onPage }) {
+  if (pages <= 1) return null
+  const from = Math.max(1, Math.min(page - 2, pages - 4))
+  const nums = Array.from({ length: Math.min(5, pages) }, (_, i) => from + i)
+  const sq = (on, disabled) => ({ minWidth: '28px', height: '28px', padding: '0 6px', boxSizing: 'border-box', border: on ? '0' : `1px solid ${BORDER}`, borderRadius: '6px', background: on ? '#0B3D1F' : '#fff', color: on ? '#fff' : '#4A564E', font: `${on ? 600 : 500} 11.5px/1.2 ${FONT}`, display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: disabled || on ? 'default' : 'pointer', opacity: disabled ? 0.4 : 1 })
+  return (
+    <span style={{ marginLeft: 'auto', display: 'flex', alignItems: 'center', gap: '5px' }}>
+      <button aria-label="Previous page" disabled={page <= 1} onClick={() => onPage(page - 1)} style={sq(false, page <= 1)}>
+        <svg width="12" height="12" viewBox="0 0 20 20" fill="none"><path d="M12.4 4.4L6.8 10l5.6 5.6" stroke={MUTED} strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round" /></svg>
+      </button>
+      {nums.map((n) => <button key={n} onClick={() => onPage(n)} style={sq(n === page)}>{n}</button>)}
+      <button aria-label="Next page" disabled={page >= pages} onClick={() => onPage(page + 1)} style={sq(false, page >= pages)}>
+        <svg width="12" height="12" viewBox="0 0 20 20" fill="none"><path d="M7.6 4.4L13 10l-5.4 5.6" stroke={MUTED} strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round" /></svg>
+      </button>
+    </span>
+  )
+}
+
+const pct = (n) => `${(Math.round(n * 10) / 10).toLocaleString('en-AU')}%`
+
+function summaryCards(s) {
+  if (!s) return null
+  const revenue = Number(s.revenue || 0)
+  const prev = Number(s.prev_revenue || 0)
+  const attempts = Number(s.succeeded || 0) + Number(s.failed || 0)
+  let delta
+  if (prev > 0) {
+    const d = ((revenue - prev) / prev) * 100
+    delta = [`${d >= 0 ? '▲' : '▼'} ${pct(Math.abs(d))} vs yesterday`, ...(d >= 0 ? GREEN : RED)]
+  } else delta = [revenue > 0 ? 'No sales yesterday' : 'No payments yet today', ...GREY]
+  return {
+    revenue, attempts,
+    rate: attempts ? (s.succeeded / attempts) * 100 : null,
+    cards: [
+      { icon: 'revenue', label: 'Today’s revenue', value: aud(revenue), note: delta },
+      { icon: 'ok', label: 'Successful', value: Number(s.succeeded || 0).toLocaleString('en-AU'), note: attempts ? [`${pct((s.succeeded / attempts) * 100)} of attempts`, ...GREEN] : ['No attempts today', ...GREY] },
+      { icon: 'failed', label: 'Failed', value: Number(s.failed || 0).toLocaleString('en-AU'), note: ['Card declines', ...(s.failed ? RED : GREY)] },
+      { icon: 'refund', label: 'Refunds', value: aud(s.refunded_amount), note: [`${s.refunds} refund${s.refunds === 1 ? '' : 's'} today`, ...GREY] },
+      { icon: 'pending', label: 'Pending', value: Number(s.pending || 0).toLocaleString('en-AU'), note: ['Awaiting payment', ...(s.pending ? AMBER : GREY)] },
+    ],
+  }
+}
+
 export default function Payments({ v }) {
+  const [tab, setTab] = useState('all')
+  const [q, setQ] = useState('')
+  const [method, setMethod] = useState('all')
+  const [period, setPeriod] = useState('all')
+  const [showFilters, setShowFilters] = useState(false)
+  const [page, setPage] = useState(1)
+  const [refund, setRefund] = useState(null) // { order } | { request }
+  const tx = useTransactions()
+  const summary = usePaymentSummary()
+  const requests = useRefundRequests(5)
+  const now = useNow(60000)
+
+  const all = useMemo(() => tx.data ?? [], [tx.data])
+  const counts = useMemo(() => {
+    const c = {}
+    for (const o of all) c[o.payment_status] = (c[o.payment_status] || 0) + 1
+    return c
+  }, [all])
+
+  const rows = useMemo(() => {
+    const t = q.trim().toLowerCase().replace(/^#/, '')
+    let since = 0
+    if (period === 'today') { const d = new Date(now); d.setHours(0, 0, 0, 0); since = d.getTime() } else if (period !== 'all') since = now - Number(period) * 864e5
+    return all.filter((o) => {
+      if (tab !== 'all' && o.payment_status !== tab) return false
+      if (method !== 'all' && (o.charge?.method ?? o.payment_method) !== method) return false
+      if (since && new Date(o.placed_at).getTime() < since) return false
+      if (!t) return true
+      return `${o.number} ${customerName(o.customer)} ${o.payments.map((p) => p.reference ?? '').join(' ')}`.toLowerCase().includes(t)
+    })
+  }, [all, tab, method, period, q, now])
+
+  const pages = Math.max(1, Math.ceil(rows.length / PAGE_SIZE))
+  const cur = Math.min(page, pages)
+  const shown = rows.slice((cur - 1) * PAGE_SIZE, cur * PAGE_SIZE)
+  const filterCount = (method !== 'all' ? 1 : 0) + (period !== 'all' ? 1 : 0)
+  const filtered = tab !== 'all' || filterCount || q.trim()
+  const reset = (fn) => (val) => { fn(val); setPage(1) }
+
+  let message = null
+  if (tx.status === 'off') message = 'Supabase keys are missing · add them to .env to load payments.'
+  else if (tx.loading) message = 'Loading transactions…'
+  else if (tx.status === 'error' && !all.length) message = tx.error
+  else if (!rows.length) message = all.length ? 'No transactions match these filters.' : 'No transactions yet · orders placed in the app appear here instantly.'
+
+  const s = summaryCards(summary.data)
+  const today = new Date(now)
+  let subtitle = 'Payments from the app appear live'
+  if (s) {
+    subtitle = s.attempts
+      ? `${aud(s.revenue)} collected today · ${pct(s.rate)} success rate`
+      : `No payments today yet · ${summary.data.pending} order${summary.data.pending === 1 ? '' : 's'} awaiting payment`
+  }
+
+  const exportCsv = () => {
+    if (!rows.length) { v.flash?.('Nothing to export · no transactions match these filters'); return }
+    downloadTransactionsCsv(rows)
+    v.flash?.(`Exported ${rows.length} transaction${rows.length === 1 ? '' : 's'} to CSV`)
+  }
+
+  const req = requests.data
+  let reqMessage = null
+  if (requests.status === 'off') reqMessage = 'Supabase keys are missing.'
+  else if (requests.loading) reqMessage = 'Loading refund requests…'
+  else if (requests.status === 'error' && !req) reqMessage = requests.error
+  else if (!req?.rows.length) reqMessage = 'No refund requests waiting · requests customers raise in the app appear here.'
+
   return (
     <>
-      <div style={{ display: "flex", alignItems: "flex-end", gap: "18px", padding: "24px 26px 2px" }}>
-        <span style={{ display: "flex", flexDirection: "column", gap: "5px", minWidth: "0" }}>
-          <span style={{ font: "700 20px/1.2 Inter,system-ui,sans-serif", color: "#17201A", whiteSpace: "nowrap" }}>Payments</span>
-          <span style={{ font: "400 12.5px/1.2 Inter,system-ui,sans-serif", color: "#7C8A81", whiteSpace: "nowrap" }}>$38,420 collected today · 99.2% success rate</span>
+      <div style={{ display: 'flex', alignItems: 'flex-end', gap: '18px', padding: '24px 26px 2px' }}>
+        <span style={{ display: 'flex', flexDirection: 'column', gap: '5px', minWidth: '0' }}>
+          <span style={{ font: `700 20px/1.2 ${FONT}`, color: INK, whiteSpace: 'nowrap' }}>Payments</span>
+          <span style={{ font: `400 12.5px/1.2 ${FONT}`, color: MUTED, whiteSpace: 'nowrap' }}>{subtitle}</span>
         </span>
-        <span style={{ marginLeft: "auto", display: "flex", alignItems: "center", gap: "8px" }}>
-          <span style={{ display: "flex", alignItems: "center", gap: "8px", height: "34px", width: "240px", padding: "0 11px", border: "1px solid #E4E7E2", borderRadius: "8px", background: "#fff" }}>
-            <svg width="15" height="15" viewBox="0 0 20 20" fill="none" style={{ flex: "none" }}>
-              <circle cx="9" cy="9" r="6" stroke="#7C8A81" strokeWidth="1.6" />
-              <path d="M13.4 13.4L18 18" stroke="#7C8A81" strokeWidth="1.6" strokeLinecap="round" />
+        <span style={{ marginLeft: 'auto', display: 'flex', alignItems: 'center', gap: '8px' }}>
+          <span style={{ display: 'flex', alignItems: 'center', gap: '8px', height: '34px', width: '240px', padding: '0 11px', border: `1px solid ${BORDER}`, borderRadius: '8px', background: '#fff' }}>
+            <svg width="15" height="15" viewBox="0 0 20 20" fill="none" style={{ flex: 'none' }}>
+              <circle cx="9" cy="9" r="6" stroke={MUTED} strokeWidth="1.6" />
+              <path d="M13.4 13.4L18 18" stroke={MUTED} strokeWidth="1.6" strokeLinecap="round" />
             </svg>
-            <span style={{ font: "400 12.5px/1.2 Inter,system-ui,sans-serif", color: "#7C8A81", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
-              Search transaction or order…
-            </span>
+            <input value={q} onChange={(e) => { setQ(e.target.value); setPage(1) }} placeholder="Search transaction or order…" style={{ border: '0', outline: 'none', background: 'transparent', font: `400 12.5px/1.2 ${FONT}`, color: INK, width: '100%' }} />
           </span>
-          <button className="hv1" onClick={v.openFilterDrawer} style={{ display: "flex", alignItems: "center", gap: "7px", height: "34px", padding: "0 12px", border: "1px solid #E4E7E2", borderRadius: "8px", background: "#fff", color: "#17201A", font: "600 12.5px/1.2 Inter,system-ui,sans-serif", cursor: "pointer", whiteSpace: "nowrap" }}>
-            <svg width="15" height="15" viewBox="0 0 20 20" fill="none" style={{ flex: "none" }}>
+          <button className="hv1" onClick={() => setShowFilters((x) => !x)} aria-expanded={showFilters} style={{ ...topBtn, ...(showFilters || filterCount ? { borderColor: '#C7E88A', background: '#F1F9DF', color: '#0B3D1F' } : null) }}>
+            <svg width="15" height="15" viewBox="0 0 20 20" fill="none" style={{ flex: 'none' }}>
               <path d="M3 5.4h14M5.6 10h8.8M8.4 14.6h3.2" stroke="#4A564E" strokeWidth="1.6" strokeLinecap="round" />
             </svg>
-            Filter
+            Filter{filterCount ? ` · ${filterCount}` : ''}
           </button>
-          <button className="hv1" onClick={v.toast_export} style={{ display: "flex", alignItems: "center", gap: "7px", height: "34px", padding: "0 12px", border: "1px solid #E4E7E2", borderRadius: "8px", background: "#fff", color: "#17201A", font: "600 12.5px/1.2 Inter,system-ui,sans-serif", cursor: "pointer", whiteSpace: "nowrap" }}>
-            <svg width="15" height="15" viewBox="0 0 20 20" fill="none" style={{ flex: "none" }}>
+          <button className="hv1" onClick={exportCsv} disabled={tx.loading} style={topBtn}>
+            <svg width="15" height="15" viewBox="0 0 20 20" fill="none" style={{ flex: 'none' }}>
               <path d="M10 3.6v9M6.4 9.2L10 12.8l3.6-3.6M3.6 16.4h12.8" stroke="#4A564E" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
             </svg>
             Export
           </button>
         </span>
       </div>
-      <div className="ad-scroll" style={{ flex: "1", minHeight: "0", overflowY: "auto", padding: "20px 26px 30px", display: "flex", flexDirection: "column", gap: "18px" }}>
-        <div style={{ display: "grid", gridTemplateColumns: "repeat(5,1fr)", gap: "14px" }}>
-          <div style={{ background: "#fff", border: "1px solid #E4E7E2", borderRadius: "10px", padding: "15px 16px", display: "flex", flexDirection: "column", gap: "10px" }}>
-            <span style={{ display: "flex", alignItems: "center", gap: "8px" }}>
-              <span style={{ width: "26px", height: "26px", borderRadius: "7px", background: "#F6F7F4", border: "1px solid #E4E7E2", display: "flex", alignItems: "center", justifyContent: "center" }}>
-                <svg width="14" height="14" viewBox="0 0 20 20" fill="none" style={{ flex: "none" }}>
-                  <circle cx="10" cy="10" r="7.2" stroke="#4A564E" strokeWidth="1.5" />
-                  <path d="M10 5.6v8.8" stroke="#4A564E" strokeWidth="1.5" strokeLinecap="round" />
-                  <path d="M12.3 7.9c0-1.05-1.03-1.75-2.3-1.75s-2.3.7-2.3 1.75 1.03 1.55 2.3 1.85 2.3.8 2.3 1.85-1.03 1.75-2.3 1.75-2.3-.7-2.3-1.75" stroke="#4A564E" strokeWidth="1.5" strokeLinecap="round" />
-                </svg>
-              </span>
-              <span style={{ font: "500 11.5px/1.2 Inter,system-ui,sans-serif", color: "#7C8A81", whiteSpace: "nowrap" }}>Today’s revenue</span>
-            </span>
-            <span style={{ font: "700 23px/1.2 Inter,system-ui,sans-serif", color: "#17201A", letterSpacing: "-.4px", whiteSpace: "nowrap" }}>$38,420</span>
-            <span style={{ font: "600 10.5px/1.2 Inter,system-ui,sans-serif", color: "#0B6B33", background: "#E9F6E3", padding: "4px 7px", borderRadius: "5px", alignSelf: "flex-start", whiteSpace: "nowrap" }}>
-              ▲ 8.2%
-            </span>
-          </div>
-          <div style={{ background: "#fff", border: "1px solid #E4E7E2", borderRadius: "10px", padding: "15px 16px", display: "flex", flexDirection: "column", gap: "10px" }}>
-            <span style={{ display: "flex", alignItems: "center", gap: "8px" }}>
-              <span style={{ width: "26px", height: "26px", borderRadius: "7px", background: "#F6F7F4", border: "1px solid #E4E7E2", display: "flex", alignItems: "center", justifyContent: "center" }}>
-                <svg width="14" height="14" viewBox="0 0 20 20" fill="none" style={{ flex: "none" }}>
-                  <path d="M4.6 10.4l3.4 3.4 7.4-7.4" stroke="#4A564E" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
-                </svg>
-              </span>
-              <span style={{ font: "500 11.5px/1.2 Inter,system-ui,sans-serif", color: "#7C8A81", whiteSpace: "nowrap" }}>Successful</span>
-            </span>
-            <span style={{ font: "700 23px/1.2 Inter,system-ui,sans-serif", color: "#17201A", letterSpacing: "-.4px", whiteSpace: "nowrap" }}>1,268</span>
-            <span style={{ font: "600 10.5px/1.2 Inter,system-ui,sans-serif", color: "#0B6B33", background: "#E9F6E3", padding: "4px 7px", borderRadius: "5px", alignSelf: "flex-start", whiteSpace: "nowrap" }}>
-              99.2% of attempts
-            </span>
-          </div>
-          <div style={{ background: "#fff", border: "1px solid #E4E7E2", borderRadius: "10px", padding: "15px 16px", display: "flex", flexDirection: "column", gap: "10px" }}>
-            <span style={{ display: "flex", alignItems: "center", gap: "8px" }}>
-              <span style={{ width: "26px", height: "26px", borderRadius: "7px", background: "#F6F7F4", border: "1px solid #E4E7E2", display: "flex", alignItems: "center", justifyContent: "center" }}>
-                <svg width="14" height="14" viewBox="0 0 20 20" fill="none" style={{ flex: "none" }}>
-                  <path d="M10 3.6l7 12.2H3l7-12.2z" stroke="#4A564E" strokeWidth="1.5" strokeLinejoin="round" />
-                  <path d="M10 8v3.4" stroke="#4A564E" strokeWidth="1.6" strokeLinecap="round" />
-                  <circle cx="10" cy="13.6" r=".9" fill="#4A564E" />
-                </svg>
-              </span>
-              <span style={{ font: "500 11.5px/1.2 Inter,system-ui,sans-serif", color: "#7C8A81", whiteSpace: "nowrap" }}>Failed</span>
-            </span>
-            <span style={{ font: "700 23px/1.2 Inter,system-ui,sans-serif", color: "#17201A", letterSpacing: "-.4px", whiteSpace: "nowrap" }}>10</span>
-            <span style={{ font: "600 10.5px/1.2 Inter,system-ui,sans-serif", color: "#A93826", background: "#FAEDEA", padding: "4px 7px", borderRadius: "5px", alignSelf: "flex-start", whiteSpace: "nowrap" }}>
-              Card declines
-            </span>
-          </div>
-          <div style={{ background: "#fff", border: "1px solid #E4E7E2", borderRadius: "10px", padding: "15px 16px", display: "flex", flexDirection: "column", gap: "10px" }}>
-            <span style={{ display: "flex", alignItems: "center", gap: "8px" }}>
-              <span style={{ width: "26px", height: "26px", borderRadius: "7px", background: "#F6F7F4", border: "1px solid #E4E7E2", display: "flex", alignItems: "center", justifyContent: "center" }}>
-                <svg width="14" height="14" viewBox="0 0 20 20" fill="none" style={{ flex: "none" }}>
-                  <path d="M4 10a6 6 0 1 1 2 4.5" stroke="#4A564E" strokeWidth="1.5" strokeLinecap="round" />
-                  <path d="M4 6.4V10h3.6" stroke="#4A564E" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
-                </svg>
-              </span>
-              <span style={{ font: "500 11.5px/1.2 Inter,system-ui,sans-serif", color: "#7C8A81", whiteSpace: "nowrap" }}>Refunds</span>
-            </span>
-            <span style={{ font: "700 23px/1.2 Inter,system-ui,sans-serif", color: "#17201A", letterSpacing: "-.4px", whiteSpace: "nowrap" }}>$1,284</span>
-            <span style={{ font: "600 10.5px/1.2 Inter,system-ui,sans-serif", color: "#7C8A81", background: "#EEF0EC", padding: "4px 7px", borderRadius: "5px", alignSelf: "flex-start", whiteSpace: "nowrap" }}>
-              18 refunds
-            </span>
-          </div>
-          <div style={{ background: "#fff", border: "1px solid #E4E7E2", borderRadius: "10px", padding: "15px 16px", display: "flex", flexDirection: "column", gap: "10px" }}>
-            <span style={{ display: "flex", alignItems: "center", gap: "8px" }}>
-              <span style={{ width: "26px", height: "26px", borderRadius: "7px", background: "#F6F7F4", border: "1px solid #E4E7E2", display: "flex", alignItems: "center", justifyContent: "center" }}>
-                <svg width="14" height="14" viewBox="0 0 20 20" fill="none" style={{ flex: "none" }}>
-                  <circle cx="10" cy="10" r="7.2" stroke="#4A564E" strokeWidth="1.5" />
-                  <path d="M10 5.8V10l3 1.8" stroke="#4A564E" strokeWidth="1.5" strokeLinecap="round" />
-                </svg>
-              </span>
-              <span style={{ font: "500 11.5px/1.2 Inter,system-ui,sans-serif", color: "#7C8A81", whiteSpace: "nowrap" }}>Pending</span>
-            </span>
-            <span style={{ font: "700 23px/1.2 Inter,system-ui,sans-serif", color: "#17201A", letterSpacing: "-.4px", whiteSpace: "nowrap" }}>6</span>
-            <span style={{ font: "600 10.5px/1.2 Inter,system-ui,sans-serif", color: "#8A6100", background: "#FBF1DE", padding: "4px 7px", borderRadius: "5px", alignSelf: "flex-start", whiteSpace: "nowrap" }}>
-              Awaiting bank
-            </span>
-          </div>
+      <div className="ad-scroll" style={{ flex: '1', minHeight: '0', overflowY: 'auto', padding: '20px 26px 30px', display: 'flex', flexDirection: 'column', gap: '18px' }}>
+        {summary.status === 'error' && <span style={{ font: `400 12px/1.4 ${FONT}`, color: '#A93826' }}>{summary.error}</span>}
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(5,1fr)', gap: '14px' }}>
+          {(s?.cards ?? [
+            { icon: 'revenue', label: 'Today’s revenue' }, { icon: 'ok', label: 'Successful' }, { icon: 'failed', label: 'Failed' },
+            { icon: 'refund', label: 'Refunds' }, { icon: 'pending', label: 'Pending' },
+          ]).map((c) => <Kpi key={c.icon} icon={c.icon} label={c.label} value={c.value ?? '—'} note={c.note ?? [summary.loading ? 'Loading…' : '—', ...GREY]} />)}
         </div>
-        <div className="ad-scroll" style={{ display: "flex", gap: "2px", borderBottom: "1px solid #E4E7E2", overflowX: "auto" }}>
-          <button onClick={v.tb_pay_0} style={{ border: "0", background: "transparent", padding: "0 12px 10px", font: "600 12.5px/1.2 Inter,system-ui,sans-serif", color: v.tb_pay_0Fg, borderBottom: `2px solid ${v.tb_pay_0Bd}`, cursor: "pointer", whiteSpace: "nowrap", marginBottom: "-1px" }}>
-            All transactions
-          </button>
-          <button onClick={v.tb_pay_1} style={{ border: "0", background: "transparent", padding: "0 12px 10px", font: "600 12.5px/1.2 Inter,system-ui,sans-serif", color: v.tb_pay_1Fg, borderBottom: `2px solid ${v.tb_pay_1Bd}`, cursor: "pointer", whiteSpace: "nowrap", marginBottom: "-1px" }}>
-            Paid
-          </button>
-          <button onClick={v.tb_pay_2} style={{ border: "0", background: "transparent", padding: "0 12px 10px", font: "600 12.5px/1.2 Inter,system-ui,sans-serif", color: v.tb_pay_2Fg, borderBottom: `2px solid ${v.tb_pay_2Bd}`, cursor: "pointer", whiteSpace: "nowrap", marginBottom: "-1px" }}>
-            Pending
-          </button>
-          <button onClick={v.tb_pay_3} style={{ border: "0", background: "transparent", padding: "0 12px 10px", font: "600 12.5px/1.2 Inter,system-ui,sans-serif", color: v.tb_pay_3Fg, borderBottom: `2px solid ${v.tb_pay_3Bd}`, cursor: "pointer", whiteSpace: "nowrap", marginBottom: "-1px" }}>
-            Failed
-          </button>
-          <button onClick={v.tb_pay_4} style={{ border: "0", background: "transparent", padding: "0 12px 10px", font: "600 12.5px/1.2 Inter,system-ui,sans-serif", color: v.tb_pay_4Fg, borderBottom: `2px solid ${v.tb_pay_4Bd}`, cursor: "pointer", whiteSpace: "nowrap", marginBottom: "-1px" }}>
-            Refunded
-          </button>
-          <button onClick={v.tb_pay_5} style={{ border: "0", background: "transparent", padding: "0 12px 10px", font: "600 12.5px/1.2 Inter,system-ui,sans-serif", color: v.tb_pay_5Fg, borderBottom: `2px solid ${v.tb_pay_5Bd}`, cursor: "pointer", whiteSpace: "nowrap", marginBottom: "-1px" }}>
-            Partially Refunded
-          </button>
+
+        <div className="ad-scroll" style={{ display: 'flex', gap: '2px', borderBottom: `1px solid ${BORDER}`, overflowX: 'auto', flex: 'none' }}>
+          {TABS.map(([k, label]) => {
+            const on = tab === k
+            const n = k === 'all' ? all.length : counts[k]
+            return (
+              <button key={k} onClick={() => reset(setTab)(k)} style={{ border: '0', background: 'transparent', padding: '0 12px 10px', font: `600 12.5px/1.2 ${FONT}`, color: on ? '#0B3D1F' : MUTED, borderBottom: `2px solid ${on ? '#0B3D1F' : 'transparent'}`, cursor: 'pointer', whiteSpace: 'nowrap', marginBottom: '-1px' }}>
+                {label}{n ? ` · ${n.toLocaleString('en-AU')}` : ''}
+              </button>
+            )
+          })}
         </div>
-        <div style={{ background: "#fff", border: "1px solid #E4E7E2", borderRadius: "10px", overflow: "hidden", flex: "none" }}>
-          {" "}
-          <div style={{ display: "grid", gridTemplateColumns: "1.1fr .9fr 1.2fr .8fr 1.3fr minmax(96px,1fr) 1.1fr", gap: "14px", padding: "11px 16px", background: "#F6F7F4", borderBottom: "1px solid #E4E7E2" }}>
-            <span style={{ font: "600 10.5px/1.2 Inter,system-ui,sans-serif", letterSpacing: ".5px", color: "#7C8A81", textTransform: "uppercase", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
-              Transaction
-            </span>
-            <span style={{ font: "600 10.5px/1.2 Inter,system-ui,sans-serif", letterSpacing: ".5px", color: "#7C8A81", textTransform: "uppercase", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
-              Order
-            </span>
-            <span style={{ font: "600 10.5px/1.2 Inter,system-ui,sans-serif", letterSpacing: ".5px", color: "#7C8A81", textTransform: "uppercase", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
-              Customer
-            </span>
-            <span style={{ font: "600 10.5px/1.2 Inter,system-ui,sans-serif", letterSpacing: ".5px", color: "#7C8A81", textTransform: "uppercase", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
-              Amount
-            </span>
-            <span style={{ font: "600 10.5px/1.2 Inter,system-ui,sans-serif", letterSpacing: ".5px", color: "#7C8A81", textTransform: "uppercase", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
-              Method
-            </span>
-            <span style={{ font: "600 10.5px/1.2 Inter,system-ui,sans-serif", letterSpacing: ".5px", color: "#7C8A81", textTransform: "uppercase", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
-              Status
-            </span>
-            <span style={{ font: "600 10.5px/1.2 Inter,system-ui,sans-serif", letterSpacing: ".5px", color: "#7C8A81", textTransform: "uppercase", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
-              Date
-            </span>
+
+        {(showFilters || filtered) && (
+          <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginTop: '-6px' }}>
+            {showFilters && (
+              <>
+                <select value={method} onChange={(e) => reset(setMethod)(e.target.value)} style={selectBox} aria-label="Payment method">
+                  <option value="all">Method: All</option>
+                  {Object.entries(PAYMENT_LABEL).map(([k, label]) => <option key={k} value={k}>{label}</option>)}
+                </select>
+                <select value={period} onChange={(e) => reset(setPeriod)(e.target.value)} style={selectBox} aria-label="Placed">
+                  {PERIODS.map(([k, label]) => <option key={k} value={k}>{k === 'all' ? 'Placed: Any date' : label}</option>)}
+                </select>
+              </>
+            )}
+            {filtered && (
+              <button className="hv1" onClick={() => { setTab('all'); setMethod('all'); setPeriod('all'); setQ(''); setPage(1) }} style={{ ...selectBox, font: `600 12px/1.2 ${FONT}` }}>Clear filters</button>
+            )}
           </div>
-          {" "}
-          <div className="hv3" style={{ display: "grid", gridTemplateColumns: "1.1fr .9fr 1.2fr .8fr 1.3fr minmax(96px,1fr) 1.1fr", gap: "14px", padding: "13px 16px", borderBottom: "1px solid #EFF1ED", alignItems: "center" }}>
-            <span style={{ minWidth: "0", display: "flex", alignItems: "center", gap: "8px" }}>
-              <span style={{ font: "700 12.5px/1.2 Inter,system-ui,sans-serif", color: "#17201A", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
-                TXN-99184
-              </span>
-            </span>
-            <span style={{ minWidth: "0", display: "flex", alignItems: "center", gap: "8px" }}>
-              <span style={{ font: "500 12px/1.2 Inter,system-ui,sans-serif", color: "#17693A", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>#SK10482</span>
-            </span>
-            <span style={{ minWidth: "0", display: "flex", alignItems: "center", gap: "8px" }}>
-              <span style={{ font: "400 11px/1.2 Inter,system-ui,sans-serif", color: "#7C8A81", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
-                John Smith
-              </span>
-            </span>
-            <span style={{ minWidth: "0", display: "flex", alignItems: "center", gap: "8px" }}>
-              <span style={{ font: "700 12.5px/1.2 Inter,system-ui,sans-serif", color: "#17201A", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>$94.04</span>
-            </span>
-            <span style={{ minWidth: "0", display: "flex", alignItems: "center", gap: "8px" }}>
-              <span style={{ font: "400 11px/1.2 Inter,system-ui,sans-serif", color: "#7C8A81", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
-                Visa · 4417
-              </span>
-            </span>
-            <span style={{ minWidth: "0", display: "flex", alignItems: "center", gap: "8px" }}>
-              <span style={{ font: "600 10.5px/1.2 Inter,system-ui,sans-serif", color: "#0B6B33", background: "#E9F6E3", padding: "5px 8px", borderRadius: "5px", whiteSpace: "nowrap", display: "inline-block" }}>
-                Paid
-              </span>
-            </span>
-            <span style={{ minWidth: "0", display: "flex", alignItems: "center", gap: "8px" }}>
-              <span style={{ font: "400 11px/1.2 Inter,system-ui,sans-serif", color: "#7C8A81", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
-                Today 12:42 PM
-              </span>
-            </span>
+        )}
+
+        <div style={{ background: '#fff', border: `1px solid ${BORDER}`, borderRadius: '10px', overflow: 'hidden', flex: 'none' }}>
+          <div style={{ display: 'grid', gridTemplateColumns: COLS, gap: '14px', padding: '11px 16px', background: '#F6F7F4', borderBottom: `1px solid ${BORDER}` }}>
+            {['Transaction', 'Order', 'Customer', 'Amount', 'Method', 'Status', 'Date'].map((h) => <span key={h} style={head}>{h}</span>)}
+            <span />
           </div>
-          {" "}
-          <div className="hv3" style={{ display: "grid", gridTemplateColumns: "1.1fr .9fr 1.2fr .8fr 1.3fr minmax(96px,1fr) 1.1fr", gap: "14px", padding: "13px 16px", borderBottom: "1px solid #EFF1ED", alignItems: "center" }}>
-            <span style={{ minWidth: "0", display: "flex", alignItems: "center", gap: "8px" }}>
-              <span style={{ font: "700 12.5px/1.2 Inter,system-ui,sans-serif", color: "#17201A", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
-                TXN-99183
+          {message ? (
+            <div style={{ padding: '32px 16px', textAlign: 'center', font: `400 12.5px/1.5 ${FONT}`, color: MUTED }}>{message}</div>
+          ) : shown.map((o, i) => {
+            const [, label, fg, bg] = payStatus(o.payment_status)
+            const ref = txReference(o)
+            const failed = o.payment_status === 'failed' && o.charge?.failure_reason
+            return (
+              <div key={o.id} className="hv3" onClick={() => v.openOrder(o)} style={{ display: 'grid', gridTemplateColumns: COLS, gap: '14px', padding: '13px 16px', borderBottom: i < shown.length - 1 ? '1px solid #EFF1ED' : '0', alignItems: 'center', cursor: 'pointer' }}>
+                <span style={cellWrap}><span style={ref === '—' ? { ...soft, fontSize: '12px' } : strong} title={ref === '—' ? 'No payment attempt yet' : undefined}>{ref}</span></span>
+                <span style={cellWrap}><span style={link}>#{o.number}</span></span>
+                <span style={cellWrap}><span style={soft}>{customerName(o.customer)}</span></span>
+                <span style={cellWrap}><span style={strong}>{aud(o.total)}</span></span>
+                <span style={cellWrap}><span style={soft}>{methodLabel(o)}</span></span>
+                <span style={cellWrap}><span style={pill(fg, bg)} title={failed || undefined}>{label}</span></span>
+                <span style={cellWrap}><span style={soft}>{placedLabel(txDate(o), today)}</span></span>
+                <span style={{ display: 'flex', justifyContent: 'flex-end' }}>
+                  {o.left > 0 && (
+                    <button className="hv1" onClick={(e) => { e.stopPropagation(); setRefund({ order: o }) }} style={smallBtn}>Refund</button>
+                  )}
+                </span>
+              </div>
+            )
+          })}
+          {!message && (
+            <div style={{ display: 'flex', alignItems: 'center', gap: '12px', padding: '12px 16px', borderTop: `1px solid ${BORDER}`, background: '#fff' }}>
+              <span style={{ font: `400 11.5px/1.2 ${FONT}`, color: MUTED, whiteSpace: 'nowrap' }}>
+                Showing {((cur - 1) * PAGE_SIZE + 1).toLocaleString('en-AU')}–{((cur - 1) * PAGE_SIZE + shown.length).toLocaleString('en-AU')} of {rows.length.toLocaleString('en-AU')} transaction{rows.length === 1 ? '' : 's'}
+                {all.length >= TX_LIMIT ? ` · from the latest ${TX_LIMIT.toLocaleString('en-AU')} orders` : ''}
               </span>
-            </span>
-            <span style={{ minWidth: "0", display: "flex", alignItems: "center", gap: "8px" }}>
-              <span style={{ font: "500 12px/1.2 Inter,system-ui,sans-serif", color: "#17693A", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>#SK10481</span>
-            </span>
-            <span style={{ minWidth: "0", display: "flex", alignItems: "center", gap: "8px" }}>
-              <span style={{ font: "400 11px/1.2 Inter,system-ui,sans-serif", color: "#7C8A81", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
-                Priya Nair
-              </span>
-            </span>
-            <span style={{ minWidth: "0", display: "flex", alignItems: "center", gap: "8px" }}>
-              <span style={{ font: "700 12.5px/1.2 Inter,system-ui,sans-serif", color: "#17201A", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
-                $132.20
-              </span>
-            </span>
-            <span style={{ minWidth: "0", display: "flex", alignItems: "center", gap: "8px" }}>
-              <span style={{ font: "400 11px/1.2 Inter,system-ui,sans-serif", color: "#7C8A81", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
-                Apple Pay
-              </span>
-            </span>
-            <span style={{ minWidth: "0", display: "flex", alignItems: "center", gap: "8px" }}>
-              <span style={{ font: "600 10.5px/1.2 Inter,system-ui,sans-serif", color: "#0B6B33", background: "#E9F6E3", padding: "5px 8px", borderRadius: "5px", whiteSpace: "nowrap", display: "inline-block" }}>
-                Paid
-              </span>
-            </span>
-            <span style={{ minWidth: "0", display: "flex", alignItems: "center", gap: "8px" }}>
-              <span style={{ font: "400 11px/1.2 Inter,system-ui,sans-serif", color: "#7C8A81", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
-                Today 12:36 PM
-              </span>
-            </span>
-          </div>
-          {" "}
-          <div className="hv3" style={{ display: "grid", gridTemplateColumns: "1.1fr .9fr 1.2fr .8fr 1.3fr minmax(96px,1fr) 1.1fr", gap: "14px", padding: "13px 16px", borderBottom: "1px solid #EFF1ED", alignItems: "center" }}>
-            <span style={{ minWidth: "0", display: "flex", alignItems: "center", gap: "8px" }}>
-              <span style={{ font: "700 12.5px/1.2 Inter,system-ui,sans-serif", color: "#17201A", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
-                TXN-99182
-              </span>
-            </span>
-            <span style={{ minWidth: "0", display: "flex", alignItems: "center", gap: "8px" }}>
-              <span style={{ font: "500 12px/1.2 Inter,system-ui,sans-serif", color: "#17693A", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>#SK10480</span>
-            </span>
-            <span style={{ minWidth: "0", display: "flex", alignItems: "center", gap: "8px" }}>
-              <span style={{ font: "400 11px/1.2 Inter,system-ui,sans-serif", color: "#7C8A81", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
-                Liam O’Brien
-              </span>
-            </span>
-            <span style={{ minWidth: "0", display: "flex", alignItems: "center", gap: "8px" }}>
-              <span style={{ font: "700 12.5px/1.2 Inter,system-ui,sans-serif", color: "#17201A", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>$36.90</span>
-            </span>
-            <span style={{ minWidth: "0", display: "flex", alignItems: "center", gap: "8px" }}>
-              <span style={{ font: "400 11px/1.2 Inter,system-ui,sans-serif", color: "#7C8A81", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>PayID</span>
-            </span>
-            <span style={{ minWidth: "0", display: "flex", alignItems: "center", gap: "8px" }}>
-              <span style={{ font: "600 10.5px/1.2 Inter,system-ui,sans-serif", color: "#8A6100", background: "#FBF1DE", padding: "5px 8px", borderRadius: "5px", whiteSpace: "nowrap", display: "inline-block" }}>
-                Pending
-              </span>
-            </span>
-            <span style={{ minWidth: "0", display: "flex", alignItems: "center", gap: "8px" }}>
-              <span style={{ font: "400 11px/1.2 Inter,system-ui,sans-serif", color: "#7C8A81", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
-                Today 12:28 PM
-              </span>
-            </span>
-          </div>
-          {" "}
-          <div className="hv3" style={{ display: "grid", gridTemplateColumns: "1.1fr .9fr 1.2fr .8fr 1.3fr minmax(96px,1fr) 1.1fr", gap: "14px", padding: "13px 16px", borderBottom: "1px solid #EFF1ED", alignItems: "center" }}>
-            <span style={{ minWidth: "0", display: "flex", alignItems: "center", gap: "8px" }}>
-              <span style={{ font: "700 12.5px/1.2 Inter,system-ui,sans-serif", color: "#17201A", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
-                TXN-99181
-              </span>
-            </span>
-            <span style={{ minWidth: "0", display: "flex", alignItems: "center", gap: "8px" }}>
-              <span style={{ font: "500 12px/1.2 Inter,system-ui,sans-serif", color: "#17693A", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>#SK10479</span>
-            </span>
-            <span style={{ minWidth: "0", display: "flex", alignItems: "center", gap: "8px" }}>
-              <span style={{ font: "400 11px/1.2 Inter,system-ui,sans-serif", color: "#7C8A81", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>Mei Chen</span>
-            </span>
-            <span style={{ minWidth: "0", display: "flex", alignItems: "center", gap: "8px" }}>
-              <span style={{ font: "700 12.5px/1.2 Inter,system-ui,sans-serif", color: "#17201A", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>$97.40</span>
-            </span>
-            <span style={{ minWidth: "0", display: "flex", alignItems: "center", gap: "8px" }}>
-              <span style={{ font: "400 11px/1.2 Inter,system-ui,sans-serif", color: "#7C8A81", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
-                Mastercard · 8802
-              </span>
-            </span>
-            <span style={{ minWidth: "0", display: "flex", alignItems: "center", gap: "8px" }}>
-              <span style={{ font: "600 10.5px/1.2 Inter,system-ui,sans-serif", color: "#0B6B33", background: "#E9F6E3", padding: "5px 8px", borderRadius: "5px", whiteSpace: "nowrap", display: "inline-block" }}>
-                Paid
-              </span>
-            </span>
-            <span style={{ minWidth: "0", display: "flex", alignItems: "center", gap: "8px" }}>
-              <span style={{ font: "400 11px/1.2 Inter,system-ui,sans-serif", color: "#7C8A81", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
-                Today 12:14 PM
-              </span>
-            </span>
-          </div>
-          {" "}
-          <div className="hv3" style={{ display: "grid", gridTemplateColumns: "1.1fr .9fr 1.2fr .8fr 1.3fr minmax(96px,1fr) 1.1fr", gap: "14px", padding: "13px 16px", borderBottom: "1px solid #EFF1ED", alignItems: "center" }}>
-            <span style={{ minWidth: "0", display: "flex", alignItems: "center", gap: "8px" }}>
-              <span style={{ font: "700 12.5px/1.2 Inter,system-ui,sans-serif", color: "#17201A", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
-                TXN-99180
-              </span>
-            </span>
-            <span style={{ minWidth: "0", display: "flex", alignItems: "center", gap: "8px" }}>
-              <span style={{ font: "500 12px/1.2 Inter,system-ui,sans-serif", color: "#17693A", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>#SK10478</span>
-            </span>
-            <span style={{ minWidth: "0", display: "flex", alignItems: "center", gap: "8px" }}>
-              <span style={{ font: "400 11px/1.2 Inter,system-ui,sans-serif", color: "#7C8A81", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
-                Daniel Cruz
-              </span>
-            </span>
-            <span style={{ minWidth: "0", display: "flex", alignItems: "center", gap: "8px" }}>
-              <span style={{ font: "700 12.5px/1.2 Inter,system-ui,sans-serif", color: "#17201A", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>$24.50</span>
-            </span>
-            <span style={{ minWidth: "0", display: "flex", alignItems: "center", gap: "8px" }}>
-              <span style={{ font: "400 11px/1.2 Inter,system-ui,sans-serif", color: "#7C8A81", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
-                Visa · 1129
-              </span>
-            </span>
-            <span style={{ minWidth: "0", display: "flex", alignItems: "center", gap: "8px" }}>
-              <span style={{ font: "600 10.5px/1.2 Inter,system-ui,sans-serif", color: "#1F5C8B", background: "#E8F1F8", padding: "5px 8px", borderRadius: "5px", whiteSpace: "nowrap", display: "inline-block" }}>
-                Refunded
-              </span>
-            </span>
-            <span style={{ minWidth: "0", display: "flex", alignItems: "center", gap: "8px" }}>
-              <span style={{ font: "400 11px/1.2 Inter,system-ui,sans-serif", color: "#7C8A81", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
-                Today 11:58 AM
-              </span>
-            </span>
-          </div>
-          {" "}
-          <div className="hv3" style={{ display: "grid", gridTemplateColumns: "1.1fr .9fr 1.2fr .8fr 1.3fr minmax(96px,1fr) 1.1fr", gap: "14px", padding: "13px 16px", borderBottom: "1px solid #EFF1ED", alignItems: "center" }}>
-            <span style={{ minWidth: "0", display: "flex", alignItems: "center", gap: "8px" }}>
-              <span style={{ font: "700 12.5px/1.2 Inter,system-ui,sans-serif", color: "#17201A", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
-                TXN-99179
-              </span>
-            </span>
-            <span style={{ minWidth: "0", display: "flex", alignItems: "center", gap: "8px" }}>
-              <span style={{ font: "500 12px/1.2 Inter,system-ui,sans-serif", color: "#17693A", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>#SK10477</span>
-            </span>
-            <span style={{ minWidth: "0", display: "flex", alignItems: "center", gap: "8px" }}>
-              <span style={{ font: "400 11px/1.2 Inter,system-ui,sans-serif", color: "#7C8A81", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
-                Ava Thompson
-              </span>
-            </span>
-            <span style={{ minWidth: "0", display: "flex", alignItems: "center", gap: "8px" }}>
-              <span style={{ font: "700 12.5px/1.2 Inter,system-ui,sans-serif", color: "#17201A", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
-                $164.80
-              </span>
-            </span>
-            <span style={{ minWidth: "0", display: "flex", alignItems: "center", gap: "8px" }}>
-              <span style={{ font: "400 11px/1.2 Inter,system-ui,sans-serif", color: "#7C8A81", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
-                Google Pay
-              </span>
-            </span>
-            <span style={{ minWidth: "0", display: "flex", alignItems: "center", gap: "8px" }}>
-              <span style={{ font: "600 10.5px/1.2 Inter,system-ui,sans-serif", color: "#0B6B33", background: "#E9F6E3", padding: "5px 8px", borderRadius: "5px", whiteSpace: "nowrap", display: "inline-block" }}>
-                Paid
-              </span>
-            </span>
-            <span style={{ minWidth: "0", display: "flex", alignItems: "center", gap: "8px" }}>
-              <span style={{ font: "400 11px/1.2 Inter,system-ui,sans-serif", color: "#7C8A81", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
-                Today 11:41 AM
-              </span>
-            </span>
-          </div>
-          {" "}
-          <div className="hv3" style={{ display: "grid", gridTemplateColumns: "1.1fr .9fr 1.2fr .8fr 1.3fr minmax(96px,1fr) 1.1fr", gap: "14px", padding: "13px 16px", borderBottom: "1px solid #EFF1ED", alignItems: "center" }}>
-            <span style={{ minWidth: "0", display: "flex", alignItems: "center", gap: "8px" }}>
-              <span style={{ font: "700 12.5px/1.2 Inter,system-ui,sans-serif", color: "#17201A", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
-                TXN-99178
-              </span>
-            </span>
-            <span style={{ minWidth: "0", display: "flex", alignItems: "center", gap: "8px" }}>
-              <span style={{ font: "500 12px/1.2 Inter,system-ui,sans-serif", color: "#17693A", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>#SK10476</span>
-            </span>
-            <span style={{ minWidth: "0", display: "flex", alignItems: "center", gap: "8px" }}>
-              <span style={{ font: "400 11px/1.2 Inter,system-ui,sans-serif", color: "#7C8A81", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
-                Rohit Sharma
-              </span>
-            </span>
-            <span style={{ minWidth: "0", display: "flex", alignItems: "center", gap: "8px" }}>
-              <span style={{ font: "700 12.5px/1.2 Inter,system-ui,sans-serif", color: "#17201A", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>$58.20</span>
-            </span>
-            <span style={{ minWidth: "0", display: "flex", alignItems: "center", gap: "8px" }}>
-              <span style={{ font: "400 11px/1.2 Inter,system-ui,sans-serif", color: "#7C8A81", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
-                Visa · 6640
-              </span>
-            </span>
-            <span style={{ minWidth: "0", display: "flex", alignItems: "center", gap: "8px" }}>
-              <span style={{ font: "600 10.5px/1.2 Inter,system-ui,sans-serif", color: "#A93826", background: "#FAEDEA", padding: "5px 8px", borderRadius: "5px", whiteSpace: "nowrap", display: "inline-block" }}>
-                Failed
-              </span>
-            </span>
-            <span style={{ minWidth: "0", display: "flex", alignItems: "center", gap: "8px" }}>
-              <span style={{ font: "400 11px/1.2 Inter,system-ui,sans-serif", color: "#7C8A81", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
-                Today 11:22 AM
-              </span>
-            </span>
-          </div>
-          {" "}
-          <div className="hv3" style={{ display: "grid", gridTemplateColumns: "1.1fr .9fr 1.2fr .8fr 1.3fr minmax(96px,1fr) 1.1fr", gap: "14px", padding: "13px 16px", alignItems: "center" }}>
-            <span style={{ minWidth: "0", display: "flex", alignItems: "center", gap: "8px" }}>
-              <span style={{ font: "700 12.5px/1.2 Inter,system-ui,sans-serif", color: "#17201A", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
-                TXN-99177
-              </span>
-            </span>
-            <span style={{ minWidth: "0", display: "flex", alignItems: "center", gap: "8px" }}>
-              <span style={{ font: "500 12px/1.2 Inter,system-ui,sans-serif", color: "#17693A", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>#SK10475</span>
-            </span>
-            <span style={{ minWidth: "0", display: "flex", alignItems: "center", gap: "8px" }}>
-              <span style={{ font: "400 11px/1.2 Inter,system-ui,sans-serif", color: "#7C8A81", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
-                Emily Nguyen
-              </span>
-            </span>
-            <span style={{ minWidth: "0", display: "flex", alignItems: "center", gap: "8px" }}>
-              <span style={{ font: "700 12.5px/1.2 Inter,system-ui,sans-serif", color: "#17201A", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
-                $118.60
-              </span>
-            </span>
-            <span style={{ minWidth: "0", display: "flex", alignItems: "center", gap: "8px" }}>
-              <span style={{ font: "400 11px/1.2 Inter,system-ui,sans-serif", color: "#7C8A81", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
-                Spice Kart Money
-              </span>
-            </span>
-            <span style={{ minWidth: "0", display: "flex", alignItems: "center", gap: "8px" }}>
-              <span style={{ font: "600 10.5px/1.2 Inter,system-ui,sans-serif", color: "#0B6B33", background: "#E9F6E3", padding: "5px 8px", borderRadius: "5px", whiteSpace: "nowrap", display: "inline-block" }}>
-                Paid
-              </span>
-            </span>
-            <span style={{ minWidth: "0", display: "flex", alignItems: "center", gap: "8px" }}>
-              <span style={{ font: "400 11px/1.2 Inter,system-ui,sans-serif", color: "#7C8A81", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
-                Today 10:58 AM
-              </span>
-            </span>
-          </div>
-          {" "}
-          <div style={{ display: "flex", alignItems: "center", gap: "12px", padding: "12px 16px", borderTop: "1px solid #E4E7E2", background: "#fff" }}>
-            <span style={{ font: "400 11.5px/1.2 Inter,system-ui,sans-serif", color: "#7C8A81", whiteSpace: "nowrap" }}>Showing 8 of 1,284 transactions</span>
-            <span style={{ marginLeft: "auto", display: "flex", alignItems: "center", gap: "5px" }}>
-              <span style={{ width: "28px", height: "28px", border: "1px solid #E4E7E2", borderRadius: "6px", display: "flex", alignItems: "center", justifyContent: "center", background: "#fff" }}>
-                <svg width="12" height="12" viewBox="0 0 20 20" fill="none" style={{ flex: "none" }}>
-                  <path d="M12.4 4.4L6.8 10l5.6 5.6" stroke="#7C8A81" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round" />
-                </svg>
-              </span>
-              <span style={{ minWidth: "28px", height: "28px", borderRadius: "6px", background: "#0B3D1F", color: "#fff", font: "600 11.5px/1.2 Inter,system-ui,sans-serif", display: "flex", alignItems: "center", justifyContent: "center" }}>
-                1
-              </span>
-              <span style={{ minWidth: "28px", height: "28px", border: "1px solid #E4E7E2", borderRadius: "6px", font: "500 11.5px/1.2 Inter,system-ui,sans-serif", color: "#4A564E", display: "flex", alignItems: "center", justifyContent: "center", background: "#fff" }}>
-                2
-              </span>
-              <span style={{ width: "28px", height: "28px", border: "1px solid #E4E7E2", borderRadius: "6px", display: "flex", alignItems: "center", justifyContent: "center", background: "#fff" }}>
-                <svg width="12" height="12" viewBox="0 0 20 20" fill="none" style={{ flex: "none" }}>
-                  <path d="M7.6 4.4L13 10l-5.4 5.6" stroke="#7C8A81" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round" />
-                </svg>
-              </span>
-            </span>
-          </div>
-          {" "}
+              <Pager page={cur} pages={pages} onPage={setPage} />
+            </div>
+          )}
         </div>
-        <div style={{ display: "flex", flexDirection: "column", gap: "10px" }}>
-          <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
-            <span style={{ font: "600 14px/1.2 Inter,system-ui,sans-serif", color: "#17201A", whiteSpace: "nowrap" }}>Refund requests</span>
-            <span>
-              <span style={{ font: "600 10.5px/1.2 Inter,system-ui,sans-serif", color: "#8A6100", background: "#FBF1DE", padding: "5px 8px", borderRadius: "5px", whiteSpace: "nowrap", display: "inline-block" }}>
-                6 AWAITING REVIEW
-              </span>
-            </span>
-            <button onClick={v.nav_refunds} style={{ marginLeft: "auto", border: "0", background: "transparent", font: "600 11.5px/1.2 Inter,system-ui,sans-serif", color: "#17693A", cursor: "pointer", padding: "0", whiteSpace: "nowrap" }}>
+
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+            <span style={{ font: `600 14px/1.2 ${FONT}`, color: INK, whiteSpace: 'nowrap' }}>Refund requests</span>
+            {req && (
+              <span><span style={pill(...(req.total ? AMBER : GREY))}>{req.total ? `${req.total} AWAITING REVIEW` : 'NONE WAITING'}</span></span>
+            )}
+            <button onClick={v.nav_refunds} style={{ marginLeft: 'auto', border: '0', background: 'transparent', font: `600 11.5px/1.2 ${FONT}`, color: '#17693A', cursor: 'pointer', padding: '0', whiteSpace: 'nowrap' }}>
               All refunds →
             </button>
           </div>
-          <div style={{ background: "#fff", border: "1px solid #E4E7E2", borderRadius: "10px", overflow: "hidden", flex: "none" }}>
-            {" "}
-            <div style={{ display: "grid", gridTemplateColumns: ".9fr .9fr 1.1fr .7fr 1.1fr 1.3fr minmax(84px,.9fr) .9fr 96px", gap: "14px", padding: "11px 16px", background: "#F6F7F4", borderBottom: "1px solid #E4E7E2" }}>
-              <span style={{ font: "600 10.5px/1.2 Inter,system-ui,sans-serif", letterSpacing: ".5px", color: "#7C8A81", textTransform: "uppercase", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
-                Refund
-              </span>
-              <span style={{ font: "600 10.5px/1.2 Inter,system-ui,sans-serif", letterSpacing: ".5px", color: "#7C8A81", textTransform: "uppercase", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
-                Order
-              </span>
-              <span style={{ font: "600 10.5px/1.2 Inter,system-ui,sans-serif", letterSpacing: ".5px", color: "#7C8A81", textTransform: "uppercase", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
-                Customer
-              </span>
-              <span style={{ font: "600 10.5px/1.2 Inter,system-ui,sans-serif", letterSpacing: ".5px", color: "#7C8A81", textTransform: "uppercase", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
-                Amount
-              </span>
-              <span style={{ font: "600 10.5px/1.2 Inter,system-ui,sans-serif", letterSpacing: ".5px", color: "#7C8A81", textTransform: "uppercase", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
-                Reason
-              </span>
-              <span style={{ font: "600 10.5px/1.2 Inter,system-ui,sans-serif", letterSpacing: ".5px", color: "#7C8A81", textTransform: "uppercase", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
-                Method
-              </span>
-              <span style={{ font: "600 10.5px/1.2 Inter,system-ui,sans-serif", letterSpacing: ".5px", color: "#7C8A81", textTransform: "uppercase", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
-                Status
-              </span>
-              <span style={{ font: "600 10.5px/1.2 Inter,system-ui,sans-serif", letterSpacing: ".5px", color: "#7C8A81", textTransform: "uppercase", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
-                Requested
-              </span>
-              <span style={{ font: "600 10.5px/1.2 Inter,system-ui,sans-serif", letterSpacing: ".5px", color: "#7C8A81", textTransform: "uppercase", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
-                Actions
-              </span>
+          <div style={{ background: '#fff', border: `1px solid ${BORDER}`, borderRadius: '10px', overflow: 'hidden', flex: 'none' }}>
+            <div style={{ display: 'grid', gridTemplateColumns: RCOLS, gap: '14px', padding: '11px 16px', background: '#F6F7F4', borderBottom: `1px solid ${BORDER}` }}>
+              {['Refund', 'Order', 'Customer', 'Amount', 'Reason', 'Method', 'Status', 'Requested', 'Actions'].map((h) => <span key={h} style={head}>{h}</span>)}
             </div>
-            {" "}
-            <div className="hv3" style={{ display: "grid", gridTemplateColumns: ".9fr .9fr 1.1fr .7fr 1.1fr 1.3fr minmax(84px,.9fr) .9fr 96px", gap: "14px", padding: "13px 16px", borderBottom: "1px solid #EFF1ED", alignItems: "center" }}>
-              <span style={{ minWidth: "0", display: "flex", alignItems: "center", gap: "8px" }}>
-                <span style={{ font: "700 12.5px/1.2 Inter,system-ui,sans-serif", color: "#17201A", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
-                  RF-2188
+            {reqMessage ? (
+              <div style={{ padding: '26px 16px', textAlign: 'center', font: `400 12.5px/1.5 ${FONT}`, color: MUTED }}>{reqMessage}</div>
+            ) : req.rows.map((r, i) => (
+              <div key={r.id} className="hv3" style={{ display: 'grid', gridTemplateColumns: RCOLS, gap: '14px', padding: '13px 16px', borderBottom: i < req.rows.length - 1 ? '1px solid #EFF1ED' : '0', alignItems: 'center' }}>
+                <span style={cellWrap}><span style={strong}>{r.number}</span></span>
+                <span style={cellWrap}>
+                  {r.order ? <button onClick={() => v.openOrder(r.order)} style={{ ...link, border: '0', background: 'transparent', padding: '0', cursor: 'pointer' }}>#{r.order.number}</button> : <span style={soft}>—</span>}
                 </span>
-              </span>
-              <span style={{ minWidth: "0", display: "flex", alignItems: "center", gap: "8px" }}>
-                <span style={{ font: "500 12px/1.2 Inter,system-ui,sans-serif", color: "#17693A", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>#SK10478</span>
-              </span>
-              <span style={{ minWidth: "0", display: "flex", alignItems: "center", gap: "8px" }}>
-                <span style={{ font: "400 11px/1.2 Inter,system-ui,sans-serif", color: "#7C8A81", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
-                  Daniel Cruz
+                <span style={cellWrap}><span style={soft}>{customerName(r.customer ?? r.order?.customer)}</span></span>
+                <span style={cellWrap}><span style={strong}>{r.amount != null ? aud(r.amount) : r.order ? aud(r.order.total) : '—'}</span></span>
+                <span style={cellWrap}><span style={soft} title={r.detail || undefined}>{REFUND_REASONS[r.reason] ?? r.reason}</span></span>
+                <span style={cellWrap}><span style={soft}>{r.order ? methodLabel(r.order) : '—'}</span></span>
+                <span style={cellWrap}><span style={pill(...AMBER)}>Pending</span></span>
+                <span style={cellWrap}><span style={soft}>{placedLabel(r.created_at, today)}</span></span>
+                <span style={cellWrap}>
+                  <span style={{ marginLeft: 'auto', display: 'flex', gap: '6px' }}>
+                    <button onClick={() => r.order && setRefund({ request: r })} disabled={!r.order} style={smallBtn}>Review</button>
+                  </span>
                 </span>
-              </span>
-              <span style={{ minWidth: "0", display: "flex", alignItems: "center", gap: "8px" }}>
-                <span style={{ font: "700 12.5px/1.2 Inter,system-ui,sans-serif", color: "#17201A", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>$24.50</span>
-              </span>
-              <span style={{ minWidth: "0", display: "flex", alignItems: "center", gap: "8px" }}>
-                <span style={{ font: "400 11px/1.2 Inter,system-ui,sans-serif", color: "#7C8A81", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
-                  Missing item
-                </span>
-              </span>
-              <span style={{ minWidth: "0", display: "flex", alignItems: "center", gap: "8px" }}>
-                <span style={{ font: "400 11px/1.2 Inter,system-ui,sans-serif", color: "#7C8A81", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
-                  Visa · 1129
-                </span>
-              </span>
-              <span style={{ minWidth: "0", display: "flex", alignItems: "center", gap: "8px" }}>
-                <span style={{ font: "600 10.5px/1.2 Inter,system-ui,sans-serif", color: "#8A6100", background: "#FBF1DE", padding: "5px 8px", borderRadius: "5px", whiteSpace: "nowrap", display: "inline-block" }}>
-                  Pending
-                </span>
-              </span>
-              <span style={{ minWidth: "0", display: "flex", alignItems: "center", gap: "8px" }}>
-                <span style={{ font: "400 11px/1.2 Inter,system-ui,sans-serif", color: "#7C8A81", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
-                  Today 12:02 PM
-                </span>
-              </span>
-              <span style={{ minWidth: "0", display: "flex", alignItems: "center", gap: "8px" }}>
-                <span style={{ marginLeft: "auto", display: "flex", gap: "6px" }}>
-                  <button onClick={v.openRefund} style={{ height: "26px", padding: "0 9px", border: "1px solid #E4E7E2", borderRadius: "6px", background: "#fff", font: "600 11px/1.2 Inter,system-ui,sans-serif", color: "#17201A", cursor: "pointer", whiteSpace: "nowrap" }}>
-                    Review
-                  </button>
-                </span>
-              </span>
-            </div>
-            {" "}
-            <div className="hv3" style={{ display: "grid", gridTemplateColumns: ".9fr .9fr 1.1fr .7fr 1.1fr 1.3fr minmax(84px,.9fr) .9fr 96px", gap: "14px", padding: "13px 16px", borderBottom: "1px solid #EFF1ED", alignItems: "center" }}>
-              <span style={{ minWidth: "0", display: "flex", alignItems: "center", gap: "8px" }}>
-                <span style={{ font: "700 12.5px/1.2 Inter,system-ui,sans-serif", color: "#17201A", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
-                  RF-2187
-                </span>
-              </span>
-              <span style={{ minWidth: "0", display: "flex", alignItems: "center", gap: "8px" }}>
-                <span style={{ font: "500 12px/1.2 Inter,system-ui,sans-serif", color: "#17693A", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>#SK10462</span>
-              </span>
-              <span style={{ minWidth: "0", display: "flex", alignItems: "center", gap: "8px" }}>
-                <span style={{ font: "400 11px/1.2 Inter,system-ui,sans-serif", color: "#7C8A81", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>Mei Chen</span>
-              </span>
-              <span style={{ minWidth: "0", display: "flex", alignItems: "center", gap: "8px" }}>
-                <span style={{ font: "700 12.5px/1.2 Inter,system-ui,sans-serif", color: "#17201A", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>$6.50</span>
-              </span>
-              <span style={{ minWidth: "0", display: "flex", alignItems: "center", gap: "8px" }}>
-                <span style={{ font: "400 11px/1.2 Inter,system-ui,sans-serif", color: "#7C8A81", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
-                  Damaged item
-                </span>
-              </span>
-              <span style={{ minWidth: "0", display: "flex", alignItems: "center", gap: "8px" }}>
-                <span style={{ font: "400 11px/1.2 Inter,system-ui,sans-serif", color: "#7C8A81", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
-                  Spice Kart Money
-                </span>
-              </span>
-              <span style={{ minWidth: "0", display: "flex", alignItems: "center", gap: "8px" }}>
-                <span style={{ font: "600 10.5px/1.2 Inter,system-ui,sans-serif", color: "#8A6100", background: "#FBF1DE", padding: "5px 8px", borderRadius: "5px", whiteSpace: "nowrap", display: "inline-block" }}>
-                  Pending
-                </span>
-              </span>
-              <span style={{ minWidth: "0", display: "flex", alignItems: "center", gap: "8px" }}>
-                <span style={{ font: "400 11px/1.2 Inter,system-ui,sans-serif", color: "#7C8A81", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
-                  Today 10:14 AM
-                </span>
-              </span>
-              <span style={{ minWidth: "0", display: "flex", alignItems: "center", gap: "8px" }}>
-                <span style={{ marginLeft: "auto", display: "flex", gap: "6px" }}>
-                  <button onClick={v.openRefund} style={{ height: "26px", padding: "0 9px", border: "1px solid #E4E7E2", borderRadius: "6px", background: "#fff", font: "600 11px/1.2 Inter,system-ui,sans-serif", color: "#17201A", cursor: "pointer", whiteSpace: "nowrap" }}>
-                    Review
-                  </button>
-                </span>
-              </span>
-            </div>
-            {" "}
-            <div className="hv3" style={{ display: "grid", gridTemplateColumns: ".9fr .9fr 1.1fr .7fr 1.1fr 1.3fr minmax(84px,.9fr) .9fr 96px", gap: "14px", padding: "13px 16px", borderBottom: "1px solid #EFF1ED", alignItems: "center" }}>
-              <span style={{ minWidth: "0", display: "flex", alignItems: "center", gap: "8px" }}>
-                <span style={{ font: "700 12.5px/1.2 Inter,system-ui,sans-serif", color: "#17201A", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
-                  RF-2186
-                </span>
-              </span>
-              <span style={{ minWidth: "0", display: "flex", alignItems: "center", gap: "8px" }}>
-                <span style={{ font: "500 12px/1.2 Inter,system-ui,sans-serif", color: "#17693A", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>#SK10441</span>
-              </span>
-              <span style={{ minWidth: "0", display: "flex", alignItems: "center", gap: "8px" }}>
-                <span style={{ font: "400 11px/1.2 Inter,system-ui,sans-serif", color: "#7C8A81", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
-                  Ava Thompson
-                </span>
-              </span>
-              <span style={{ minWidth: "0", display: "flex", alignItems: "center", gap: "8px" }}>
-                <span style={{ font: "700 12.5px/1.2 Inter,system-ui,sans-serif", color: "#17201A", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>$14.40</span>
-              </span>
-              <span style={{ minWidth: "0", display: "flex", alignItems: "center", gap: "8px" }}>
-                <span style={{ font: "400 11px/1.2 Inter,system-ui,sans-serif", color: "#7C8A81", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
-                  Late delivery
-                </span>
-              </span>
-              <span style={{ minWidth: "0", display: "flex", alignItems: "center", gap: "8px" }}>
-                <span style={{ font: "400 11px/1.2 Inter,system-ui,sans-serif", color: "#7C8A81", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
-                  Apple Pay
-                </span>
-              </span>
-              <span style={{ minWidth: "0", display: "flex", alignItems: "center", gap: "8px" }}>
-                <span style={{ font: "600 10.5px/1.2 Inter,system-ui,sans-serif", color: "#0B6B33", background: "#E9F6E3", padding: "5px 8px", borderRadius: "5px", whiteSpace: "nowrap", display: "inline-block" }}>
-                  Approved
-                </span>
-              </span>
-              <span style={{ minWidth: "0", display: "flex", alignItems: "center", gap: "8px" }}>
-                <span style={{ font: "400 11px/1.2 Inter,system-ui,sans-serif", color: "#7C8A81", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
-                  Yesterday
-                </span>
-              </span>
-              <span style={{ minWidth: "0", display: "flex", alignItems: "center", gap: "8px" }}>
-                <span style={{ marginLeft: "auto", display: "flex", gap: "6px" }}>
-                  <button onClick={v.openRefund} style={{ height: "26px", padding: "0 9px", border: "1px solid #E4E7E2", borderRadius: "6px", background: "#fff", font: "600 11px/1.2 Inter,system-ui,sans-serif", color: "#17201A", cursor: "pointer", whiteSpace: "nowrap" }}>
-                    Review
-                  </button>
-                </span>
-              </span>
-            </div>
-            {" "}
-            <div className="hv3" style={{ display: "grid", gridTemplateColumns: ".9fr .9fr 1.1fr .7fr 1.1fr 1.3fr minmax(84px,.9fr) .9fr 96px", gap: "14px", padding: "13px 16px", borderBottom: "1px solid #EFF1ED", alignItems: "center" }}>
-              <span style={{ minWidth: "0", display: "flex", alignItems: "center", gap: "8px" }}>
-                <span style={{ font: "700 12.5px/1.2 Inter,system-ui,sans-serif", color: "#17201A", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
-                  RF-2185
-                </span>
-              </span>
-              <span style={{ minWidth: "0", display: "flex", alignItems: "center", gap: "8px" }}>
-                <span style={{ font: "500 12px/1.2 Inter,system-ui,sans-serif", color: "#17693A", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>#SK10428</span>
-              </span>
-              <span style={{ minWidth: "0", display: "flex", alignItems: "center", gap: "8px" }}>
-                <span style={{ font: "400 11px/1.2 Inter,system-ui,sans-serif", color: "#7C8A81", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
-                  Liam O’Brien
-                </span>
-              </span>
-              <span style={{ minWidth: "0", display: "flex", alignItems: "center", gap: "8px" }}>
-                <span style={{ font: "700 12.5px/1.2 Inter,system-ui,sans-serif", color: "#17201A", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>$8.90</span>
-              </span>
-              <span style={{ minWidth: "0", display: "flex", alignItems: "center", gap: "8px" }}>
-                <span style={{ font: "400 11px/1.2 Inter,system-ui,sans-serif", color: "#7C8A81", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
-                  Quality issue
-                </span>
-              </span>
-              <span style={{ minWidth: "0", display: "flex", alignItems: "center", gap: "8px" }}>
-                <span style={{ font: "400 11px/1.2 Inter,system-ui,sans-serif", color: "#7C8A81", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
-                  Visa · 4417
-                </span>
-              </span>
-              <span style={{ minWidth: "0", display: "flex", alignItems: "center", gap: "8px" }}>
-                <span style={{ font: "600 10.5px/1.2 Inter,system-ui,sans-serif", color: "#0B6B33", background: "#E9F6E3", padding: "5px 8px", borderRadius: "5px", whiteSpace: "nowrap", display: "inline-block" }}>
-                  Approved
-                </span>
-              </span>
-              <span style={{ minWidth: "0", display: "flex", alignItems: "center", gap: "8px" }}>
-                <span style={{ font: "400 11px/1.2 Inter,system-ui,sans-serif", color: "#7C8A81", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
-                  Yesterday
-                </span>
-              </span>
-              <span style={{ minWidth: "0", display: "flex", alignItems: "center", gap: "8px" }}>
-                <span style={{ marginLeft: "auto", display: "flex", gap: "6px" }}>
-                  <button onClick={v.openRefund} style={{ height: "26px", padding: "0 9px", border: "1px solid #E4E7E2", borderRadius: "6px", background: "#fff", font: "600 11px/1.2 Inter,system-ui,sans-serif", color: "#17201A", cursor: "pointer", whiteSpace: "nowrap" }}>
-                    Review
-                  </button>
-                </span>
-              </span>
-            </div>
-            {" "}
-            <div className="hv3" style={{ display: "grid", gridTemplateColumns: ".9fr .9fr 1.1fr .7fr 1.1fr 1.3fr minmax(84px,.9fr) .9fr 96px", gap: "14px", padding: "13px 16px", alignItems: "center" }}>
-              <span style={{ minWidth: "0", display: "flex", alignItems: "center", gap: "8px" }}>
-                <span style={{ font: "700 12.5px/1.2 Inter,system-ui,sans-serif", color: "#17201A", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
-                  RF-2184
-                </span>
-              </span>
-              <span style={{ minWidth: "0", display: "flex", alignItems: "center", gap: "8px" }}>
-                <span style={{ font: "500 12px/1.2 Inter,system-ui,sans-serif", color: "#17693A", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>#SK10402</span>
-              </span>
-              <span style={{ minWidth: "0", display: "flex", alignItems: "center", gap: "8px" }}>
-                <span style={{ font: "400 11px/1.2 Inter,system-ui,sans-serif", color: "#7C8A81", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
-                  Rohit Sharma
-                </span>
-              </span>
-              <span style={{ minWidth: "0", display: "flex", alignItems: "center", gap: "8px" }}>
-                <span style={{ font: "700 12.5px/1.2 Inter,system-ui,sans-serif", color: "#17201A", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>$32.00</span>
-              </span>
-              <span style={{ minWidth: "0", display: "flex", alignItems: "center", gap: "8px" }}>
-                <span style={{ font: "400 11px/1.2 Inter,system-ui,sans-serif", color: "#7C8A81", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
-                  Order cancelled
-                </span>
-              </span>
-              <span style={{ minWidth: "0", display: "flex", alignItems: "center", gap: "8px" }}>
-                <span style={{ font: "400 11px/1.2 Inter,system-ui,sans-serif", color: "#7C8A81", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>PayID</span>
-              </span>
-              <span style={{ minWidth: "0", display: "flex", alignItems: "center", gap: "8px" }}>
-                <span style={{ font: "600 10.5px/1.2 Inter,system-ui,sans-serif", color: "#A93826", background: "#FAEDEA", padding: "5px 8px", borderRadius: "5px", whiteSpace: "nowrap", display: "inline-block" }}>
-                  Rejected
-                </span>
-              </span>
-              <span style={{ minWidth: "0", display: "flex", alignItems: "center", gap: "8px" }}>
-                <span style={{ font: "400 11px/1.2 Inter,system-ui,sans-serif", color: "#7C8A81", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
-                  2 days ago
-                </span>
-              </span>
-              <span style={{ minWidth: "0", display: "flex", alignItems: "center", gap: "8px" }}>
-                <span style={{ marginLeft: "auto", display: "flex", gap: "6px" }}>
-                  <button onClick={v.openRefund} style={{ height: "26px", padding: "0 9px", border: "1px solid #E4E7E2", borderRadius: "6px", background: "#fff", font: "600 11px/1.2 Inter,system-ui,sans-serif", color: "#17201A", cursor: "pointer", whiteSpace: "nowrap" }}>
-                    Review
-                  </button>
-                </span>
-              </span>
-            </div>
-            {" "}
+              </div>
+            ))}
           </div>
+          {req && req.total > req.rows.length && (
+            <span style={{ font: `400 11.5px/1.2 ${FONT}`, color: MUTED }}>Showing the latest {req.rows.length} of {req.total} · see All refunds for the rest.</span>
+          )}
         </div>
       </div>
+      {refund && (
+        <RefundModal
+          order={refund.order}
+          request={refund.request}
+          onClose={() => setRefund(null)}
+          onDone={(msg) => { v.flash?.(msg); tx.refetch(); summary.refetch(); requests.refetch() }}
+        />
+      )}
     </>
   )
 }

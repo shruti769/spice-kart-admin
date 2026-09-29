@@ -1,6 +1,79 @@
 import { useEffect, useRef, useState } from "react"
+import DeliveryPostcodesCard from "../components/DeliveryPostcodesCard"
 import DeliverySlotsCard from "../components/DeliverySlotsCard"
 import { updateDeliverySettings, useDeliverySettings } from "../lib/delivery"
+import StoreMapPicker from "../components/StoreMapPicker"
+import { AU_STATES, saveStore, useStore } from "../lib/stores"
+import { fetchStoreConfig, updateBusinessSettings, useBusinessSettings } from "../lib/businessSettings"
+import { Field, Money, NotificationsCard, PaymentsCard } from "../components/settings/BusinessCards"
+import StoreHoursCard from "../components/settings/StoreHoursCard"
+import SecurityCard from "../components/settings/SecurityCard"
+
+// business_settings columns edited on this page, by card.
+const PAYMENT_KEYS = ["gst_rate", "prices_include_gst", "refund_destination", "accept_card", "card_brands", "accept_apple_pay", "accept_google_pay", "accept_payid", "restocking_fee_max", "payout_schedule"]
+const NOTIFY_KEYS = ["notify_order_email", "notify_delivery_sms", "allow_promo_push", "slack_low_stock", "slack_webhook_url", "daily_digest", "digest_emails", "digest_hour"]
+const SECURITY_KEYS = ["require_2fa", "allow_google_sso", "session_timeout_minutes"]
+// Store hours save straight from their own popup (StoreHoursCard), so they aren't in the draft.
+const BIZ_KEYS = ["min_order_value", ...PAYMENT_KEYS, ...NOTIFY_KEYS, ...SECURITY_KEYS]
+const NUMERIC = { min_order_value: [0, 10000], gst_rate: [0, 100], restocking_fee_max: [0, 1000] }
+const same = (a, b) => JSON.stringify(a) === JSON.stringify(b) || (a != null && b != null && typeof a !== "object" && String(a) === String(b))
+
+/** Draft → `{ patch, errors }` for the changed business settings. */
+function parseBusiness(draft, saved) {
+  const patch = {}
+  const errors = {}
+  for (const k of BIZ_KEYS) {
+    if (same(draft[k], saved[k])) continue
+    if (NUMERIC[k]) {
+      const n = Number(draft[k])
+      const [min, max] = NUMERIC[k]
+      if (String(draft[k]).trim() === "" || !Number.isFinite(n) || n < min || n > max) errors[k] = `Enter ${min}–${max}`
+      else patch[k] = Math.round(n * 100) / 100
+    } else patch[k] = draft[k]
+  }
+  if (draft.slack_low_stock && !/^https:\/\/hooks\.slack\.com\//.test(draft.slack_webhook_url ?? "")) errors.slack_webhook_url = "Paste the Slack webhook URL (starts with https://hooks.slack.com/)"
+  if (draft.daily_digest && !draft.digest_emails.length) errors.digest_emails = "Add at least one email"
+  if (draft.digest_emails.some((e) => !/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(e))) errors.digest_emails = "Check the email addresses"
+  if (![draft.accept_card, draft.accept_apple_pay, draft.accept_google_pay, draft.accept_payid].some(Boolean)) errors.payment_methods = "Keep at least one payment method on"
+  if (draft.accept_card && !draft.card_brands.length) errors.payment_methods = "Pick at least one card brand, or turn cards off"
+  return { patch, errors }
+}
+
+// [stores column, label, placeholder, full width] — the store customers order from.
+const STORE_FIELDS = [
+  ["name", "STORE NAME", "e.g. Spice Kart Collingwood"],
+  ["support_email", "SUPPORT EMAIL", "e.g. help@spicekart.com.au"],
+  ["support_phone", "SUPPORT PHONE", "e.g. 1800 774 235"],
+  ["abn", "ABN", "11 digits"],
+  ["address_line", "STREET ADDRESS", "e.g. 118 Smith Street", true],
+  ["suburb", "SUBURB", "e.g. Collingwood"],
+  ["postcode", "POSTCODE", "e.g. 3066"],
+]
+const STORE_KEYS = [...STORE_FIELDS.map(([k]) => k), "state", "latitude", "longitude"]
+const toStoreForm = (store) => Object.fromEntries(STORE_KEYS.map((k) => [k, store?.[k] == null ? (k === "state" ? "VIC" : "") : String(store[k])]))
+
+/** Form strings → `{ row, errors }` (empty optional fields become null). */
+function parseStoreForm(form) {
+  const t = (k) => form[k].trim()
+  const errors = {}
+  if (!t("name")) errors.name = "The store needs a name"
+  if (t("support_email") && !/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(t("support_email"))) errors.support_email = "Enter a valid email"
+  if (t("abn") && !/^\d{11}$/.test(t("abn").replace(/\s/g, ""))) errors.abn = "An ABN has 11 digits"
+  if (t("postcode") && !/^\d{4}$/.test(t("postcode"))) errors.postcode = "4 digits"
+  const row = {
+    name: t("name"),
+    support_email: t("support_email") || null,
+    support_phone: t("support_phone") || null,
+    abn: t("abn") || null,
+    address_line: t("address_line"),
+    suburb: t("suburb"),
+    state: form.state,
+    postcode: t("postcode") || null,
+    latitude: form.latitude === "" ? null : Number(form.latitude),
+    longitude: form.longitude === "" ? null : Number(form.longitude),
+  }
+  return { row, errors }
+}
 
 // [delivery_settings column, label, unit] — edited here and saved with "Save settings".
 const DELIVERY_FIELDS = [
@@ -50,22 +123,74 @@ export default function Settings({ v }) {
   const deliveryForm = deliveryDraft ?? savedForm
   const deliveryDirty = !!deliveryDraft && DELIVERY_FIELDS.some(([k]) => deliveryDraft[k] !== savedForm[k])
 
+  const storeQ = useStore()
+  const [storeDraft, setStoreDraft] = useState(null) // null = showing the saved store
+  const [storeErrors, setStoreErrors] = useState({})
+  const savedStoreForm = toStoreForm(storeQ.store)
+  const storeForm = storeDraft ?? savedStoreForm
+  const storeDirty = !!storeDraft && STORE_KEYS.some((k) => storeDraft[k] !== savedStoreForm[k])
+  const setStoreField = (k, val) => {
+    setStoreDraft({ ...storeForm, [k]: val })
+    if (storeErrors[k]) setStoreErrors((e) => ({ ...e, [k]: undefined }))
+  }
+  // A place picked on the map fills several fields at once.
+  const patchStore = (patch) => {
+    setStoreDraft({ ...storeForm, ...patch })
+    setStoreErrors((e) => Object.fromEntries(Object.entries(e).filter(([k]) => !(k in patch))))
+  }
+
+  const biz = useBusinessSettings()
+  const [bizDraft, setBizDraft] = useState(null)
+  const [bizErrors, setBizErrors] = useState({})
+  const bizForm = bizDraft ?? biz.data ?? {
+    min_order_value: 0, gst_rate: 10, prices_include_gst: true, refund_destination: "wallet", accept_card: true, card_brands: [], accept_apple_pay: true,
+    accept_google_pay: true, accept_payid: true, restocking_fee_max: 0, payout_schedule: "daily", notify_order_email: false, notify_delivery_sms: false,
+    allow_promo_push: true, slack_low_stock: false, slack_webhook_url: null, daily_digest: false, digest_emails: [], digest_hour: 7, hours: {}, public_holidays: [],
+    require_2fa: false, allow_google_sso: false, session_timeout_minutes: 30, ip_allowlist_enabled: false, ip_allowlist: [],
+  }
+  const bizDisabled = biz.status !== "ready"
+  const bizDirtyIn = (keys) => !!bizDraft && !!biz.data && keys.some((k) => !same(bizDraft[k], biz.data[k]))
+  const bizDirty = bizDirtyIn(BIZ_KEYS)
+  const setBiz = (patch) => {
+    setBizDraft({ ...bizForm, ...patch })
+    setBizErrors((e) => Object.fromEntries(Object.entries(e).filter(([k]) => !Object.keys(patch).some((p) => k === p || k.startsWith(`${p}.`)) && k !== "payment_methods")))
+  }
+  const [openNow, setOpenNow] = useState(null)
+  useEffect(() => {
+    let cancelled = false
+    fetchStoreConfig().then((c) => { if (!cancelled) setOpenNow(c?.open_now ?? null) })
+    return () => { cancelled = true }
+  }, [biz.data])
+
   const saveSettings = async () => {
     const { patch, errors } = parseDeliveryForm(deliveryForm)
+    const store = storeDirty ? parseStoreForm(storeForm) : { errors: {} }
+    const business = bizDirty ? parseBusiness(bizForm, biz.data) : { patch: {}, errors: {} }
     setDeliveryErrors(errors)
-    if (Object.keys(errors).length) {
-      v.flash("Check the highlighted delivery fields")
-      return
-    }
-    if (!deliveryDirty) {
+    setStoreErrors(store.errors)
+    setBizErrors(business.errors)
+    if (Object.keys(store.errors).length) return v.flash("Check the highlighted store details")
+    if (Object.keys(errors).length || Object.keys(business.errors).length) return v.flash("Check the highlighted fields")
+    if (!deliveryDirty && !storeDirty && !bizDirty) {
       v.saveSettings()
       return
     }
     setSaving(true)
     try {
-      await updateDeliverySettings(patch)
-      setDeliveryDraft(null)
-      v.saveSettings()
+      if (storeDirty) {
+        await saveStore(storeQ.store?.id ?? null, store.row)
+        setStoreDraft(null)
+      }
+      if (deliveryDirty) {
+        await updateDeliverySettings(patch)
+        setDeliveryDraft(null)
+      }
+      if (bizDirty && Object.keys(business.patch).length) {
+        await updateBusinessSettings(business.patch)
+        setBizDraft(null)
+        biz.refetch()
+      } else if (bizDirty) setBizDraft(null)
+      v.flash(storeDirty && !storeQ.store ? `${store.row.name} added · new orders go to this store` : "Settings saved")
     } catch (e) {
       v.flash(e.message)
     } finally {
@@ -76,6 +201,10 @@ export default function Settings({ v }) {
   const discardChanges = () => {
     setDeliveryDraft(null)
     setDeliveryErrors({})
+    setStoreDraft(null)
+    setStoreErrors({})
+    setBizDraft(null)
+    setBizErrors({})
     v.discardChanges()
   }
 
@@ -120,7 +249,7 @@ export default function Settings({ v }) {
       <div style={{ display: "flex", alignItems: "flex-end", gap: "18px", padding: "24px 26px 2px" }}>
         <span style={{ display: "flex", flexDirection: "column", gap: "5px", minWidth: "0" }}>
           <span style={{ font: "700 20px/1.2 Inter,system-ui,sans-serif", color: "#17201A", whiteSpace: "nowrap" }}>Settings</span>
-          <span style={{ font: "400 12.5px/1.2 Inter,system-ui,sans-serif", color: "#7C8A81", whiteSpace: "nowrap" }}>Store configuration for Spice Kart Australia</span>
+          <span style={{ font: "400 12.5px/1.2 Inter,system-ui,sans-serif", color: "#7C8A81", whiteSpace: "nowrap" }}>{storeQ.store ? `Store configuration for ${storeQ.store.name}` : "Store configuration"}</span>
         </span>
         <span style={{ marginLeft: "auto", display: "flex", alignItems: "center", gap: "8px" }}>
           <button className="hv1" onClick={discardChanges}style={{ display: "flex", alignItems: "center", gap: "7px", height: "34px", padding: "0 12px", border: "1px solid #E4E7E2", borderRadius: "8px", background: "#fff", color: "#17201A", font: "600 12.5px/1.2 Inter,system-ui,sans-serif", cursor: "pointer", whiteSpace: "nowrap" }}>
@@ -145,64 +274,37 @@ export default function Settings({ v }) {
           </div>
           <div style={{ display: "flex", flexDirection: "column", gap: "14px" }}>
             <div data-section="general" style={{ background: "#fff", border: "1px solid #E4E7E2", borderRadius: "10px", padding: "18px", display: "flex", flexDirection: "column", gap: "14px" }}>
-              <span style={{ font: "600 13.5px/1.2 Inter,system-ui,sans-serif", color: "#17201A", whiteSpace: "nowrap" }}>General</span>
+              <span style={{ display: "flex", alignItems: "center", gap: "10px" }}>
+                <span style={{ font: "600 13.5px/1.2 Inter,system-ui,sans-serif", color: "#17201A", whiteSpace: "nowrap" }}>General · your store</span>
+                {storeDirty && <span style={{ padding: "3px 8px", borderRadius: "6px", background: "#FFF4DB", color: "#8A5A00", font: "600 10.5px/1.2 Inter,system-ui,sans-serif" }}>Unsaved changes</span>}
+                {storeQ.status === "error" && <span style={{ font: "400 11.5px/1.2 Inter,system-ui,sans-serif", color: "#B3402F" }}>Couldn't load · {storeQ.error}</span>}
+              </span>
+              {storeQ.status === "ready" && !storeQ.store && (
+                <span style={{ padding: "10px 12px", borderRadius: "8px", background: "#FBF1DE", color: "#8A6100", font: "500 12px/1.45 Inter,system-ui,sans-serif" }}>
+                  No store yet. Add your store's details and press Save settings. Every customer order goes to this store, and the app can't take orders until it exists.
+                </span>
+              )}
               <div style={{ display: "grid", gridTemplateColumns: "repeat(2,1fr)", gap: "11px" }}>
+                {STORE_FIELDS.map(([key, label, placeholder, wide]) => (
+                  <label key={key} style={{ display: "flex", flexDirection: "column", gap: "6px", ...(wide ? { gridColumn: "span 2" } : null) }}>
+                    <span style={{ font: "600 10.5px/1.2 Inter,system-ui,sans-serif", letterSpacing: ".4px", color: "#7C8A81", textTransform: "uppercase", whiteSpace: "nowrap" }}>{label}</span>
+                    <input value={storeForm[key]} placeholder={placeholder} disabled={storeQ.loading} maxLength={key === "address_line" ? 120 : 60} onChange={(e) => setStoreField(key, e.target.value)} style={{ height: "36px", padding: "0 11px", border: `1px solid ${storeErrors[key] ? "#B3402F" : "#E4E7E2"}`, borderRadius: "8px", background: "#fff", font: "500 12.5px/1.2 Inter,system-ui,sans-serif", color: "#17201A", outline: "none", minWidth: "0" }} />
+                    {storeErrors[key] && <span style={{ font: "400 11px/1.3 Inter,system-ui,sans-serif", color: "#B3402F" }}>{storeErrors[key]}</span>}
+                  </label>
+                ))}
+                <label style={{ display: "flex", flexDirection: "column", gap: "6px" }}>
+                  <span style={{ font: "600 10.5px/1.2 Inter,system-ui,sans-serif", letterSpacing: ".4px", color: "#7C8A81", textTransform: "uppercase", whiteSpace: "nowrap" }}>STATE</span>
+                  <select value={storeForm.state} disabled={storeQ.loading} onChange={(e) => setStoreField("state", e.target.value)} style={{ height: "36px", padding: "0 11px", border: "1px solid #E4E7E2", borderRadius: "8px", background: "#fff", font: "500 12.5px/1.2 Inter,system-ui,sans-serif", color: "#17201A", outline: "none", cursor: "pointer" }}>
+                    {AU_STATES.map((st) => <option key={st}>{st}</option>)}
+                  </select>
+                </label>
                 <span style={{ display: "flex", flexDirection: "column", gap: "6px" }}>
-                  <span style={{ font: "600 10.5px/1.2 Inter,system-ui,sans-serif", letterSpacing: ".4px", color: "#7C8A81", textTransform: "uppercase", whiteSpace: "nowrap" }}>
-                    STORE NAME
-                  </span>
-                  <span style={{ display: "flex", alignItems: "center", height: "36px", padding: "0 11px", border: "1px solid #E4E7E2", borderRadius: "8px", background: "#fff", font: "500 12.5px/1.2 Inter,system-ui,sans-serif", color: "#17201A", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
-                    Spice Kart Australia
+                  <span style={{ font: "600 10.5px/1.2 Inter,system-ui,sans-serif", letterSpacing: ".4px", color: "#7C8A81", textTransform: "uppercase", whiteSpace: "nowrap" }}>CURRENCY · TIME ZONE</span>
+                  <span style={{ display: "flex", alignItems: "center", height: "36px", padding: "0 11px", border: "1px solid #E4E7E2", borderRadius: "8px", background: "#F6F7F4", font: "500 12.5px/1.2 Inter,system-ui,sans-serif", color: "#4A564E", whiteSpace: "nowrap" }}>
+                    AUD ($) · Australia/Melbourne
                   </span>
                 </span>
-                <span style={{ display: "flex", flexDirection: "column", gap: "6px" }}>
-                  <span style={{ font: "600 10.5px/1.2 Inter,system-ui,sans-serif", letterSpacing: ".4px", color: "#7C8A81", textTransform: "uppercase", whiteSpace: "nowrap" }}>
-                    SUPPORT EMAIL
-                  </span>
-                  <span style={{ display: "flex", alignItems: "center", height: "36px", padding: "0 11px", border: "1px solid #E4E7E2", borderRadius: "8px", background: "#fff", font: "500 12.5px/1.2 Inter,system-ui,sans-serif", color: "#17201A", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
-                    help@spicekart.com.au
-                  </span>
-                </span>
-                <span style={{ display: "flex", flexDirection: "column", gap: "6px" }}>
-                  <span style={{ font: "600 10.5px/1.2 Inter,system-ui,sans-serif", letterSpacing: ".4px", color: "#7C8A81", textTransform: "uppercase", whiteSpace: "nowrap" }}>
-                    SUPPORT PHONE
-                  </span>
-                  <span style={{ display: "flex", alignItems: "center", height: "36px", padding: "0 11px", border: "1px solid #E4E7E2", borderRadius: "8px", background: "#fff", font: "500 12.5px/1.2 Inter,system-ui,sans-serif", color: "#17201A", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
-                    1800 774 235
-                  </span>
-                </span>
-                <span style={{ display: "flex", flexDirection: "column", gap: "6px" }}>
-                  <span style={{ font: "600 10.5px/1.2 Inter,system-ui,sans-serif", letterSpacing: ".4px", color: "#7C8A81", textTransform: "uppercase", whiteSpace: "nowrap" }}>
-                    ABN
-                  </span>
-                  <span style={{ display: "flex", alignItems: "center", height: "36px", padding: "0 11px", border: "1px solid #E4E7E2", borderRadius: "8px", background: "#fff", font: "500 12.5px/1.2 Inter,system-ui,sans-serif", color: "#17201A", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
-                    41 998 220 117
-                  </span>
-                </span>
-                <span style={{ display: "flex", flexDirection: "column", gap: "6px", gridColumn: "span 2" }}>
-                  <span style={{ font: "600 10.5px/1.2 Inter,system-ui,sans-serif", letterSpacing: ".4px", color: "#7C8A81", textTransform: "uppercase", whiteSpace: "nowrap" }}>
-                    BUSINESS ADDRESS
-                  </span>
-                  <span style={{ display: "flex", alignItems: "center", height: "36px", padding: "0 11px", border: "1px solid #E4E7E2", borderRadius: "8px", background: "#fff", font: "500 12.5px/1.2 Inter,system-ui,sans-serif", color: "#17201A", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
-                    118 Smith Street, Collingwood VIC 3066
-                  </span>
-                </span>
-                <span style={{ display: "flex", flexDirection: "column", gap: "6px" }}>
-                  <span style={{ font: "600 10.5px/1.2 Inter,system-ui,sans-serif", letterSpacing: ".4px", color: "#7C8A81", textTransform: "uppercase", whiteSpace: "nowrap" }}>
-                    CURRENCY
-                  </span>
-                  <span style={{ display: "flex", alignItems: "center", height: "36px", padding: "0 11px", border: "1px solid #E4E7E2", borderRadius: "8px", background: "#fff", font: "500 12.5px/1.2 Inter,system-ui,sans-serif", color: "#17201A", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
-                    AUD ($)
-                  </span>
-                </span>
-                <span style={{ display: "flex", flexDirection: "column", gap: "6px" }}>
-                  <span style={{ font: "600 10.5px/1.2 Inter,system-ui,sans-serif", letterSpacing: ".4px", color: "#7C8A81", textTransform: "uppercase", whiteSpace: "nowrap" }}>
-                    TIME ZONE
-                  </span>
-                  <span style={{ display: "flex", alignItems: "center", height: "36px", padding: "0 11px", border: "1px solid #E4E7E2", borderRadius: "8px", background: "#fff", font: "500 12.5px/1.2 Inter,system-ui,sans-serif", color: "#17201A", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
-                    Australia/Melbourne (AEST)
-                  </span>
-                </span>
+                <StoreMapPicker form={storeForm} onChange={patchStore} disabled={storeQ.loading} />
               </div>
             </div>
             <div data-section="delivery" style={{ background: "#fff", border: "1px solid #E4E7E2", borderRadius: "10px", padding: "18px", display: "flex", flexDirection: "column", gap: "14px" }}>
@@ -225,232 +327,22 @@ export default function Settings({ v }) {
                     {deliveryErrors[key] && <span style={{ font: "400 11px/1.3 Inter,system-ui,sans-serif", color: "#B3402F" }}>{deliveryErrors[key]}</span>}
                   </label>
                 ))}
-                <span style={{ display: "flex", flexDirection: "column", gap: "6px" }}>
-                  <span style={{ font: "600 10.5px/1.2 Inter,system-ui,sans-serif", letterSpacing: ".4px", color: "#7C8A81", textTransform: "uppercase", whiteSpace: "nowrap" }}>
-                    MINIMUM ORDER VALUE
-                  </span>
-                  <span style={{ display: "flex", alignItems: "center", height: "36px", padding: "0 11px", border: "1px solid #E4E7E2", borderRadius: "8px", background: "#fff", font: "500 12.5px/1.2 Inter,system-ui,sans-serif", color: "#17201A", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
-                    $15.00
-                  </span>
-                </span>
-                <span style={{ display: "flex", flexDirection: "column", gap: "6px" }}>
-                  <span style={{ font: "600 10.5px/1.2 Inter,system-ui,sans-serif", letterSpacing: ".4px", color: "#7C8A81", textTransform: "uppercase", whiteSpace: "nowrap" }}>
-                    DELIVERY RADIUS
-                  </span>
-                  <span style={{ display: "flex", alignItems: "center", height: "36px", padding: "0 11px", border: "1px solid #E4E7E2", borderRadius: "8px", background: "#fff", font: "500 12.5px/1.2 Inter,system-ui,sans-serif", color: "#17201A", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
-                    18 km from store
-                  </span>
-                </span>
+                <Field label="MINIMUM ORDER VALUE" error={bizErrors.min_order_value} hint="Orders below this are refused at checkout · 0 = no minimum">
+                  <Money value={bizForm.min_order_value} onChange={(x) => setBiz({ min_order_value: x })} error={bizErrors.min_order_value} disabled={bizDisabled} />
+                </Field>
               </div>
             </div>
             <DeliverySlotsCard v={v} data-section="slots" />
-            <div data-section="payments" style={{ background: "#fff", border: "1px solid #E4E7E2", borderRadius: "10px", padding: "18px", display: "flex", flexDirection: "column", gap: "14px" }}>
-              <span style={{ font: "600 13.5px/1.2 Inter,system-ui,sans-serif", color: "#17201A", whiteSpace: "nowrap" }}>Payments & tax</span>
-              <div style={{ display: "grid", gridTemplateColumns: "repeat(2,1fr)", gap: "11px" }}>
-                <span style={{ display: "flex", flexDirection: "column", gap: "6px" }}>
-                  <span style={{ font: "600 10.5px/1.2 Inter,system-ui,sans-serif", letterSpacing: ".4px", color: "#7C8A81", textTransform: "uppercase", whiteSpace: "nowrap" }}>
-                    GST RATE
-                  </span>
-                  <span style={{ display: "flex", alignItems: "center", height: "36px", padding: "0 11px", border: "1px solid #E4E7E2", borderRadius: "8px", background: "#fff", font: "500 12.5px/1.2 Inter,system-ui,sans-serif", color: "#17201A", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
-                    10% (included in price)
-                  </span>
-                </span>
-                <span style={{ display: "flex", flexDirection: "column", gap: "6px" }}>
-                  <span style={{ font: "600 10.5px/1.2 Inter,system-ui,sans-serif", letterSpacing: ".4px", color: "#7C8A81", textTransform: "uppercase", whiteSpace: "nowrap" }}>
-                    REFUND DESTINATION
-                  </span>
-                  <span style={{ display: "flex", alignItems: "center", height: "36px", padding: "0 11px", border: "1px solid #E4E7E2", borderRadius: "8px", background: "#fff", font: "500 12.5px/1.2 Inter,system-ui,sans-serif", color: "#17201A", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
-                    Spice Kart Money by default
-                  </span>
-                </span>
-                <span style={{ display: "flex", flexDirection: "column", gap: "6px" }}>
-                  <span style={{ font: "600 10.5px/1.2 Inter,system-ui,sans-serif", letterSpacing: ".4px", color: "#7C8A81", textTransform: "uppercase", whiteSpace: "nowrap" }}>
-                    CARD PAYMENTS
-                  </span>
-                  <span style={{ display: "flex", alignItems: "center", height: "36px", padding: "0 11px", border: "1px solid #E4E7E2", borderRadius: "8px", background: "#fff", font: "500 12.5px/1.2 Inter,system-ui,sans-serif", color: "#17201A", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
-                    Visa, Mastercard, Amex
-                  </span>
-                </span>
-                <span style={{ display: "flex", flexDirection: "column", gap: "6px" }}>
-                  <span style={{ font: "600 10.5px/1.2 Inter,system-ui,sans-serif", letterSpacing: ".4px", color: "#7C8A81", textTransform: "uppercase", whiteSpace: "nowrap" }}>
-                    WALLETS
-                  </span>
-                  <span style={{ display: "flex", alignItems: "center", height: "36px", padding: "0 11px", border: "1px solid #E4E7E2", borderRadius: "8px", background: "#fff", font: "500 12.5px/1.2 Inter,system-ui,sans-serif", color: "#17201A", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
-                    Apple Pay, Google Pay, PayID
-                  </span>
-                </span>
-                <span style={{ display: "flex", flexDirection: "column", gap: "6px" }}>
-                  <span style={{ font: "600 10.5px/1.2 Inter,system-ui,sans-serif", letterSpacing: ".4px", color: "#7C8A81", textTransform: "uppercase", whiteSpace: "nowrap" }}>
-                    RESTOCKING FEE
-                  </span>
-                  <span style={{ display: "flex", alignItems: "center", height: "36px", padding: "0 11px", border: "1px solid #E4E7E2", borderRadius: "8px", background: "#fff", font: "500 12.5px/1.2 Inter,system-ui,sans-serif", color: "#17201A", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
-                    $4.95 max
-                  </span>
-                </span>
-                <span style={{ display: "flex", flexDirection: "column", gap: "6px" }}>
-                  <span style={{ font: "600 10.5px/1.2 Inter,system-ui,sans-serif", letterSpacing: ".4px", color: "#7C8A81", textTransform: "uppercase", whiteSpace: "nowrap" }}>
-                    PAYOUT SCHEDULE
-                  </span>
-                  <span style={{ display: "flex", alignItems: "center", height: "36px", padding: "0 11px", border: "1px solid #E4E7E2", borderRadius: "8px", background: "#fff", font: "500 12.5px/1.2 Inter,system-ui,sans-serif", color: "#17201A", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
-                    Daily · 6:00 AM
-                  </span>
-                </span>
-              </div>
-            </div>
-            <div data-section="notifications" style={{ background: "#fff", border: "1px solid #E4E7E2", borderRadius: "10px", padding: "18px", display: "flex", flexDirection: "column", gap: "2px" }}>
-              <span style={{ font: "600 13.5px/1.2 Inter,system-ui,sans-serif", color: "#17201A", paddingBottom: "6px" }}>Notifications</span>
-              <span style={{ display: "flex", alignItems: "center", gap: "11px", padding: "10px 0", borderBottom: "1px solid #EFF1ED" }}>
-                <span style={{ display: "flex", flexDirection: "column", gap: "3px", flex: "1", minWidth: "0" }}>
-                  <span style={{ font: "500 12.5px/1.2 Inter,system-ui,sans-serif", color: "#17201A", whiteSpace: "nowrap" }}>Order confirmation email</span>
-                  <span style={{ font: "400 11px/1.2 Inter,system-ui,sans-serif", color: "#7C8A81" }}>Sent to the customer on every order</span>
-                </span>
-                <span style={{ width: "38px", height: "22px", borderRadius: "11px", background: "#8BE000", position: "relative", flex: "none", display: "block" }}>
-                  {" "}
-                  <span style={{ position: "absolute", top: "2.5px", left: "18px", width: "17px", height: "17px", borderRadius: "9px", background: "#fff", boxShadow: "0 1px 3px rgba(0,0,0,.2)", display: "block" }} />
-                  {" "}
-                </span>
+            <DeliveryPostcodesCard v={v} />
+            {biz.status === "error" && (
+              <span style={{ padding: "12px 14px", borderRadius: "10px", background: "#FBF1DE", color: "#8A6100", font: "500 12.5px/1.5 Inter,system-ui,sans-serif" }}>
+                Payments, notifications, store hours and security can’t load yet · {biz.error}
               </span>
-              <span style={{ display: "flex", alignItems: "center", gap: "11px", padding: "10px 0", borderBottom: "1px solid #EFF1ED" }}>
-                <span style={{ display: "flex", flexDirection: "column", gap: "3px", flex: "1", minWidth: "0" }}>
-                  <span style={{ font: "500 12.5px/1.2 Inter,system-ui,sans-serif", color: "#17201A", whiteSpace: "nowrap" }}>Delivery SMS updates</span>
-                  <span style={{ font: "400 11px/1.2 Inter,system-ui,sans-serif", color: "#7C8A81" }}>Out-for-delivery and arrival alerts</span>
-                </span>
-                <span style={{ width: "38px", height: "22px", borderRadius: "11px", background: "#8BE000", position: "relative", flex: "none", display: "block" }}>
-                  {" "}
-                  <span style={{ position: "absolute", top: "2.5px", left: "18px", width: "17px", height: "17px", borderRadius: "9px", background: "#fff", boxShadow: "0 1px 3px rgba(0,0,0,.2)", display: "block" }} />
-                  {" "}
-                </span>
-              </span>
-              <span style={{ display: "flex", alignItems: "center", gap: "11px", padding: "10px 0", borderBottom: "1px solid #EFF1ED" }}>
-                <span style={{ display: "flex", flexDirection: "column", gap: "3px", flex: "1", minWidth: "0" }}>
-                  <span style={{ font: "500 12.5px/1.2 Inter,system-ui,sans-serif", color: "#17201A", whiteSpace: "nowrap" }}>Promotional push</span>
-                  <span style={{ font: "400 11px/1.2 Inter,system-ui,sans-serif", color: "#7C8A81" }}>Marketing campaigns and offers</span>
-                </span>
-                <span style={{ width: "38px", height: "22px", borderRadius: "11px", background: "#8BE000", position: "relative", flex: "none", display: "block" }}>
-                  {" "}
-                  <span style={{ position: "absolute", top: "2.5px", left: "18px", width: "17px", height: "17px", borderRadius: "9px", background: "#fff", boxShadow: "0 1px 3px rgba(0,0,0,.2)", display: "block" }} />
-                  {" "}
-                </span>
-              </span>
-              <span style={{ display: "flex", alignItems: "center", gap: "11px", padding: "10px 0", borderBottom: "1px solid #EFF1ED" }}>
-                <span style={{ display: "flex", flexDirection: "column", gap: "3px", flex: "1", minWidth: "0" }}>
-                  <span style={{ font: "500 12.5px/1.2 Inter,system-ui,sans-serif", color: "#17201A", whiteSpace: "nowrap" }}>Low stock alerts to Slack</span>
-                  <span style={{ font: "400 11px/1.2 Inter,system-ui,sans-serif", color: "#7C8A81" }}>#spicekart-ops channel</span>
-                </span>
-                <span style={{ width: "38px", height: "22px", borderRadius: "11px", background: "#8BE000", position: "relative", flex: "none", display: "block" }}>
-                  {" "}
-                  <span style={{ position: "absolute", top: "2.5px", left: "18px", width: "17px", height: "17px", borderRadius: "9px", background: "#fff", boxShadow: "0 1px 3px rgba(0,0,0,.2)", display: "block" }} />
-                  {" "}
-                </span>
-              </span>
-              <span style={{ display: "flex", alignItems: "center", gap: "11px", padding: "10px 0", borderBottom: "1px solid #EFF1ED" }}>
-                <span style={{ display: "flex", flexDirection: "column", gap: "3px", flex: "1", minWidth: "0" }}>
-                  <span style={{ font: "500 12.5px/1.2 Inter,system-ui,sans-serif", color: "#17201A", whiteSpace: "nowrap" }}>Daily operations digest</span>
-                  <span style={{ font: "400 11px/1.2 Inter,system-ui,sans-serif", color: "#7C8A81" }}>Emailed at 7:00 AM AEST</span>
-                </span>
-                <span style={{ width: "38px", height: "22px", borderRadius: "11px", background: "#DCDDD8", position: "relative", flex: "none", display: "block" }}>
-                  {" "}
-                  <span style={{ position: "absolute", top: "2.5px", left: "2.5px", width: "17px", height: "17px", borderRadius: "9px", background: "#fff", boxShadow: "0 1px 3px rgba(0,0,0,.2)", display: "block" }} />
-                  {" "}
-                </span>
-              </span>
-            </div>
-            <div style={{ display: "flex", flexDirection: "column", gap: "14px" }}>
-              <div data-section="hours" style={{ background: "#fff", border: "1px solid #E4E7E2", borderRadius: "10px", padding: "18px", display: "flex", flexDirection: "column", gap: "14px" }}>
-                <span style={{ font: "600 13.5px/1.2 Inter,system-ui,sans-serif", color: "#17201A", whiteSpace: "nowrap" }}>Store hours</span>
-                <div style={{ display: "grid", gridTemplateColumns: "repeat(2,1fr)", gap: "11px" }}>
-                  <span style={{ display: "flex", flexDirection: "column", gap: "6px" }}>
-                    <span style={{ font: "600 10.5px/1.2 Inter,system-ui,sans-serif", letterSpacing: ".4px", color: "#7C8A81", textTransform: "uppercase", whiteSpace: "nowrap" }}>
-                      MONDAY – FRIDAY
-                    </span>
-                    <span style={{ display: "flex", alignItems: "center", height: "36px", padding: "0 11px", border: "1px solid #E4E7E2", borderRadius: "8px", background: "#fff", font: "500 12.5px/1.2 Inter,system-ui,sans-serif", color: "#17201A", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
-                      7:00 AM – 10:00 PM
-                    </span>
-                  </span>
-                  <span style={{ display: "flex", flexDirection: "column", gap: "6px" }}>
-                    <span style={{ font: "600 10.5px/1.2 Inter,system-ui,sans-serif", letterSpacing: ".4px", color: "#7C8A81", textTransform: "uppercase", whiteSpace: "nowrap" }}>
-                      SATURDAY
-                    </span>
-                    <span style={{ display: "flex", alignItems: "center", height: "36px", padding: "0 11px", border: "1px solid #E4E7E2", borderRadius: "8px", background: "#fff", font: "500 12.5px/1.2 Inter,system-ui,sans-serif", color: "#17201A", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
-                      7:00 AM – 10:00 PM
-                    </span>
-                  </span>
-                  <span style={{ display: "flex", flexDirection: "column", gap: "6px" }}>
-                    <span style={{ font: "600 10.5px/1.2 Inter,system-ui,sans-serif", letterSpacing: ".4px", color: "#7C8A81", textTransform: "uppercase", whiteSpace: "nowrap" }}>
-                      SUNDAY
-                    </span>
-                    <span style={{ display: "flex", alignItems: "center", height: "36px", padding: "0 11px", border: "1px solid #E4E7E2", borderRadius: "8px", background: "#fff", font: "500 12.5px/1.2 Inter,system-ui,sans-serif", color: "#17201A", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
-                      8:00 AM – 9:00 PM
-                    </span>
-                  </span>
-                  <span style={{ display: "flex", flexDirection: "column", gap: "6px" }}>
-                    <span style={{ font: "600 10.5px/1.2 Inter,system-ui,sans-serif", letterSpacing: ".4px", color: "#7C8A81", textTransform: "uppercase", whiteSpace: "nowrap" }}>
-                      PUBLIC HOLIDAYS
-                    </span>
-                    <span style={{ display: "flex", alignItems: "center", height: "36px", padding: "0 11px", border: "1px solid #E4E7E2", borderRadius: "8px", background: "#fff", font: "500 12.5px/1.2 Inter,system-ui,sans-serif", color: "#17201A", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
-                      9:00 AM – 6:00 PM
-                    </span>
-                  </span>
-                </div>
-              </div>
-              <div data-section="security" style={{ background: "#fff", border: "1px solid #E4E7E2", borderRadius: "10px", padding: "18px", display: "flex", flexDirection: "column", gap: "2px" }}>
-                <span style={{ font: "600 13.5px/1.2 Inter,system-ui,sans-serif", color: "#17201A", paddingBottom: "6px" }}>Security</span>
-                <span style={{ display: "flex", alignItems: "center", gap: "11px", padding: "10px 0", borderBottom: "1px solid #EFF1ED" }}>
-                  <span style={{ display: "flex", flexDirection: "column", gap: "3px", flex: "1", minWidth: "0" }}>
-                    <span style={{ font: "500 12.5px/1.2 Inter,system-ui,sans-serif", color: "#17201A", whiteSpace: "nowrap" }}>Two-factor authentication</span>
-                    <span style={{ font: "400 11px/1.2 Inter,system-ui,sans-serif", color: "#7C8A81" }}>Required for all admin accounts</span>
-                  </span>
-                  <span style={{ width: "38px", height: "22px", borderRadius: "11px", background: "#8BE000", position: "relative", flex: "none", display: "block" }}>
-                    {" "}
-                    <span style={{ position: "absolute", top: "2.5px", left: "18px", width: "17px", height: "17px", borderRadius: "9px", background: "#fff", boxShadow: "0 1px 3px rgba(0,0,0,.2)", display: "block" }} />
-                    {" "}
-                  </span>
-                </span>
-                <span style={{ display: "flex", alignItems: "center", gap: "11px", padding: "10px 0", borderBottom: "1px solid #EFF1ED" }}>
-                  <span style={{ display: "flex", flexDirection: "column", gap: "3px", flex: "1", minWidth: "0" }}>
-                    <span style={{ font: "500 12.5px/1.2 Inter,system-ui,sans-serif", color: "#17201A", whiteSpace: "nowrap" }}>Single sign-on (Google)</span>
-                  </span>
-                  <span style={{ width: "38px", height: "22px", borderRadius: "11px", background: "#8BE000", position: "relative", flex: "none", display: "block" }}>
-                    {" "}
-                    <span style={{ position: "absolute", top: "2.5px", left: "18px", width: "17px", height: "17px", borderRadius: "9px", background: "#fff", boxShadow: "0 1px 3px rgba(0,0,0,.2)", display: "block" }} />
-                    {" "}
-                  </span>
-                </span>
-                <span style={{ display: "flex", alignItems: "center", gap: "11px", padding: "10px 0", borderBottom: "1px solid #EFF1ED" }}>
-                  <span style={{ display: "flex", flexDirection: "column", gap: "3px", flex: "1", minWidth: "0" }}>
-                    <span style={{ font: "500 12.5px/1.2 Inter,system-ui,sans-serif", color: "#17201A", whiteSpace: "nowrap" }}>Session timeout after 30 min</span>
-                  </span>
-                  <span style={{ width: "38px", height: "22px", borderRadius: "11px", background: "#8BE000", position: "relative", flex: "none", display: "block" }}>
-                    {" "}
-                    <span style={{ position: "absolute", top: "2.5px", left: "18px", width: "17px", height: "17px", borderRadius: "9px", background: "#fff", boxShadow: "0 1px 3px rgba(0,0,0,.2)", display: "block" }} />
-                    {" "}
-                  </span>
-                </span>
-                <span style={{ display: "flex", alignItems: "center", gap: "11px", padding: "10px 0", borderBottom: "1px solid #EFF1ED" }}>
-                  <span style={{ display: "flex", flexDirection: "column", gap: "3px", flex: "1", minWidth: "0" }}>
-                    <span style={{ font: "500 12.5px/1.2 Inter,system-ui,sans-serif", color: "#17201A", whiteSpace: "nowrap" }}>IP allowlist</span>
-                    <span style={{ font: "400 11px/1.2 Inter,system-ui,sans-serif", color: "#7C8A81" }}>Restrict admin access by IP</span>
-                  </span>
-                  <span style={{ width: "38px", height: "22px", borderRadius: "11px", background: "#DCDDD8", position: "relative", flex: "none", display: "block" }}>
-                    {" "}
-                    <span style={{ position: "absolute", top: "2.5px", left: "2.5px", width: "17px", height: "17px", borderRadius: "9px", background: "#fff", boxShadow: "0 1px 3px rgba(0,0,0,.2)", display: "block" }} />
-                    {" "}
-                  </span>
-                </span>
-                <span style={{ display: "flex", alignItems: "center", gap: "9px", paddingTop: "10px" }}>
-                  <button className="hv1" onClick={v.openPassword} style={{ display: "flex", alignItems: "center", gap: "7px", height: "34px", padding: "0 12px", border: "1px solid #E4E7E2", borderRadius: "8px", background: "#fff", color: "#17201A", font: "600 12.5px/1.2 Inter,system-ui,sans-serif", cursor: "pointer", whiteSpace: "nowrap" }}>
-                    <svg width="15" height="15" viewBox="0 0 20 20" fill="none" style={{ flex: "none" }}>
-                      <rect x="4.6" y="8.6" width="10.8" height="8" rx="2" stroke="#4A564E" strokeWidth="1.5" />
-                      <path d="M7.2 8.6V6.8a2.8 2.8 0 015.6 0v1.8" stroke="#4A564E" strokeWidth="1.5" />
-                    </svg>
-                    Change password
-                  </button>
-                  <button className="hv1" onClick={v.openSessions} style={{ display: "flex", alignItems: "center", gap: "7px", height: "34px", padding: "0 12px", border: "1px solid #E4E7E2", borderRadius: "8px", background: "#fff", color: "#17201A", font: "600 12.5px/1.2 Inter,system-ui,sans-serif", cursor: "pointer", whiteSpace: "nowrap" }}>
-                    View login history
-                  </button>
-                </span>
-              </div>
-            </div>
+            )}
+            <PaymentsCard form={bizForm} set={setBiz} errors={bizErrors} disabled={bizDisabled} dirty={bizDirtyIn(PAYMENT_KEYS)} />
+            <NotificationsCard form={bizForm} set={setBiz} errors={bizErrors} disabled={bizDisabled} dirty={bizDirtyIn(NOTIFY_KEYS)} />
+            <StoreHoursCard v={v} hours={biz.data?.hours} openNow={openNow} disabled={bizDisabled} onSaved={biz.refetch} />
+            <SecurityCard v={v} form={bizForm} set={setBiz} disabled={bizDisabled} dirty={bizDirtyIn(SECURITY_KEYS)} />
           </div>
         </div>
       </div>

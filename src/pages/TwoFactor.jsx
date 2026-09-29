@@ -1,20 +1,51 @@
-import { useRef, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import imgSpiceKartLogo from '../assets/images/spice-kart-logo.png'
+import TotpSetup from '../components/settings/TotpSetup'
+import { listTotpFactors, verifyTotp } from '../lib/businessSettings'
+import { supabase } from '../lib/supabase'
 
 const CODE_LENGTH = 6
 
+// v.twofaMode: 'mfa' = enter a code from an enrolled authenticator; 'enroll' = 2FA is required
+// for admins but this account hasn't set it up yet.
 export default function TwoFactor({ v }) {
+  const enroll = v.twofaMode === 'enroll'
   const [digits, setDigits] = useState(() => Array(CODE_LENGTH).fill(''))
+  const [factorId, setFactorId] = useState(null)
+  const [busy, setBusy] = useState(false)
+  const [loadError, setLoadError] = useState('')
   const boxes = useRef([])
   const focusBox = (i) => boxes.current[Math.max(0, Math.min(CODE_LENGTH - 1, i))]?.focus()
 
-  // Dummy verification: any 6 digits sign the user in.
-  const verify = () => {
+  useEffect(() => {
+    if (enroll) return
+    listTotpFactors()
+      .then((f) => setFactorId(f.find((x) => x.status === 'verified')?.id ?? null))
+      .catch((e) => setLoadError(e.message))
+  }, [enroll])
+
+  const backToSignIn = async () => {
+    await supabase.auth.signOut()
+    v.nav_login()
+  }
+
+  const verify = async () => {
+    if (busy) return
     if (digits.some((d) => !d)) {
       focusBox(digits.findIndex((d) => !d))
       return v.authError('Enter the 6-digit code to continue')
     }
-    v.verify2fa()
+    if (!factorId) return v.authError(loadError || 'No authenticator found for this account')
+    setBusy(true)
+    try {
+      await verifyTotp(factorId, digits.join(''))
+      v.signedIn(v.authEmail)
+    } catch (e) {
+      v.authError(e.message)
+      setDigits(Array(CODE_LENGTH).fill(''))
+      focusBox(0)
+      setBusy(false)
+    }
   }
   const typeDigit = (i, value) => {
     const d = value.replace(/\D/g, '').slice(-1)
@@ -56,15 +87,19 @@ export default function TwoFactor({ v }) {
           </span>
         </div>
         <div style={{ width: "460px", flex: "none", display: "flex", flexDirection: "column", justifyContent: "center", padding: "44px 48px", gap: "18px" }}>
-          <button onClick={v.nav_login} style={{ display: "flex", alignItems: "center", gap: "6px", border: "0", background: "transparent", font: "600 11.5px/1.2 Inter,system-ui,sans-serif", color: "#17693A", cursor: "pointer", padding: "0", whiteSpace: "nowrap", alignSelf: "flex-start" }}>
+          <button onClick={backToSignIn} style={{ display: "flex", alignItems: "center", gap: "6px", border: "0", background: "transparent", font: "600 11.5px/1.2 Inter,system-ui,sans-serif", color: "#17693A", cursor: "pointer", padding: "0", whiteSpace: "nowrap", alignSelf: "flex-start" }}>
             ← Back to sign in
           </button>
           <span style={{ display: "flex", flexDirection: "column", gap: "7px" }}>
-            <span style={{ font: "700 22px/1.2 Inter,system-ui,sans-serif", color: "#17201A" }}>Two-factor verification</span>
+            <span style={{ font: "700 22px/1.2 Inter,system-ui,sans-serif", color: "#17201A" }}>{enroll ? "Set up two-factor" : "Two-factor verification"}</span>
             <span style={{ font: "400 12.5px/1.6 Inter,system-ui,sans-serif", color: "#7C8A81" }}>
-              Enter the 6-digit code from your authenticator app for {v.authEmail}.
+              {enroll
+                ? `Your store requires two-factor for every admin. Link an authenticator app to ${v.authEmail} to continue.`
+                : `Enter the 6-digit code from your authenticator app for ${v.authEmail}.`}
             </span>
           </span>
+          {enroll && <TotpSetup onDone={() => v.signedIn(v.authEmail)} />}
+          {!enroll && <>
           <span style={{ display: "flex", gap: "9px" }}>
             {digits.map((d, i) => (
               <input
@@ -85,16 +120,14 @@ export default function TwoFactor({ v }) {
             ))}
           </span>
           <span style={{ display: "flex", alignItems: "center", gap: "12px" }}>
-            <span style={{ font: "400 11px/1.2 Inter,system-ui,sans-serif", color: "#7C8A81", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
-              Code expires in 0:42
+            <span style={{ font: "400 11px/1.45 Inter,system-ui,sans-serif", color: "#7C8A81" }}>
+              The code changes every 30 seconds. Lost your phone? Ask another admin to reset two-factor for your account.
             </span>
-            <button onClick={v.recoveryCode} style={{ marginLeft: "auto", border: "0", background: "transparent", font: "600 12px/1.2 Inter,system-ui,sans-serif", color: "#17693A", cursor: "pointer", whiteSpace: "nowrap", padding: "0" }}>
-              Use a recovery code
-            </button>
           </span>
-          <button onClick={verify} style={{ height: "44px", border: "0", borderRadius: "9px", background: "#0B3D1F", color: "#fff", font: "700 13.5px/1.2 Inter,system-ui,sans-serif", cursor: "pointer", boxShadow: "0 6px 16px rgba(11,61,31,.2)" }}>
-            Verify & continue
+          <button onClick={verify} disabled={busy} style={{ opacity: busy ? 0.7 : 1, height: "44px", border: "0", borderRadius: "9px", background: "#0B3D1F", color: "#fff", font: "700 13.5px/1.2 Inter,system-ui,sans-serif", cursor: "pointer", boxShadow: "0 6px 16px rgba(11,61,31,.2)" }}>
+            {busy ? "Checking…" : "Verify & continue"}
           </button>
+          </>}
           <span style={{ display: "flex", alignItems: "center", gap: "9px", padding: "11px 12px", borderRadius: "9px", background: "#F6F7F4", border: "1px solid #E4E7E2" }}>
             <svg width="15" height="15" viewBox="0 0 20 20" fill="none" style={{ flex: "none" }}>
               <rect x="4.6" y="8.6" width="10.8" height="8" rx="2" stroke="#17693A" strokeWidth="1.5" />

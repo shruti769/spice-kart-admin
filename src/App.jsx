@@ -26,6 +26,7 @@ import Settings from './pages/Settings'
 import NotificationCentre from './pages/NotificationCentre'
 import Login from './pages/Login'
 import TwoFactor from './pages/TwoFactor'
+import IdleLogout from './components/IdleLogout'
 import ForgotPassword from './pages/ForgotPassword'
 import CallDriverModal from './modals/CallDriverModal'
 import EditCustomerModal from './modals/EditCustomerModal'
@@ -103,6 +104,7 @@ export default function App() {
       {v.m_suspend && <SuspendCustomerModal v={v} />}
       {v.m_catedit && <CategoryEditModal v={v} />}
       {v.hasToast && <Toast v={v} />}
+      {!v.p_login && !v.p_twofa && !v.p_forgot && <IdleLogout v={v} />}
       {v.p_login && <Login v={v} />}
       {v.p_twofa && <TwoFactor v={v} />}
       {v.p_forgot && <ForgotPassword v={v} />}

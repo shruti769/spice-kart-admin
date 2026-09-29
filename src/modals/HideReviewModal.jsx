@@ -1,69 +1,99 @@
-export default function HideReviewModal({ v }) {
+import { useState } from 'react'
+import { Modal } from '../components/content/ui'
+import { FONT, INK, MUTED, btnPrimary, btnSecondary, errorText, inputStyle, labelStyle } from '../components/content/styles'
+import { hideReview, productLabel, publishReview } from '../lib/reviews'
+import { customerName } from '../lib/orders'
+
+const REASONS = ['Offensive language', 'Spam or promotional', 'Not about this product', 'Names a staff member', 'Other']
+
+/**
+ * Hides a review from the app (with a reason) or, when it's hidden, shows it again.
+ * Props: `review`, `onClose`, `onDone`, `flash`.
+ */
+export default function HideReviewModal({ review, onClose, onDone, flash }) {
+  if (!review || !onClose) return null
+  return <HideForm key={review.id} review={review} onClose={onClose} onDone={onDone} flash={flash} />
+}
+
+function HideForm({ review, onClose, onDone, flash }) {
+  const unhide = review.status === 'hidden'
+  const [reason, setReason] = useState(REASONS[0])
+  const [other, setOther] = useState('')
+  const [busy, setBusy] = useState(false)
+  const [error, setError] = useState('')
+  const blocked = !unhide && reason === 'Other' && !other.trim()
+
+  const confirm = async () => {
+    if (busy || blocked) return
+    setBusy(true)
+    setError('')
+    try {
+      if (unhide) await publishReview(review.id)
+      else await hideReview(review.id, reason === 'Other' ? other : reason)
+      flash?.(unhide ? 'Review is visible in the app again' : 'Review hidden from the app')
+      onDone?.()
+      onClose()
+    } catch (e) {
+      setError(e.message)
+      setBusy(false)
+    }
+  }
+
   return (
-    <>
-      <div onClick={v.closeModal} style={{ position: "absolute", inset: "0", zIndex: "90", background: "rgba(14,22,16,.45)", display: "flex", alignItems: "center", justifyContent: "center", padding: "40px" }}>
-        <div style={{ width: "440px", maxWidth: "100%", background: "#fff", borderRadius: "14px", boxShadow: "0 26px 60px rgba(10,18,12,.3)", overflow: "hidden", display: "flex", flexDirection: "column" }}>
-          <div style={{ padding: "16px 18px 14px", display: "flex", alignItems: "flex-start", gap: "11px", borderBottom: "1px solid #EFF1ED" }}>
-            <span style={{ width: "34px", height: "34px", borderRadius: "9px", background: "#FBF1DE", display: "flex", alignItems: "center", justifyContent: "center", flex: "none" }}>
-              <svg width="17" height="17" viewBox="0 0 20 20" fill="none" style={{ flex: "none" }}>
-                <path d="M2.4 10S5.3 5.4 10 5.4 17.6 10 17.6 10 14.7 14.6 10 14.6 2.4 10 2.4 10z" stroke="#8A6100" strokeWidth="1.5" strokeLinejoin="round" />
-                <circle cx="10" cy="10" r="2.2" stroke="#8A6100" strokeWidth="1.5" />
-              </svg>
+    <Modal
+      width={440}
+      busy={busy}
+      onClose={onClose}
+      title={(
+        <span style={{ display: 'flex', alignItems: 'flex-start', gap: '11px' }}>
+          <span style={{ width: '34px', height: '34px', borderRadius: '9px', background: '#FBF1DE', display: 'flex', alignItems: 'center', justifyContent: 'center', flex: 'none' }}>
+            <svg width="17" height="17" viewBox="0 0 20 20" fill="none">
+              <path d="M2.4 10S5.3 5.4 10 5.4 17.6 10 17.6 10 14.7 14.6 10 14.6 2.4 10 2.4 10z" stroke="#8A6100" strokeWidth="1.5" strokeLinejoin="round" />
+              <circle cx="10" cy="10" r="2.2" stroke="#8A6100" strokeWidth="1.5" />
+            </svg>
+          </span>
+          <span style={{ display: 'flex', flexDirection: 'column', gap: '4px', minWidth: '0' }}>
+            <span>{unhide ? 'Show this review again?' : 'Hide this review?'}</span>
+            <span style={{ font: `400 11.5px/1.55 ${FONT}`, color: MUTED }}>
+              {unhide
+                ? `${customerName(review.customer)} · ${review.rating}★ on ${productLabel(review)}. It’s published in the app again straight away.`
+                : 'It stops showing in the app immediately but stays here in your moderation history.'}
             </span>
-            <span style={{ display: "flex", flexDirection: "column", gap: "4px", minWidth: "0" }}>
-              <span style={{ font: "700 15px/1.2 Inter,system-ui,sans-serif", color: "#17201A" }}>Hide this review?</span>
-              <span style={{ font: "400 11.5px/1.55 Inter,system-ui,sans-serif", color: "#7C8A81" }}>
-                It stops showing in the app immediately but stays in your moderation history and still counts toward the product rating.
-              </span>
-            </span>
-          </div>
-          <div style={{ padding: "15px 18px", display: "flex", flexDirection: "column", gap: "8px" }}>
-            <span style={{ font: "600 10.5px/1.2 Inter,system-ui,sans-serif", letterSpacing: ".4px", color: "#7C8A81", textTransform: "uppercase", whiteSpace: "nowrap" }}>
-              REASON
-            </span>
-            <span style={{ display: "flex", alignItems: "center", gap: "10px", padding: "10px 11px", border: "1px solid #E4E7E2", background: "#fff", borderRadius: "8px" }}>
-              <span style={{ width: "16px", height: "16px", borderRadius: "8px", border: "2px solid #C9D0C8", background: "transparent", display: "block", flex: "none" }} />
-              <span style={{ display: "flex", flexDirection: "column", gap: "2px", minWidth: "0" }}>
-                <span style={{ font: "600 12px/1.2 Inter,system-ui,sans-serif", color: "#17201A", whiteSpace: "nowrap" }}>Offensive language</span>
-              </span>
-            </span>
-            <span style={{ display: "flex", alignItems: "center", gap: "10px", padding: "10px 11px", border: "1px solid #C7E88A", background: "#F7FCEE", borderRadius: "8px" }}>
-              <span style={{ width: "16px", height: "16px", borderRadius: "8px", border: "2px solid #8BE000", background: "#8BE000", display: "block", flex: "none" }} />
-              <span style={{ display: "flex", flexDirection: "column", gap: "2px", minWidth: "0" }}>
-                <span style={{ font: "600 12px/1.2 Inter,system-ui,sans-serif", color: "#17201A", whiteSpace: "nowrap" }}>Spam or promotional</span>
-              </span>
-            </span>
-            <span style={{ display: "flex", alignItems: "center", gap: "10px", padding: "10px 11px", border: "1px solid #E4E7E2", background: "#fff", borderRadius: "8px" }}>
-              <span style={{ width: "16px", height: "16px", borderRadius: "8px", border: "2px solid #C9D0C8", background: "transparent", display: "block", flex: "none" }} />
-              <span style={{ display: "flex", flexDirection: "column", gap: "2px", minWidth: "0" }}>
-                <span style={{ font: "600 12px/1.2 Inter,system-ui,sans-serif", color: "#17201A", whiteSpace: "nowrap" }}>Not about this product</span>
-              </span>
-            </span>
-            <span style={{ display: "flex", alignItems: "center", gap: "10px", padding: "10px 11px", border: "1px solid #E4E7E2", background: "#fff", borderRadius: "8px" }}>
-              <span style={{ width: "16px", height: "16px", borderRadius: "8px", border: "2px solid #C9D0C8", background: "transparent", display: "block", flex: "none" }} />
-              <span style={{ display: "flex", flexDirection: "column", gap: "2px", minWidth: "0" }}>
-                <span style={{ font: "600 12px/1.2 Inter,system-ui,sans-serif", color: "#17201A", whiteSpace: "nowrap" }}>Names a staff member</span>
-              </span>
-            </span>
-            <span style={{ display: "flex", alignItems: "center", gap: "10px", padding: "10px 11px", border: "1px solid #E4E7E2", background: "#fff", borderRadius: "8px" }}>
-              <span style={{ width: "16px", height: "16px", borderRadius: "8px", border: "2px solid #C9D0C8", background: "transparent", display: "block", flex: "none" }} />
-              <span style={{ display: "flex", flexDirection: "column", gap: "2px", minWidth: "0" }}>
-                <span style={{ font: "600 12px/1.2 Inter,system-ui,sans-serif", color: "#17201A", whiteSpace: "nowrap" }}>Other</span>
-              </span>
-            </span>
-          </div>
-          <div style={{ padding: "13px 18px 16px", display: "flex", alignItems: "center", gap: "9px", borderTop: "1px solid #EFF1ED", background: "#F6F7F4" }}>
-            <span style={{ marginLeft: "auto", display: "flex", gap: "9px" }}>
-              <button onClick={v.closeModal} style={{ height: "36px", padding: "0 14px", border: "1px solid #E4E7E2", borderRadius: "8px", background: "#fff", font: "600 12.5px/1.2 Inter,system-ui,sans-serif", color: "#17201A", cursor: "pointer", whiteSpace: "nowrap" }}>
-                Cancel
+          </span>
+        </span>
+      )}
+      footer={(
+        <span style={{ marginLeft: 'auto', display: 'flex', gap: '9px' }}>
+          <button type="button" onClick={onClose} disabled={busy} style={btnSecondary}>Cancel</button>
+          <button type="button" onClick={confirm} disabled={busy || blocked} style={{ ...btnPrimary, opacity: busy || blocked ? 0.5 : 1 }}>
+            {busy ? 'Saving…' : unhide ? 'Show review' : 'Hide review'}
+          </button>
+        </span>
+      )}
+    >
+      {unhide ? (
+        <span style={{ display: 'flex', flexDirection: 'column', gap: '6px', padding: '10px 11px', borderRadius: '8px', background: '#F6F7F4', border: '1px solid #E4E7E2' }}>
+          <span style={labelStyle}>Hidden because</span>
+          <span style={{ font: `400 12px/1.5 ${FONT}`, color: '#4A564E' }}>{review.hidden_reason || 'No reason recorded'}</span>
+        </span>
+      ) : (
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+          <span style={labelStyle}>Reason</span>
+          {REASONS.map((r) => {
+            const on = reason === r
+            return (
+              <button key={r} type="button" onClick={() => setReason(r)} disabled={busy} style={{ display: 'flex', alignItems: 'center', gap: '10px', padding: '10px 11px', border: `1px solid ${on ? '#C7E88A' : '#E4E7E2'}`, background: on ? '#F7FCEE' : '#fff', borderRadius: '8px', cursor: 'pointer', textAlign: 'left' }}>
+                <span style={{ width: '16px', height: '16px', borderRadius: '8px', border: `2px solid ${on ? '#8BE000' : '#C9D0C8'}`, background: on ? '#8BE000' : 'transparent', display: 'block', flex: 'none', boxSizing: 'border-box' }} />
+                <span style={{ font: `600 12px/1.2 ${FONT}`, color: INK, whiteSpace: 'nowrap' }}>{r}</span>
               </button>
-              <button onClick={v.confirmModal} style={{ height: "36px", padding: "0 15px", border: "0", borderRadius: "8px", background: "#0B3D1F", color: "#fff", font: "600 12.5px/1.2 Inter,system-ui,sans-serif", cursor: "pointer", whiteSpace: "nowrap" }}>
-                Hide review
-              </button>
-            </span>
-          </div>
+            )
+          })}
+          {reason === 'Other' && (
+            <input autoFocus value={other} onChange={(e) => setOther(e.target.value)} maxLength={300} disabled={busy} placeholder="Why is it being hidden?" style={inputStyle} />
+          )}
         </div>
-      </div>
-    </>
+      )}
+      {error && <span style={{ ...errorText, font: `500 12px/1.4 ${FONT}` }}>{error}</span>}
+    </Modal>
   )
 }

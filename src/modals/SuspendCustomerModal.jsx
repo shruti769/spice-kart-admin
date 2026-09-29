@@ -1,64 +1,98 @@
-export default function SuspendCustomerModal({ v }) {
+import { useState } from 'react'
+import { Modal } from '../components/content/ui'
+import { FONT, MUTED, btnPrimary, btnSecondary, errorText, inputStyle, labelStyle, selectStyle } from '../components/content/styles'
+import { suspendCustomer, unsuspendCustomer } from '../lib/customers'
+import { customerName } from '../lib/orders'
+
+const REASONS = ['Payment disputes', 'Suspected fraud', 'Abusive behaviour', 'Repeated failed deliveries', 'Other']
+
+/**
+ * Suspends a customer (they can't place orders until reinstated) or, when already suspended, reinstates them.
+ * Props: `customer` (customer_stats row), `onClose`, `onDone`, `flash`.
+ */
+export default function SuspendCustomerModal({ customer, onClose, onDone, flash }) {
+  if (!customer || !onClose) return null
+  return <SuspendForm key={customer.id} customer={customer} onClose={onClose} onDone={onDone} flash={flash} />
+}
+
+function SuspendForm({ customer, onClose, onDone, flash }) {
+  const reinstate = Boolean(customer.suspended_at)
+  const [reason, setReason] = useState(REASONS[0])
+  const [details, setDetails] = useState('')
+  const [busy, setBusy] = useState(false)
+  const [error, setError] = useState('')
+  const name = customerName(customer)
+  const needsDetails = reason === 'Other' && !details.trim()
+
+  const confirm = async () => {
+    if (busy || (!reinstate && needsDetails)) return
+    setBusy(true)
+    setError('')
+    try {
+      if (reinstate) await unsuspendCustomer(customer.id)
+      else await suspendCustomer(customer.id, reason === 'Other' ? details : [reason, details.trim()].filter(Boolean).join(' · '))
+      flash?.(reinstate ? `${name} reinstated · they can order again` : `${name} suspended · they can’t place new orders`)
+      onDone?.()
+      onClose()
+    } catch (e) {
+      setError(e.message)
+      setBusy(false)
+    }
+  }
+
+  const tone = reinstate ? ['#F1F9DF', '#0B3D1F'] : ['#FBF1DE', '#8A6100']
   return (
-    <>
-      <div onClick={v.closeModal} style={{ position: "absolute", inset: "0", zIndex: "90", background: "rgba(14,22,16,.45)", display: "flex", alignItems: "center", justifyContent: "center", padding: "40px" }}>
-        <div style={{ width: "440px", maxWidth: "100%", background: "#fff", borderRadius: "14px", boxShadow: "0 26px 60px rgba(10,18,12,.3)", overflow: "hidden", display: "flex", flexDirection: "column" }}>
-          <div style={{ padding: "16px 18px 14px", display: "flex", alignItems: "flex-start", gap: "11px", borderBottom: "1px solid #EFF1ED" }}>
-            <span style={{ width: "34px", height: "34px", borderRadius: "9px", background: "#FBF1DE", display: "flex", alignItems: "center", justifyContent: "center", flex: "none" }}>
-              <svg width="17" height="17" viewBox="0 0 20 20" fill="none" style={{ flex: "none" }}>
-                <rect x="4.6" y="8.6" width="10.8" height="8" rx="2" stroke="#8A6100" strokeWidth="1.5" />
-                <path d="M7.2 8.6V6.8a2.8 2.8 0 015.6 0v1.8" stroke="#8A6100" strokeWidth="1.5" />
-              </svg>
+    <Modal
+      width={440}
+      busy={busy}
+      onClose={onClose}
+      title={(
+        <span style={{ display: 'flex', alignItems: 'flex-start', gap: '11px' }}>
+          <span style={{ width: '34px', height: '34px', borderRadius: '9px', background: tone[0], display: 'flex', alignItems: 'center', justifyContent: 'center', flex: 'none' }}>
+            <svg width="17" height="17" viewBox="0 0 20 20" fill="none">
+              <rect x="4.6" y="8.6" width="10.8" height="8" rx="2" stroke={tone[1]} strokeWidth="1.5" />
+              <path d={reinstate ? 'M7.2 8.6V6.8a2.8 2.8 0 015.4-1' : 'M7.2 8.6V6.8a2.8 2.8 0 015.6 0v1.8'} stroke={tone[1]} strokeWidth="1.5" strokeLinecap="round" />
+            </svg>
+          </span>
+          <span style={{ display: 'flex', flexDirection: 'column', gap: '4px', minWidth: '0' }}>
+            <span>{reinstate ? `Reinstate ${name}?` : `Suspend ${name}?`}</span>
+            <span style={{ font: `400 11.5px/1.55 ${FONT}`, color: MUTED }}>
+              {reinstate
+                ? 'They’ll be able to place orders in the app again straight away.'
+                : 'They won’t be able to place new orders until reinstated. Open orders are unaffected.'}
             </span>
-            <span style={{ display: "flex", flexDirection: "column", gap: "4px", minWidth: "0" }}>
-              <span style={{ font: "700 15px/1.2 Inter,system-ui,sans-serif", color: "#17201A" }}>Suspend this account?</span>
-              <span style={{ font: "400 11.5px/1.55 Inter,system-ui,sans-serif", color: "#7C8A81" }}>
-                They will be signed out immediately and unable to place orders until reinstated. Open orders are unaffected.
-              </span>
-            </span>
-          </div>
-          <div style={{ padding: "15px 18px", display: "flex", flexDirection: "column", gap: "11px" }}>
-            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "11px" }}>
-              <span style={{ display: "flex", flexDirection: "column", gap: "6px" }}>
-                <span style={{ font: "600 10.5px/1.2 Inter,system-ui,sans-serif", letterSpacing: ".4px", color: "#7C8A81", textTransform: "uppercase", whiteSpace: "nowrap" }}>
-                  SUSPENSION LENGTH
-                </span>
-                <span style={{ display: "flex", alignItems: "center", height: "36px", padding: "0 11px", border: "1px solid #E4E7E2", borderRadius: "8px", background: "#fff", font: "500 12.5px/1.2 Inter,system-ui,sans-serif", color: "#17201A", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
-                  Until reviewed
-                </span>
-              </span>
-              <span style={{ display: "flex", flexDirection: "column", gap: "6px" }}>
-                <span style={{ font: "600 10.5px/1.2 Inter,system-ui,sans-serif", letterSpacing: ".4px", color: "#7C8A81", textTransform: "uppercase", whiteSpace: "nowrap" }}>
-                  REASON
-                </span>
-                <span style={{ display: "flex", alignItems: "center", height: "36px", padding: "0 11px", border: "1px solid #E4E7E2", borderRadius: "8px", background: "#fff", font: "500 12.5px/1.2 Inter,system-ui,sans-serif", color: "#17201A", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
-                  Payment disputes
-                </span>
-              </span>
-            </div>
-            <span style={{ display: "flex", alignItems: "center", gap: "9px", padding: "10px 11px", borderRadius: "8px", background: "#F6F7F4", border: "1px solid #E4E7E2" }}>
-              <span style={{ width: "19px", height: "19px", borderRadius: "5px", background: "#8BE000", display: "flex", alignItems: "center", justifyContent: "center", flex: "none" }}>
-                <svg width="13" height="13" viewBox="0 0 20 20" fill="none" style={{ flex: "none" }}>
-                  <path d="M4.6 10.4l3.4 3.4 7.4-7.4" stroke="#0B3D1F" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
-                </svg>
-              </span>
-              <span style={{ font: "500 12.5px/1.2 Inter,system-ui,sans-serif", color: "#17201A", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
-                Notify by email
-              </span>
-            </span>
-          </div>
-          <div style={{ padding: "13px 18px 16px", display: "flex", alignItems: "center", gap: "9px", borderTop: "1px solid #EFF1ED", background: "#F6F7F4" }}>
-            <span style={{ marginLeft: "auto", display: "flex", gap: "9px" }}>
-              <button onClick={v.closeModal} style={{ height: "36px", padding: "0 14px", border: "1px solid #E4E7E2", borderRadius: "8px", background: "#fff", font: "600 12.5px/1.2 Inter,system-ui,sans-serif", color: "#17201A", cursor: "pointer", whiteSpace: "nowrap" }}>
-                Cancel
-              </button>
-              <button onClick={v.confirmModal} style={{ height: "36px", padding: "0 15px", border: "0", borderRadius: "8px", background: "#A93826", color: "#fff", font: "600 12.5px/1.2 Inter,system-ui,sans-serif", cursor: "pointer", whiteSpace: "nowrap" }}>
-                Suspend account
-              </button>
-            </span>
-          </div>
-        </div>
-      </div>
-    </>
+          </span>
+        </span>
+      )}
+      footer={(
+        <span style={{ marginLeft: 'auto', display: 'flex', gap: '9px' }}>
+          <button type="button" onClick={onClose} disabled={busy} style={btnSecondary}>Cancel</button>
+          <button type="button" onClick={confirm} disabled={busy || (!reinstate && needsDetails)} style={{ ...btnPrimary, background: reinstate ? '#0B3D1F' : '#A93826', opacity: busy || (!reinstate && needsDetails) ? 0.5 : 1 }}>
+            {busy ? 'Saving…' : reinstate ? 'Reinstate account' : 'Suspend account'}
+          </button>
+        </span>
+      )}
+    >
+      {reinstate ? (
+        <span style={{ display: 'flex', flexDirection: 'column', gap: '6px', padding: '10px 11px', borderRadius: '8px', background: '#F6F7F4', border: '1px solid #E4E7E2' }}>
+          <span style={labelStyle}>Suspended {new Date(customer.suspended_at).toLocaleDateString('en-AU', { day: 'numeric', month: 'short', year: 'numeric' })}</span>
+          <span style={{ font: `400 12px/1.5 ${FONT}`, color: '#4A564E' }}>{customer.suspended_reason || 'No reason recorded'}</span>
+        </span>
+      ) : (
+        <>
+          <label style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+            <span style={labelStyle}>Reason</span>
+            <select value={reason} onChange={(e) => setReason(e.target.value)} disabled={busy} style={selectStyle}>
+              {REASONS.map((r) => <option key={r} value={r}>{r}</option>)}
+            </select>
+          </label>
+          <label style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+            <span style={labelStyle}>{reason === 'Other' ? 'Details' : 'Details (optional)'}</span>
+            <textarea value={details} onChange={(e) => setDetails(e.target.value)} disabled={busy} maxLength={250} rows={3} placeholder="Visible to admins only" style={{ ...inputStyle, height: 'auto', padding: '9px 11px', font: `400 12px/1.5 ${FONT}`, resize: 'vertical' }} />
+          </label>
+        </>
+      )}
+      {error && <span style={{ ...errorText, font: `500 12px/1.4 ${FONT}` }}>{error}</span>}
+    </Modal>
   )
 }

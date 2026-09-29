@@ -3,6 +3,12 @@ import { createClient } from '@supabase/supabase-js';
 const url = import.meta.env.VITE_SUPABASE_URL;
 const key = import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY;
 
+/**
+ * 'invite' | 'recovery' when the page was opened from a Supabase invite or password-reset email
+ * (read before the client consumes the link's #access_token…&type=…), else null.
+ */
+export const authLinkType = typeof window === 'undefined' ? null : (/[#&]type=(invite|recovery)\b/.exec(window.location.hash)?.[1] ?? null);
+
 /** False until `.env` has the project URL and publishable key. */
 export const isSupabaseConfigured = Boolean(url && key);
 
