@@ -102,7 +102,7 @@ export default function DeliverySlotsCard({ v, ...rest }) {
 
   return (
     <div {...rest} style={{ background: '#fff', border: `1px solid ${BORDER}`, borderRadius: '10px', padding: '18px', display: 'flex', flexDirection: 'column', gap: '14px' }}>
-      <span style={{ display: 'flex', alignItems: 'flex-start', gap: '14px' }}>
+      <span className="r-wrap" style={{ display: 'flex', alignItems: 'flex-start', gap: '14px' }}>
         <span style={{ display: 'flex', flexDirection: 'column', gap: '5px', minWidth: '0', flex: '1' }}>
           <span style={{ font: `600 13.5px/1.2 ${FONT}`, color: INK }}>Scheduled delivery slots</span>
           <span style={{ font: `400 11.5px/1.4 ${FONT}`, color: MUTED }}>Time windows customers can book at checkout. Changes apply to new bookings only.</span>
@@ -115,7 +115,7 @@ export default function DeliverySlotsCard({ v, ...rest }) {
         </button>
       </span>
 
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3,1fr)', gap: '11px' }}>
+      <div className="r-stack-sm" style={{ display: 'grid', gridTemplateColumns: 'repeat(3,1fr)', gap: '11px' }}>
         <span style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
           <span style={labelStyle}>BOOK AHEAD</span>
           <Select value={bookAhead} options={BOOK_AHEAD.map(([, l]) => l)} onChange={setBookAhead} />
@@ -156,8 +156,8 @@ export default function DeliverySlotsCard({ v, ...rest }) {
         </span>
       </span>
 
-      <div style={{ border: `1px solid ${BORDER}`, borderRadius: '9px', overflow: 'hidden' }}>
-        <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+      <div className="r-table-wrap" style={{ border: `1px solid ${BORDER}`, borderRadius: '9px', overflow: 'hidden' }}>
+        <table className="r-table" style={{ width: '100%', borderCollapse: 'collapse' }}>
           <thead>
             <tr>
               <th style={th}>Time window</th>
@@ -206,7 +206,7 @@ export default function DeliverySlotsCard({ v, ...rest }) {
             )}
           </tbody>
         </table>
-        <span style={{ display: 'flex', alignItems: 'center', gap: '12px', padding: '10px 14px', background: '#F6F7F4' }}>
+        <span className="r-wrap" style={{ display: 'flex', alignItems: 'center', gap: '12px', padding: '10px 14px', background: '#F6F7F4' }}>
           <span style={{ font: `500 12px/1.3 ${FONT}`, color: '#4A564E', flex: '1', minWidth: '0' }}>
             {active.length} active slot{active.length === 1 ? '' : 's'} · {capacity} orders capacity
             {active.length > 0 && ` · ${fmtTime(Math.min(...active.map((s) => s.start)))} – ${fmtTime(Math.max(...active.map((s) => s.end)))}`}

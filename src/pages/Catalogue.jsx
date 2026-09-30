@@ -72,7 +72,7 @@ function CategoryRow({ v, c, index, count, last }) {
   const edit = () => v.openCategoryEdit(c)
   return (
     <div
-      className="hv3"
+      className="hv3 r-table"
       role="button"
       tabIndex={0}
       onClick={edit}
@@ -182,15 +182,15 @@ export default function Catalogue({ v }) {
   }
   return (
     <>
-      <div style={{ display: "flex", alignItems: "flex-end", gap: "18px", padding: "24px 26px 2px" }}>
+      <div className="sk-topbar" style={{ display: "flex", alignItems: "flex-end", gap: "18px", padding: "24px 26px 2px" }}>
         <span style={{ display: "flex", flexDirection: "column", gap: "5px", minWidth: "0" }}>
           <span style={{ font: "700 20px/1.2 Inter,system-ui,sans-serif", color: "#17201A", whiteSpace: "nowrap" }}>Catalogue</span>
           <span style={{ font: "400 12.5px/1.2 Inter,system-ui,sans-serif", color: "#7C8A81", whiteSpace: "nowrap" }}>
             {loaded ? `${num(stats.total)} product${stats.total === 1 ? "" : "s"} across ${categories.length} categories · ${num(stats.low + stats.out)} need restocking` : "Loading products…"}
           </span>
         </span>
-        <span style={{ marginLeft: "auto", display: "flex", alignItems: "center", gap: "8px" }}>
-          <span style={{ display: "flex", alignItems: "center", gap: "8px", height: "34px", width: "230px", padding: "0 11px", border: "1px solid #E4E7E2", borderRadius: "8px", background: "#fff" }}>
+        <span className="r-wrap" style={{ marginLeft: "auto", display: "flex", alignItems: "center", gap: "8px" }}>
+          <span className="r-full" style={{ display: "flex", alignItems: "center", gap: "8px", height: "34px", width: "230px", padding: "0 11px", border: "1px solid #E4E7E2", borderRadius: "8px", background: "#fff" }}>
             <svg width="15" height="15" viewBox="0 0 20 20" fill="none" style={{ flex: "none" }}>
               <circle cx="9" cy="9" r="6" stroke="#7C8A81" strokeWidth="1.6" />
               <path d="M13.4 13.4L18 18" stroke="#7C8A81" strokeWidth="1.6" strokeLinecap="round" />
@@ -237,8 +237,8 @@ export default function Catalogue({ v }) {
           )}
         </span>
       </div>
-      <div className="ad-scroll" style={{ flex: "1", minHeight: "0", overflowY: "auto", padding: "20px 26px 30px", display: "flex", flexDirection: "column", gap: "18px" }}>
-        <div style={{ display: "flex", alignItems: "center", gap: "2px", borderBottom: "1px solid #E4E7E2" }}>
+      <div className="ad-scroll sk-page" style={{ flex: "1", minHeight: "0", overflowY: "auto", padding: "20px 26px 30px", display: "flex", flexDirection: "column", gap: "18px" }}>
+        <div className="r-wrap" style={{ display: "flex", alignItems: "center", gap: "2px", borderBottom: "1px solid #E4E7E2" }}>
           <button onClick={v.ct_products} style={{ display: "flex", alignItems: "center", gap: "8px", border: "0", background: "transparent", padding: "0 14px 11px", font: "600 13px/1.2 Inter,system-ui,sans-serif", color: v.ct_productsFg, borderBottom: `2px solid ${v.ct_productsBd}`, cursor: "pointer", whiteSpace: "nowrap", marginBottom: "-1px" }}>
             {" Products"}
             <span style={{ font: "600 10.5px/1.2 Inter,system-ui,sans-serif", color: v.ct_productsFg, background: v.ct_productsBg, padding: "4px 7px", borderRadius: "5px", whiteSpace: "nowrap" }}>
@@ -289,10 +289,10 @@ export default function Catalogue({ v }) {
               <FilterChip label="Attribute" value={filters.attribute} onChange={setFilter('attribute')} options={attributeOptions} anyLabel="any" />
               <FilterChip label="Price" value={filters.price} onChange={setFilter('price')} options={PRICE_FILTERS.map(([k, t]) => [k, t])} anyLabel="any" />
             </div>
-            <div style={{ background: "#fff", border: "1px solid #E4E7E2", borderRadius: "10px", overflow: "hidden", flex: "none" }}>
+            <div className="r-table-wrap" style={{ background: "#fff", border: "1px solid #E4E7E2", borderRadius: "10px", overflow: "hidden", flex: "none" }}>
               {" "}
               <div style={{ display: "flex", alignItems: "center", gap: "9px", padding: "12px 16px", borderBottom: "1px solid #E4E7E2", flexWrap: "wrap" }}>
-                <span className="sk-input-wrap" style={{ display: "flex", alignItems: "center", gap: "8px", height: "34px", width: "200px", padding: "0 11px", border: "1px solid #E4E7E2", borderRadius: "8px", background: "#fff", boxSizing: "border-box" }}>
+                <span className="sk-input-wrap r-full" style={{ display: "flex", alignItems: "center", gap: "8px", height: "34px", width: "200px", padding: "0 11px", border: "1px solid #E4E7E2", borderRadius: "8px", background: "#fff", boxSizing: "border-box" }}>
                   <svg width="15" height="15" viewBox="0 0 20 20" fill="none" style={{ flex: "none" }}>
                     <circle cx="9" cy="9" r="6" stroke="#7C8A81" strokeWidth="1.6" />
                     <path d="M13.4 13.4L18 18" stroke="#7C8A81" strokeWidth="1.6" strokeLinecap="round" />
@@ -316,7 +316,7 @@ export default function Catalogue({ v }) {
                 <span style={{ marginLeft: "auto", font: "400 11.5px/1.2 Inter,system-ui,sans-serif", color: "#7C8A81", whiteSpace: "nowrap" }}>Sorted by newest first</span>
               </div>
               {" "}
-              <div style={{ display: "grid", gridTemplateColumns: "2.1fr 1fr 1fr .7fr .6fr minmax(96px,1fr) .9fr 120px", gap: "14px", padding: "11px 16px", background: "#F6F7F4", borderBottom: "1px solid #E4E7E2" }}>
+              <div className="r-table" style={{ '--r-min': '900px', display: "grid", gridTemplateColumns: "2.1fr 1fr 1fr .7fr .6fr minmax(96px,1fr) .9fr 120px", gap: "14px", padding: "11px 16px", background: "#F6F7F4", borderBottom: "1px solid #E4E7E2" }}>
                 <span style={{ font: "600 10.5px/1.2 Inter,system-ui,sans-serif", letterSpacing: ".5px", color: "#7C8A81", textTransform: "uppercase", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
                   Product
                 </span>
@@ -351,7 +351,7 @@ export default function Catalogue({ v }) {
         )}
         {v.isCats && (
           <>
-            <div style={{ display: "grid", gridTemplateColumns: "repeat(4,1fr)", gap: "14px" }}>
+            <div className="r-kpi" style={{ display: "grid", gridTemplateColumns: "repeat(4,1fr)", gap: "14px" }}>
               <div style={{ background: "#fff", border: "1px solid #E4E7E2", borderRadius: "10px", padding: "15px 16px", display: "flex", flexDirection: "column", gap: "10px" }}>
                 <span style={{ display: "flex", alignItems: "center", gap: "8px" }}>
                   <span style={{ width: "26px", height: "26px", borderRadius: "7px", background: "#F6F7F4", border: "1px solid #E4E7E2", display: "flex", alignItems: "center", justifyContent: "center" }}>
@@ -418,7 +418,7 @@ export default function Catalogue({ v }) {
                 </span>
               </div>
             </div>
-            <div style={{ background: "#fff", border: "1px solid #E4E7E2", borderRadius: "10px", overflow: "hidden", flex: "none" }}>
+            <div className="r-table-wrap" style={{ background: "#fff", border: "1px solid #E4E7E2", borderRadius: "10px", overflow: "hidden", flex: "none" }}>
               {" "}
               <div style={{ display: "flex", alignItems: "center", gap: "10px", padding: "12px 16px", borderBottom: "1px solid #E4E7E2", flexWrap: "wrap" }}>
                 <span style={{ font: "600 13.5px/1.2 Inter,system-ui,sans-serif", color: "#17201A", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
@@ -436,7 +436,7 @@ export default function Catalogue({ v }) {
                 </span>
               </div>
               {" "}
-              <div style={{ display: "grid", gridTemplateColumns: "74px 2fr 1.2fr .8fr minmax(86px,1fr) 120px", gap: "14px", padding: "11px 16px", background: "#F6F7F4", borderBottom: "1px solid #E4E7E2" }}>
+              <div className="r-table" style={{ display: "grid", gridTemplateColumns: "74px 2fr 1.2fr .8fr minmax(86px,1fr) 120px", gap: "14px", padding: "11px 16px", background: "#F6F7F4", borderBottom: "1px solid #E4E7E2" }}>
                 <span style={{ font: "600 10.5px/1.2 Inter,system-ui,sans-serif", letterSpacing: ".5px", color: "#7C8A81", textTransform: "uppercase", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
                   Order
                 </span>
@@ -487,7 +487,7 @@ export default function Catalogue({ v }) {
         )}
         {v.isInv && (
           <>
-            <div style={{ display: "grid", gridTemplateColumns: "repeat(4,1fr)", gap: "14px" }}>
+            <div className="r-kpi" style={{ display: "grid", gridTemplateColumns: "repeat(4,1fr)", gap: "14px" }}>
               <div style={{ background: "#fff", border: "1px solid #E4E7E2", borderRadius: "10px", padding: "15px 16px", display: "flex", flexDirection: "column", gap: "10px" }}>
                 <span style={{ display: "flex", alignItems: "center", gap: "8px" }}>
                   <span style={{ width: "26px", height: "26px", borderRadius: "7px", background: "#F6F7F4", border: "1px solid #E4E7E2", display: "flex", alignItems: "center", justifyContent: "center" }}>
@@ -568,7 +568,7 @@ export default function Catalogue({ v }) {
                 Overstocked
               </button>
             </div>
-            <div style={{ background: "#fff", border: "1px solid #E4E7E2", borderRadius: "10px", overflow: "hidden", flex: "none" }}>
+            <div className="r-table-wrap" style={{ background: "#fff", border: "1px solid #E4E7E2", borderRadius: "10px", overflow: "hidden", flex: "none" }}>
               {" "}
               <div style={{ display: "flex", alignItems: "center", gap: "9px", padding: "12px 16px", borderBottom: "1px solid #E4E7E2", flexWrap: "wrap" }}>
                 <FilterChip label="Warehouse" value={invFilters.warehouse} onChange={setInvFilter('warehouse')} options={warehouseOptions} />
@@ -579,7 +579,7 @@ export default function Catalogue({ v }) {
                 <span style={{ marginLeft: "auto", font: "400 11.5px/1.2 Inter,system-ui,sans-serif", color: "#7C8A81", whiteSpace: "nowrap" }}>{products.fetchedAt ? `Last sync ${timeAgo(products.fetchedAt).toLowerCase()}` : "Syncing…"}</span>
               </div>
               {" "}
-              <div style={{ display: "grid", gridTemplateColumns: "1.8fr 1fr .7fr .7fr .8fr .8fr minmax(104px,1.1fr) .9fr 90px", gap: "14px", padding: "11px 16px", background: "#F6F7F4", borderBottom: "1px solid #E4E7E2" }}>
+              <div className="r-table" style={{ '--r-min': '960px', display: "grid", gridTemplateColumns: "1.8fr 1fr .7fr .7fr .8fr .8fr minmax(104px,1.1fr) .9fr 90px", gap: "14px", padding: "11px 16px", background: "#F6F7F4", borderBottom: "1px solid #E4E7E2" }}>
                 <span style={{ font: "600 10.5px/1.2 Inter,system-ui,sans-serif", letterSpacing: ".5px", color: "#7C8A81", textTransform: "uppercase", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
                   Product / SKU
                 </span>

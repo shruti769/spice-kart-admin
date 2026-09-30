@@ -90,7 +90,7 @@ function CollectionModal({ v, collection, onClose }) {
         </span>
       </span>
       {errors.cover && <span style={errorText}>{errors.cover}</span>}
-      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '13px' }}>
+      <div className="r-stack-sm" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '13px' }}>
         <label style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
           <span style={labelStyle}>Collection name</span>
           <input value={name} maxLength={40} placeholder="e.g. Diwali Essentials" onChange={(e) => { setName(e.target.value); setErrors((x) => ({ ...x, name: undefined })) }} style={withError(inputStyle, errors.name)} />

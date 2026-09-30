@@ -80,7 +80,7 @@ export default function LiveProductRows({ v, products, rows, emptyTitle, emptyTe
   return rows.map((p, i) => {
     const [label, fg, bg] = statusPill(p)
     return (
-      <div key={p.id} className="hv3" {...rowProps(() => v.editProduct(p))} style={rowStyle(PRODUCT_GRID, i === rows.length - 1)}>
+      <div key={p.id} className="hv3 r-table" {...rowProps(() => v.editProduct(p))} style={{ ...rowStyle(PRODUCT_GRID, i === rows.length - 1), '--r-min': '900px' }}>
         <span style={cell}>
           <span style={{ width: '15px', height: '15px', border: '1.5px solid #E4E7E2', borderRadius: '4px', background: '#fff', display: 'block', flex: 'none' }} />
           <span style={{ width: '30px', height: '30px', borderRadius: '7px', overflow: 'hidden', background: '#F6F7F4', border: '1px solid #E4E7E2', flex: 'none', display: 'block', position: 'relative' }}>
@@ -120,7 +120,7 @@ export function InventoryRows({ v, products, rows, emptyTitle, emptyText }) {
   return rows.map((p, i) => {
     const [label, fg, bg] = stockPill(p)
     return (
-      <div key={p.id} className="hv3" {...rowProps(() => v.editProduct(p))} style={rowStyle(INVENTORY_GRID, i === rows.length - 1)}>
+      <div key={p.id} className="hv3 r-table" {...rowProps(() => v.editProduct(p))} style={{ ...rowStyle(INVENTORY_GRID, i === rows.length - 1), '--r-min': '960px' }}>
         <span style={cell}>
           <span style={{ display: 'flex', flexDirection: 'column', gap: '3px', minWidth: '0' }}>
             <span style={strong(600)}>{p.name}</span>

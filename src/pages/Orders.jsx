@@ -45,21 +45,21 @@ export default function Orders({ v }) {
 
   return (
     <>
-      <div style={{ display: 'flex', alignItems: 'flex-end', gap: '18px', padding: '24px 26px 2px' }}>
+      <div className="sk-topbar" style={{ display: 'flex', alignItems: 'flex-end', gap: '18px', padding: '24px 26px 2px' }}>
         <span style={{ display: 'flex', flexDirection: 'column', gap: '5px', minWidth: '0' }}>
           <span style={{ font: `700 20px/1.2 ${FONT}`, color: INK, whiteSpace: 'nowrap' }}>Orders</span>
           <span style={{ font: `400 12.5px/1.2 ${FONT}`, color: MUTED, whiteSpace: 'nowrap' }}>
             {counts ? `${counts.all} order${counts.all === 1 ? '' : 's'} · ` : ''}new orders from the app appear live
           </span>
         </span>
-        <span style={{ marginLeft: 'auto', display: 'flex', alignItems: 'center', gap: '8px' }}>
-          <span style={{ display: 'flex', alignItems: 'center', gap: '8px', height: '34px', width: '260px', padding: '0 11px', border: `1px solid ${BORDER}`, borderRadius: '8px', background: '#fff' }}>
+        <span className="r-full" style={{ marginLeft: 'auto', display: 'flex', alignItems: 'center', gap: '8px' }}>
+          <span className="r-full" style={{ display: 'flex', alignItems: 'center', gap: '8px', height: '34px', width: '260px', padding: '0 11px', border: `1px solid ${BORDER}`, borderRadius: '8px', background: '#fff' }}>
             <svg width="15" height="15" viewBox="0 0 20 20" fill="none" style={{ flex: 'none' }}><circle cx="9" cy="9" r="6" stroke={MUTED} strokeWidth="1.6" /><path d="M13.4 13.4L18 18" stroke={MUTED} strokeWidth="1.6" strokeLinecap="round" /></svg>
             <input value={q} onChange={(e) => setQ(e.target.value)} placeholder="Search order #, customer, mobile…" style={{ border: '0', outline: 'none', background: 'transparent', font: `400 12.5px/1.2 ${FONT}`, color: INK, width: '100%' }} />
           </span>
         </span>
       </div>
-      <div className="ad-scroll" style={{ flex: '1', minHeight: '0', overflowY: 'auto', padding: '20px 26px 30px', display: 'flex', flexDirection: 'column', gap: '14px' }}>
+      <div className="ad-scroll sk-page" style={{ flex: '1', minHeight: '0', overflowY: 'auto', padding: '20px 26px 30px', display: 'flex', flexDirection: 'column', gap: '14px' }}>
         <div className="ad-scroll" style={{ display: 'flex', gap: '2px', borderBottom: `1px solid ${BORDER}`, overflowX: 'auto', flex: 'none' }}>
           {[['all', 'All'], ...STATUSES].map(([k, label]) => {
             const on = tab === k
@@ -72,7 +72,7 @@ export default function Orders({ v }) {
           })}
         </div>
 
-        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+        <div className="r-wrap" style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
           <select value={type} onChange={(e) => setType(e.target.value)} style={selectBox} aria-label="Delivery type">
             <option value="all">Type: All</option>
             <option value="express">Express</option>
@@ -88,8 +88,8 @@ export default function Orders({ v }) {
           <span style={{ marginLeft: 'auto', font: `400 11.5px/1.2 ${FONT}`, color: MUTED }}>Showing the latest {Math.min(limit, orders.rows.length)} orders</span>
         </div>
 
-        <div style={{ background: '#fff', border: `1px solid ${BORDER}`, borderRadius: '10px', overflow: 'hidden' }}>
-          <div style={{ display: 'grid', gridTemplateColumns: COLS, gap: '12px', padding: '11px 16px', background: '#F6F7F4', borderBottom: `1px solid ${BORDER}` }}>
+        <div className="r-table-wrap" style={{ background: '#fff', border: `1px solid ${BORDER}`, borderRadius: '10px', overflow: 'hidden' }}>
+          <div className="r-table" style={{ '--r-min': '1040px', display: 'grid', gridTemplateColumns: COLS, gap: '12px', padding: '11px 16px', background: '#F6F7F4', borderBottom: `1px solid ${BORDER}` }}>
             {['Order', 'Customer', 'Items', 'Value', 'Delivery', 'Payment', 'Status', 'Placed'].map((h) => <span key={h} style={head}>{h}</span>)}
             <span style={{ ...head, textAlign: 'right' }}>Actions</span>
           </div>
@@ -100,7 +100,7 @@ export default function Orders({ v }) {
             const [pl, pfg, pbg] = PAYMENT_STATUS_PILL[o.payment_status] ?? PAYMENT_STATUS_PILL.pending
             const n = itemCount(o)
             return (
-              <div key={o.id} className="hv3" onClick={() => v.openOrder(o)} style={{ display: 'grid', gridTemplateColumns: COLS, gap: '12px', padding: '12px 16px', borderTop: i ? '1px solid #EFF1ED' : '0', alignItems: 'center', cursor: 'pointer' }}>
+              <div key={o.id} className="hv3 r-table" onClick={() => v.openOrder(o)} style={{ '--r-min': '1040px', display: 'grid', gridTemplateColumns: COLS, gap: '12px', padding: '12px 16px', borderTop: i ? '1px solid #EFF1ED' : '0', alignItems: 'center', cursor: 'pointer' }}>
                 <span style={{ ...cell, font: `700 12.5px/1.2 ${FONT}`, color: INK }}>#{o.number}</span>
                 <span style={{ display: 'flex', alignItems: 'center', gap: '9px', minWidth: '0' }}>
                   <span style={{ width: '28px', height: '28px', borderRadius: '7px', background: '#F1F9DF', color: '#0B3D1F', font: `700 10.5px/28px ${FONT}`, textAlign: 'center', flex: 'none' }}>{initials(o.customer)}</span>

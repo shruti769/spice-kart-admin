@@ -83,7 +83,7 @@ export default function AnnouncementModal({ v, announcement, onClose }) {
         <textarea value={message} maxLength={200} rows={3} placeholder="What should customers know?" onChange={(e) => setMessage(e.target.value)} style={{ ...inputStyle, height: 'auto', padding: '10px 11px', font: `400 12.5px/1.5 ${FONT}`, resize: 'vertical' }} />
         <span style={hintText}>{message.length}/200</span>
       </label>
-      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '13px' }}>
+      <div className="r-stack-sm" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '13px' }}>
         <span style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
           <span style={labelStyle}>Type</span>
           <Segmented label="Type" options={TYPES.map(([k, l]) => [k, l])} value={type} onChange={setType} />

@@ -213,7 +213,7 @@ function CategoryForm({ v, all, original }) {
 
       {/* Body */}
       <div className="ad-scroll" style={{ padding: '20px 24px', display: 'flex', flexDirection: 'column', gap: '20px', overflowY: 'auto', minHeight: '0' }}>
-        <div style={{ display: 'grid', gridTemplateColumns: '150px minmax(0,1fr)', gap: '22px', alignItems: 'start' }}>
+        <div className="r-stack-sm" style={{ display: 'grid', gridTemplateColumns: '150px minmax(0,1fr)', gap: '22px', alignItems: 'start' }}>
           {/* Left: image */}
           <span style={{ display: 'flex', flexDirection: 'column', gap: '8px', minWidth: '0' }}>
             <span style={labelStyle}>Image / icon</span>
@@ -378,7 +378,7 @@ function CategoryForm({ v, all, original }) {
       </div>
 
       {/* Footer */}
-      <div style={{ padding: '14px 24px', display: 'flex', alignItems: 'center', gap: '10px', borderTop: `1px solid ${DIVIDER}`, background: '#F7F8F5', flex: 'none' }}>
+      <div className="r-wrap" style={{ padding: '14px 24px', display: 'flex', alignItems: 'center', gap: '10px', borderTop: `1px solid ${DIVIDER}`, background: '#F7F8F5', flex: 'none' }}>
         {!isAdd && (confirmDelete ? (
           <span style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
             <span style={{ font: `600 12.5px/1.2 ${FONT}`, color: DANGER, whiteSpace: 'nowrap' }}>Delete this category?</span>
@@ -403,8 +403,8 @@ export default function CategoryEditModal({ v }) {
   const original = v.editingCategory ? categories.rows.find((c) => c.id === v.editingCategory.id) ?? v.editingCategory : null
   const waiting = categories.status === 'loading'
   return (
-    <div onClick={v.closeModal} style={{ position: 'absolute', inset: '0', zIndex: '90', background: 'rgba(14,22,16,.45)', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '40px' }}>
-      <div onClick={(e) => e.stopPropagation()} style={{ width: '560px', maxWidth: '100%', maxHeight: '100%', background: '#fff', borderRadius: '18px', boxShadow: '0 26px 60px rgba(10,18,12,.3)', overflow: 'hidden', display: 'flex', flexDirection: 'column' }}>
+    <div className="sk-overlay" onClick={v.closeModal} style={{ position: 'absolute', inset: '0', zIndex: '90', background: 'rgba(14,22,16,.45)', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '40px' }}>
+      <div className="sk-modal" onClick={(e) => e.stopPropagation()} style={{ width: '560px', maxWidth: '100%', maxHeight: '100%', background: '#fff', borderRadius: '18px', boxShadow: '0 26px 60px rgba(10,18,12,.3)', overflow: 'hidden', display: 'flex', flexDirection: 'column' }}>
         {waiting ? (
           <span style={{ padding: '40px 24px', textAlign: 'center', font: `400 13px/1.2 ${FONT}`, color: MUTED }}>Loading categories…</span>
         ) : (

@@ -10,7 +10,7 @@ const cardStyle = { background: '#fff', border: `1px solid ${BORDER}`, borderRad
 
 export function CardTitle({ title, dirty, note }) {
   return (
-    <span style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+    <span className="r-wrap" style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
       <span style={{ font: `600 13.5px/1.2 ${FONT}`, color: INK, whiteSpace: 'nowrap' }}>{title}</span>
       {dirty && <span style={{ padding: '3px 8px', borderRadius: '6px', background: '#FFF4DB', color: '#8A5A00', font: `600 10.5px/1.2 ${FONT}` }}>Unsaved changes</span>}
       {note && <span style={{ marginLeft: 'auto', font: `500 11.5px/1.2 ${FONT}`, color: MUTED }}>{note}</span>}
@@ -69,7 +69,7 @@ export function PaymentsCard({ form, set, errors, disabled, dirty }) {
   return (
     <div data-section="payments" style={cardStyle}>
       <CardTitle title="Payments & tax" dirty={dirty} />
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2,1fr)', gap: '12px' }}>
+      <div className="r-stack-sm" style={{ display: 'grid', gridTemplateColumns: 'repeat(2,1fr)', gap: '12px' }}>
         <Field label="GST rate" error={errors.gst_rate} hint="Shown on invoices and in the app">
           <Money value={form.gst_rate} onChange={(x) => set({ gst_rate: x })} error={errors.gst_rate} disabled={disabled} suffix="%" />
         </Field>
@@ -147,7 +147,7 @@ export function NotificationsCard({ form, set, errors, disabled, dirty }) {
         <QueueNote stats={stats} channel="slack" />
       </ToggleRow>
       <ToggleRow title="Daily operations digest" sub="Yesterday’s orders, revenue, new customers, stock and alerts, emailed each morning" on={form.daily_digest} disabled={disabled} onChange={(on) => set({ daily_digest: on })} last>
-        <div style={{ display: 'grid', gridTemplateColumns: '1fr 160px', gap: '12px' }}>
+        <div className="r-stack-sm" style={{ display: 'grid', gridTemplateColumns: '1fr 160px', gap: '12px' }}>
           <Field label="Send to" error={errors.digest_emails} hint="Emails, separated by commas">
             <input
               value={emails}

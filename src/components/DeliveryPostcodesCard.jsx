@@ -63,7 +63,7 @@ export default function DeliveryPostcodesCard({ v, ...rest }) {
         Customers can only save an address and order to these postcodes. While the list is empty, every postcode is accepted.
       </span>
 
-      <form onSubmit={add} style={{ display: 'grid', gridTemplateColumns: 'minmax(0,1.4fr) minmax(0,1fr) auto', gap: '10px', alignItems: 'end' }}>
+      <form onSubmit={add} className="r-stack-sm" style={{ display: 'grid', gridTemplateColumns: 'minmax(0,1.4fr) minmax(0,1fr) auto', gap: '10px', alignItems: 'end' }}>
         <label style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
           <span style={labelStyle}>Postcodes</span>
           <input value={codes} onChange={(e) => setCodes(e.target.value)} placeholder="3000, 3004, 3168" inputMode="numeric" style={input} />

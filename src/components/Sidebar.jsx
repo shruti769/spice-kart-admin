@@ -1,12 +1,13 @@
 import imgSpiceKartLogo from '../assets/images/spice-kart-logo.png'
 import { useOpenTicketCount } from '../lib/support'
 
-export default function Sidebar({ v }) {
+export default function Sidebar({ v, open, onClose }) {
   // Only count once an admin is signed in (RLS hides tickets from everyone else anyway).
   const openTickets = useOpenTicketCount(v.p_login || v.p_twofa || v.p_forgot ? '' : v.authEmail)
   return (
     <>
-      <aside style={{ width: "236px", flex: "none", background: "#0B3D1F", display: "flex", flexDirection: "column", padding: "18px 13px 14px" }}>
+      <div className={`sk-backdrop${open ? ' is-open' : ''}`} onClick={onClose} />
+      <aside className={`sk-sidebar${open ? ' is-open' : ''}`} style={{ width: "236px", flex: "none", background: "#0B3D1F", display: "flex", flexDirection: "column", padding: "18px 13px 14px" }}>
         <div style={{ display: "flex", alignItems: "center", gap: "9px", padding: "0 4px 16px" }}>
           <img src={imgSpiceKartLogo} alt="Spice Kart" style={{ width: "30px", height: "30px", borderRadius: "8px" }} />
           <span style={{ display: "flex", flexDirection: "column", gap: "2px" }}>
@@ -14,7 +15,7 @@ export default function Sidebar({ v }) {
             <span style={{ font: "500 9.5px/1.2 Inter,system-ui,sans-serif", color: "rgba(255,255,255,.5)", letterSpacing: ".5px", whiteSpace: "nowrap" }}>OPERATIONS</span>
           </span>
         </div>
-        <nav className="sk-nav" style={{ display: "flex", flexDirection: "column", gap: "2px", flex: "1", minHeight: "0", overflowY: "auto", overflowX: "hidden" }}>
+        <nav className="sk-nav" onClick={(e) => { if (e.target.closest('button')) onClose() }} style={{ display: "flex", flexDirection: "column", gap: "2px", flex: "1", minHeight: "0", overflowY: "auto", overflowX: "hidden" }}>
           <span style={{ display: "block", font: "700 9.5px/1 Inter,system-ui", letterSpacing: ".9px", color: "rgba(255,255,255,.34)", padding: "14px 10px 7px", whiteSpace: "nowrap" }}>
             OVERVIEW
           </span>

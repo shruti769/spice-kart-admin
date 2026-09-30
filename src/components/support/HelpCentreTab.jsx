@@ -66,7 +66,7 @@ function HelpArticleModal({ article, defaultTopic, flash, onClose }) {
         </span>
       )}
     >
-      <div style={{ display: 'grid', gridTemplateColumns: '1fr 150px', gap: '11px' }}>
+      <div className="r-stack-sm" style={{ display: 'grid', gridTemplateColumns: '1fr 150px', gap: '11px' }}>
         {field('Question / title', <input autoFocus value={title} maxLength={120} placeholder="e.g. Where is my order?" onChange={(e) => setTitle(e.target.value)} style={inputStyle} />)}
         <span style={{ display: 'flex', flexDirection: 'column', gap: '7px', minWidth: '0' }}>
           <span style={labelStyle}>Topic</span>
@@ -75,7 +75,7 @@ function HelpArticleModal({ article, defaultTopic, flash, onClose }) {
       </div>
       {field('Short summary', <input value={subtitle} maxLength={160} placeholder="Shown under the question" onChange={(e) => setSubtitle(e.target.value)} style={inputStyle} />)}
       {field('Answer', <textarea value={body} maxLength={5000} onChange={(e) => setBody(e.target.value)} style={textarea(3)} />)}
-      <div style={{ display: 'grid', gridTemplateColumns: '150px 1fr', gap: '11px', alignItems: 'start' }}>
+      <div className="r-stack-sm" style={{ display: 'grid', gridTemplateColumns: '150px 1fr', gap: '11px', alignItems: 'start' }}>
         {field('Steps heading', <input value={stepsTitle} maxLength={60} onChange={(e) => setStepsTitle(e.target.value)} style={inputStyle} />)}
         {field('Steps · one per line', <textarea value={steps} onChange={(e) => setSteps(e.target.value)} style={textarea(4)} />)}
       </div>
@@ -144,7 +144,7 @@ export default function HelpCentreTab({ v, adding, setAdding }) {
   }
 
   return (
-    <div className="ad-scroll" style={{ flex: '1', minHeight: '0', overflowY: 'auto', padding: '18px 26px 30px', display: 'flex', gap: '18px', alignItems: 'flex-start' }}>
+    <div className="ad-scroll sk-page r-flex-stack" style={{ flex: '1', minHeight: '0', overflowY: 'auto', padding: '18px 26px 30px', display: 'flex', gap: '18px', alignItems: 'flex-start' }}>
       <div style={{ width: '180px', flex: 'none', background: '#fff', border: `1px solid ${BORDER}`, borderRadius: '10px', padding: '12px 8px', display: 'flex', flexDirection: 'column', gap: '2px' }}>
         <span style={{ ...labelStyle, padding: '2px 10px 8px' }}>Topics</span>
         {topicBtn('all', 'All articles', all.length)}

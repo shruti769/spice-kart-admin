@@ -70,8 +70,8 @@ function RefundDialog({ order: orderProp, request, onClose, onDone }) {
     : `${who} paid ${aud(order.paid)}${order.refunded > 0 ? ` · ${aud(order.refunded)} already refunded` : ''}.`
 
   return (
-    <div onClick={close} style={{ position: 'fixed', inset: '0', zIndex: '90', background: 'rgba(14,22,16,.45)', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '40px' }}>
-      <div onClick={(e) => e.stopPropagation()} style={{ width: '500px', maxWidth: '100%', maxHeight: '100%', background: '#fff', borderRadius: '14px', boxShadow: '0 26px 60px rgba(10,18,12,.3)', overflow: 'hidden', display: 'flex', flexDirection: 'column' }}>
+    <div className="sk-overlay" onClick={close} style={{ position: 'fixed', inset: '0', zIndex: '90', background: 'rgba(14,22,16,.45)', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '40px' }}>
+      <div className="sk-modal" onClick={(e) => e.stopPropagation()} style={{ width: '500px', maxWidth: '100%', maxHeight: '100%', background: '#fff', borderRadius: '14px', boxShadow: '0 26px 60px rgba(10,18,12,.3)', overflow: 'hidden', display: 'flex', flexDirection: 'column' }}>
         <div style={{ padding: '16px 18px 14px', display: 'flex', alignItems: 'flex-start', gap: '11px', borderBottom: '1px solid #EFF1ED' }}>
           <span style={{ width: '34px', height: '34px', borderRadius: '9px', background: '#E8F1F8', display: 'flex', alignItems: 'center', justifyContent: 'center', flex: 'none' }}>
             <svg width="17" height="17" viewBox="0 0 20 20" fill="none" style={{ flex: 'none' }}>
@@ -85,7 +85,7 @@ function RefundDialog({ order: orderProp, request, onClose, onDone }) {
           </span>
         </div>
         <div className="ad-scroll" style={{ padding: '15px 18px', display: 'flex', flexDirection: 'column', gap: '12px', overflowY: 'auto' }}>
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '11px' }}>
+          <div className="r-stack-sm" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '11px' }}>
             <label style={{ display: 'flex', flexDirection: 'column', gap: '6px', minWidth: '0' }}>
               <span style={label}>Refund amount</span>
               <span style={{ ...box, gap: '4px', padding: '0', ...(error && error === amountError ? { borderColor: '#B3402F' } : null), opacity: canRefund ? 1 : 0.55 }}>

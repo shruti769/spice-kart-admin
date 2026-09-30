@@ -155,13 +155,13 @@ export default function Reviews({ v }) {
 
   return (
     <>
-      <div style={{ display: 'flex', alignItems: 'flex-end', gap: '18px', padding: '24px 26px 2px' }}>
+      <div className="sk-topbar" style={{ display: 'flex', alignItems: 'flex-end', gap: '18px', padding: '24px 26px 2px' }}>
         <span style={{ display: 'flex', flexDirection: 'column', gap: '5px', minWidth: '0' }}>
           <span style={{ font: `700 20px/1.2 ${FONT}`, color: INK, whiteSpace: 'nowrap' }}>Reviews & ratings</span>
           <span style={{ font: `400 12.5px/1.2 ${FONT}`, color: MUTED, whiteSpace: 'nowrap' }}>{subtitle}</span>
         </span>
-        <span style={{ marginLeft: 'auto', display: 'flex', alignItems: 'center', gap: '8px' }}>
-          <span style={{ display: 'flex', alignItems: 'center', gap: '8px', height: '34px', width: '230px', padding: '0 11px', border: `1px solid ${BORDER}`, borderRadius: '8px', background: '#fff' }}>
+        <span className="r-wrap" style={{ marginLeft: 'auto', display: 'flex', alignItems: 'center', gap: '8px' }}>
+          <span className="r-full" style={{ display: 'flex', alignItems: 'center', gap: '8px', height: '34px', width: '230px', padding: '0 11px', border: `1px solid ${BORDER}`, borderRadius: '8px', background: '#fff' }}>
             <svg width="15" height="15" viewBox="0 0 20 20" fill="none" style={{ flex: 'none' }}>
               <circle cx="9" cy="9" r="6" stroke={MUTED} strokeWidth="1.6" />
               <path d="M13.4 13.4L18 18" stroke={MUTED} strokeWidth="1.6" strokeLinecap="round" />
@@ -182,8 +182,8 @@ export default function Reviews({ v }) {
           </button>
         </span>
       </div>
-      <div className="ad-scroll" style={{ flex: '1', minHeight: '0', overflowY: 'auto', padding: '20px 26px 30px', display: 'flex', flexDirection: 'column', gap: '18px' }}>
-        <div style={{ display: 'grid', gridTemplateColumns: '1fr 2.4fr', gap: '18px', alignItems: 'start' }}>
+      <div className="ad-scroll sk-page" style={{ flex: '1', minHeight: '0', overflowY: 'auto', padding: '20px 26px 30px', display: 'flex', flexDirection: 'column', gap: '18px' }}>
+        <div className="r-stack" style={{ display: 'grid', gridTemplateColumns: '1fr 2.4fr', gap: '18px', alignItems: 'start' }}>
           <div style={{ background: '#fff', border: `1px solid ${BORDER}`, borderRadius: '10px', padding: '18px', display: 'flex', flexDirection: 'column', gap: '14px' }}>
             <span style={{ font: `600 13.5px/1.2 ${FONT}`, color: INK }}>Rating overview</span>
             <span style={{ display: 'flex', alignItems: 'flex-end', gap: '9px' }}>
@@ -234,7 +234,7 @@ export default function Reviews({ v }) {
               })}
             </div>
             {showFilters && (
-              <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+              <div className="r-wrap" style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
                 <select value={rating} onChange={(e) => { setRating(e.target.value); setPage(1) }} style={selectBox} aria-label="Rating">
                   <option value="all">Rating: All</option>
                   {[5, 4, 3, 2, 1].map((n) => <option key={n} value={String(n)}>{n} star{n === 1 ? '' : 's'}</option>)}
@@ -244,8 +244,8 @@ export default function Reviews({ v }) {
                 )}
               </div>
             )}
-            <div style={{ background: '#fff', border: `1px solid ${BORDER}`, borderRadius: '10px', overflow: 'hidden', flex: 'none' }}>
-              <div style={{ display: 'grid', gridTemplateColumns: COLS, gap: '14px', padding: '11px 16px', background: '#F6F7F4', borderBottom: `1px solid ${BORDER}` }}>
+            <div className="r-table-wrap" style={{ background: '#fff', border: `1px solid ${BORDER}`, borderRadius: '10px', overflow: 'hidden', flex: 'none' }}>
+              <div className="r-table" style={{ '--r-min': '900px', display: 'grid', gridTemplateColumns: COLS, gap: '14px', padding: '11px 16px', background: '#F6F7F4', borderBottom: `1px solid ${BORDER}` }}>
                 {['Customer', 'Product', 'Rating', 'Review', 'Date', 'Status'].map((h) => <span key={h} style={head}>{h}</span>)}
                 <span style={{ ...head, textAlign: 'right' }}>Actions</span>
               </div>
@@ -254,7 +254,7 @@ export default function Reviews({ v }) {
               ) : rows.map((r, i) => {
                 const [pl, pfg, pbg] = REVIEW_PILL[r.status] ?? REVIEW_PILL.pending
                 return (
-                  <div key={r.id} className="hv3" style={{ display: 'grid', gridTemplateColumns: COLS, gap: '14px', padding: '13px 16px', borderBottom: i < rows.length - 1 ? '1px solid #EFF1ED' : '0', alignItems: 'center' }}>
+                  <div key={r.id} className="hv3 r-table" style={{ '--r-min': '900px', display: 'grid', gridTemplateColumns: COLS, gap: '14px', padding: '13px 16px', borderBottom: i < rows.length - 1 ? '1px solid #EFF1ED' : '0', alignItems: 'center' }}>
                     <span style={cellWrap}>
                       <span style={{ width: '28px', height: '28px', borderRadius: '7px', background: '#F6F7F4', border: `1px solid ${BORDER}`, display: 'flex', alignItems: 'center', justifyContent: 'center', font: `600 10.5px/1.2 ${FONT}`, color: '#4A564E', flex: 'none' }}>{initials(r.customer)}</span>
                       <span style={{ font: `600 12.5px/1.2 ${FONT}`, color: INK, ...ellipsis }}>{customerName(r.customer)}</span>

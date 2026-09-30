@@ -58,7 +58,7 @@ export default function BannerGrid({ v }) {
   }
 
   return (
-    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3,1fr)', gap: '14px' }}>
+    <div className="r-stack-sm" style={{ display: 'grid', gridTemplateColumns: 'repeat(3,1fr)', gap: '14px' }}>
       {banners.rows.map((b) => {
         const [label, fg, bg] = STATUS_PILL[bannerStatus(b)]
         return (

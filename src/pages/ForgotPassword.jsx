@@ -3,6 +3,7 @@ import imgSpiceKartLogo from '../assets/images/spice-kart-logo.png'
 import { fetchIsAdmin } from '../lib/adminAuth'
 import { nextSignInStep } from '../lib/businessSettings'
 import { authLinkType, isSupabaseConfigured, supabase } from '../lib/supabase'
+import PasswordInput from '../components/PasswordInput'
 
 const RULES = [
   ['At least 12 characters', (p) => p.length >= 12],
@@ -62,7 +63,7 @@ export default function ForgotPassword({ v }) {
   return (
     <>
       <div style={{ position: "absolute", inset: "0", zIndex: "60", display: "flex", background: "#fff" }}>
-        <div style={{ flex: "1", minWidth: "0", background: "linear-gradient(150deg,#0B3D1F 0%,#14572A 52%,#1F7135 100%)", padding: "44px", display: "flex", flexDirection: "column", position: "relative", overflow: "hidden" }}>
+        <div className="sk-auth-art" style={{ flex: "1", minWidth: "0", background: "linear-gradient(150deg,#0B3D1F 0%,#14572A 52%,#1F7135 100%)", padding: "44px", display: "flex", flexDirection: "column", position: "relative", overflow: "hidden" }}>
           <span style={{ position: "absolute", right: "-90px", top: "-90px", width: "320px", height: "320px", borderRadius: "160px", background: "rgba(139,224,0,.1)", display: "block" }} />
           <span style={{ position: "absolute", right: "60px", bottom: "-60px", width: "180px", height: "180px", borderRadius: "90px", background: "rgba(139,224,0,.07)", display: "block" }} />
           <span style={{ display: "flex", alignItems: "center", gap: "11px", position: "relative" }}>
@@ -79,7 +80,7 @@ export default function ForgotPassword({ v }) {
             </span>
           </span>
         </div>
-        <div style={{ width: "460px", flex: "none", display: "flex", flexDirection: "column", justifyContent: "center", padding: "44px 48px", gap: "18px" }}>
+        <div className="sk-auth-form" style={{ width: "460px", flex: "none", display: "flex", flexDirection: "column", justifyContent: "center", padding: "44px 48px", gap: "18px" }}>
           <button onClick={async () => { if (setting) { await supabase.auth.signOut(); window.history.replaceState(null, '', window.location.pathname) } v.nav_login() }} style={{ display: "flex", alignItems: "center", gap: "6px", border: "0", background: "transparent", font: "600 11.5px/1.2 Inter,system-ui,sans-serif", color: "#17693A", cursor: "pointer", padding: "0", whiteSpace: "nowrap", alignSelf: "flex-start" }}>
             ← Back to sign in
           </button>
@@ -95,7 +96,7 @@ export default function ForgotPassword({ v }) {
           {[['NEW PASSWORD', password, setPassword], ['CONFIRM PASSWORD', confirm, setConfirm]].map(([label, value, set], i) => (
             <span key={label} style={{ display: "flex", flexDirection: "column", gap: "6px" }}>
               <span style={{ font: "600 10.5px/1.2 Inter,system-ui,sans-serif", letterSpacing: ".4px", color: "#7C8A81", textTransform: "uppercase", whiteSpace: "nowrap" }}>{label}</span>
-              <input className="sk-input" type="password" autoComplete="new-password" autoFocus={i === 0} value={value} onChange={(e) => set(e.target.value)} onKeyDown={(e) => e.key === 'Enter' && savePassword()}
+              <PasswordInput className="sk-input" autoComplete="new-password" autoFocus={i === 0} value={value} onChange={(e) => set(e.target.value)} onKeyDown={(e) => e.key === 'Enter' && savePassword()}
                 style={{ height: "36px", padding: "0 11px", border: "1px solid #E4E7E2", borderRadius: "8px", background: "#fff", font: "500 12.5px/1.2 Inter,system-ui,sans-serif", color: "#17201A", width: "100%", boxSizing: "border-box", outline: "none" }} />
             </span>
           ))}

@@ -27,7 +27,7 @@ export default function Content({ v }) {
 
   return (
     <>
-      <div style={{ display: "flex", alignItems: "flex-end", gap: "18px", padding: "24px 26px 2px" }}>
+      <div className="sk-topbar" style={{ display: "flex", alignItems: "flex-end", gap: "18px", padding: "24px 26px 2px" }}>
         <span style={{ display: "flex", flexDirection: "column", gap: "5px", minWidth: "0" }}>
           <span style={{ font: "700 20px/1.2 Inter,system-ui,sans-serif", color: "#17201A", whiteSpace: "nowrap" }}>Content</span>
           <span style={{ font: "400 12.5px/1.2 Inter,system-ui,sans-serif", color: "#7C8A81", whiteSpace: "nowrap" }}>
@@ -46,7 +46,7 @@ export default function Content({ v }) {
           </button>
         </span>
       </div>
-      <div className="ad-scroll" style={{ flex: "1", minHeight: "0", overflowY: "auto", padding: "20px 26px 30px", display: "flex", flexDirection: "column", gap: "18px" }}>
+      <div className="ad-scroll sk-page" style={{ flex: "1", minHeight: "0", overflowY: "auto", padding: "20px 26px 30px", display: "flex", flexDirection: "column", gap: "18px" }}>
         <div role="tablist" className="ad-scroll" style={{ display: "flex", gap: "2px", borderBottom: "1px solid #E4E7E2", overflowX: "auto", flex: "none" }}>
           {TABS.map(([label], i) => (
             <button key={label} role="tab" aria-selected={tab === i} onClick={v[`tb_content_${i}`]} style={{ border: "0", background: "transparent", padding: "0 12px 10px", font: "600 12.5px/1.2 Inter,system-ui,sans-serif", color: v[`tb_content_${i}Fg`], borderBottom: `2px solid ${v[`tb_content_${i}Bd`]}`, cursor: "pointer", whiteSpace: "nowrap", marginBottom: "-1px" }}>

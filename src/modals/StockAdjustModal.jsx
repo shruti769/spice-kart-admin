@@ -41,8 +41,8 @@ function AdjustRealStock({ v, product }) {
   const busy = saving ? { opacity: ".6", cursor: "default" } : null
   const shownError = error || problem
   return (
-    <div onClick={close} style={{ position: "absolute", inset: "0", zIndex: "90", background: "rgba(14,22,16,.45)", display: "flex", alignItems: "center", justifyContent: "center", padding: "40px" }}>
-      <div onClick={(e) => e.stopPropagation()} role="dialog" aria-modal="true" style={{ width: "500px", maxWidth: "100%", background: "#fff", borderRadius: "14px", boxShadow: "0 26px 60px rgba(10,18,12,.3)", overflow: "hidden", display: "flex", flexDirection: "column" }}>
+    <div className="sk-overlay" onClick={close} style={{ position: "absolute", inset: "0", zIndex: "90", background: "rgba(14,22,16,.45)", display: "flex", alignItems: "center", justifyContent: "center", padding: "40px" }}>
+      <div className="sk-modal" onClick={(e) => e.stopPropagation()} role="dialog" aria-modal="true" style={{ width: "500px", maxWidth: "100%", background: "#fff", borderRadius: "14px", boxShadow: "0 26px 60px rgba(10,18,12,.3)", overflow: "hidden", display: "flex", flexDirection: "column" }}>
         <div style={{ padding: "16px 18px 14px", display: "flex", alignItems: "flex-start", gap: "11px", borderBottom: "1px solid #EFF1ED" }}>
           <span style={{ width: "34px", height: "34px", borderRadius: "9px", background: "#F1F9DF", display: "flex", alignItems: "center", justifyContent: "center", flex: "none" }}>
             <svg width="17" height="17" viewBox="0 0 20 20" fill="none" style={{ flex: "none" }}>
@@ -61,7 +61,7 @@ function AdjustRealStock({ v, product }) {
         <div style={{ padding: "15px 18px", display: "flex", flexDirection: "column", gap: "12px" }}>
           <span style={{ display: "flex", flexDirection: "column", gap: "6px" }}>
             <span style={fieldLabel}>ADJUSTMENT TYPE</span>
-            <span style={{ display: "flex", gap: "8px" }}>
+            <span className="r-wrap" style={{ display: "flex", gap: "8px" }}>
               {MODES.map(([id, label]) => {
                 const on = mode === id
                 return (
@@ -72,7 +72,7 @@ function AdjustRealStock({ v, product }) {
               })}
             </span>
           </span>
-          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "11px" }}>
+          <div className="r-stack-sm" style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "11px" }}>
             <label style={{ display: "flex", flexDirection: "column", gap: "6px" }}>
               <span style={fieldLabel}>{mode === 'set' ? "COUNTED ON HAND" : "QUANTITY"}</span>
               <input

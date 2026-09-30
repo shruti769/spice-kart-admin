@@ -120,7 +120,7 @@ export function OrderRemove({ first, last, onUp, onDown, onRemove, busy, label }
 
 export function SectionHead({ title, sub, right }) {
   return (
-    <div style={{ display: 'flex', alignItems: 'flex-end', gap: '16px' }}>
+    <div className="r-wrap" style={{ display: 'flex', alignItems: 'flex-end', gap: '16px' }}>
       <span style={{ display: 'flex', flexDirection: 'column', gap: '6px', flex: '1', minWidth: '0' }}>
         <span style={{ font: `600 14.5px/1.2 ${FONT}`, color: INK }}>{title}</span>
         <span style={{ font: `400 12.5px/1.45 ${FONT}`, color: MUTED }}>{sub}</span>
@@ -133,8 +133,8 @@ export function SectionHead({ title, sub, right }) {
 /** Bordered table with a header row; `cols` is a CSS grid template. */
 export function Table({ cols, head, children, empty }) {
   return (
-    <div style={{ background: '#fff', border: `1px solid ${BORDER}`, borderRadius: '10px', overflow: 'hidden' }}>
-      <div style={{ display: 'grid', gridTemplateColumns: cols, gap: '14px', padding: '11px 16px', background: '#F6F7F4', borderBottom: `1px solid ${BORDER}` }}>
+    <div className="r-table-wrap" style={{ background: '#fff', border: `1px solid ${BORDER}`, borderRadius: '10px', overflow: 'hidden' }}>
+      <div className="r-table" style={{ display: 'grid', gridTemplateColumns: cols, gap: '14px', padding: '11px 16px', background: '#F6F7F4', borderBottom: `1px solid ${BORDER}` }}>
         {head.map((h, i) => <span key={i} style={{ ...headCell, ...(i === head.length - 1 && h.right ? { textAlign: 'right' } : null) }}>{h.label ?? h}</span>)}
       </div>
       {empty ? <div style={{ padding: '26px 16px', textAlign: 'center', font: `400 12.5px/1.5 ${FONT}`, color: MUTED }}>{empty}</div> : children}
@@ -144,7 +144,7 @@ export function Table({ cols, head, children, empty }) {
 
 export function Row({ cols, children, dim, last }) {
   return (
-    <div className="hv3" style={{ display: 'grid', gridTemplateColumns: cols, gap: '14px', padding: '12px 16px', borderBottom: last ? '0' : `1px solid ${DIVIDER}`, alignItems: 'center', opacity: dim ? 0.55 : 1 }}>
+    <div className="hv3 r-table" style={{ display: 'grid', gridTemplateColumns: cols, gap: '14px', padding: '12px 16px', borderBottom: last ? '0' : `1px solid ${DIVIDER}`, alignItems: 'center', opacity: dim ? 0.55 : 1 }}>
       {children}
     </div>
   )
@@ -158,8 +158,8 @@ export function Modal({ title, sub, width = 480, onClose, busy, footer, children
     return () => window.removeEventListener('keydown', onKey)
   }, [onClose, busy])
   return (
-    <div onClick={() => !busy && onClose()} style={{ position: 'fixed', inset: '0', zIndex: '90', background: 'rgba(14,22,16,.45)', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '32px' }}>
-      <div onClick={(e) => e.stopPropagation()} style={{ width: `${width}px`, maxWidth: '100%', maxHeight: '100%', background: '#fff', borderRadius: '14px', boxShadow: '0 26px 60px rgba(10,18,12,.3)', overflow: 'hidden', display: 'flex', flexDirection: 'column' }}>
+    <div className="sk-overlay" onClick={() => !busy && onClose()} style={{ position: 'fixed', inset: '0', zIndex: '90', background: 'rgba(14,22,16,.45)', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '32px' }}>
+      <div className="sk-modal" onClick={(e) => e.stopPropagation()} style={{ width: `${width}px`, maxWidth: '100%', maxHeight: '100%', background: '#fff', borderRadius: '14px', boxShadow: '0 26px 60px rgba(10,18,12,.3)', overflow: 'hidden', display: 'flex', flexDirection: 'column' }}>
         <div style={{ padding: '17px 20px 14px', borderBottom: `1px solid ${DIVIDER}`, display: 'flex', flexDirection: 'column', gap: '5px' }}>
           <span style={{ font: `700 15px/1.2 ${FONT}`, color: INK }}>{title}</span>
           {sub && <span style={{ font: `400 12px/1.45 ${FONT}`, color: MUTED }}>{sub}</span>}

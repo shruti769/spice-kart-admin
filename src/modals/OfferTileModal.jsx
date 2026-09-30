@@ -110,15 +110,15 @@ export default function OfferTileModal({ tile, kind, sort, categories, freeOver,
   const shownImage = preview ?? tileImageSrc(imageUrl)
 
   return (
-    <div onClick={() => !saving && onClose()} style={{ position: 'fixed', inset: '0', zIndex: '90', background: 'rgba(14,22,16,.45)', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '40px' }}>
-      <div onClick={(e) => e.stopPropagation()} role="dialog" aria-modal="true" style={{ width: '520px', maxWidth: '100%', maxHeight: '100%', background: '#fff', borderRadius: '14px', boxShadow: '0 26px 60px rgba(10,18,12,.3)', overflow: 'hidden', display: 'flex', flexDirection: 'column' }}>
+    <div className="sk-overlay" onClick={() => !saving && onClose()} style={{ position: 'fixed', inset: '0', zIndex: '90', background: 'rgba(14,22,16,.45)', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '40px' }}>
+      <div className="sk-modal" onClick={(e) => e.stopPropagation()} role="dialog" aria-modal="true" style={{ width: '520px', maxWidth: '100%', maxHeight: '100%', background: '#fff', borderRadius: '14px', boxShadow: '0 26px 60px rgba(10,18,12,.3)', overflow: 'hidden', display: 'flex', flexDirection: 'column' }}>
         <div style={{ padding: '16px 18px 14px', display: 'flex', flexDirection: 'column', gap: '4px', borderBottom: '1px solid #EFF1ED' }}>
           <span style={{ font: `700 15px/1.2 ${FONT}`, color: INK }}>{isEdit ? 'Edit' : 'Add'} {isDeal ? 'deal tile' : 'bank & payment offer'}</span>
           <span style={{ font: `400 11.5px/1.5 ${FONT}`, color: MUTED }}>
             {isDeal ? 'Shown under “Shop the deals” on the app’s Offers screen. Tapping it opens the chosen category.' : 'Shown under “Bank & payment offers” on the app’s Offers screen.'}
           </span>
         </div>
-        <div className="ad-scroll" style={{ padding: '15px 18px', display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '13px', overflowY: 'auto' }}>
+        <div className="ad-scroll r-stack-sm" style={{ padding: '15px 18px', display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '13px', overflowY: 'auto' }}>
           {isDeal && (
             <Field label="Image" error={errors.image} note="PNG, SVG or WebP, up to 1 MB · shown about 180 × 90" span>
               <span style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>

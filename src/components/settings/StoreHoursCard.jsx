@@ -85,7 +85,7 @@ function HoursModal({ hours, editing, onClose, onSaved, v }) {
             : <span style={hintText}>{date ? `${longDate(date)} · saved as ${DAYS.find(([k]) => k === weekdayOf(date))[1]} hours, every week` : 'The day is taken from the date'}</span>}
         </label>
       )}
-      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
+      <div className="r-stack-sm" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
         <label style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
           <span style={labelStyle}>Opens</span>
           <input type="time" step="900" value={open} onChange={(e) => { setOpen(e.target.value); setErrors((x) => ({ ...x, time: undefined })) }} style={withError(inputStyle, errors.time)} />
@@ -126,8 +126,8 @@ export default function StoreHoursCard({ v, hours: saved, openNow, disabled, onS
 
   return (
     <div data-section="hours" style={{ background: '#fff', border: `1px solid ${BORDER}`, borderRadius: '10px', padding: '18px', display: 'flex', flexDirection: 'column', gap: '14px' }}>
-      <span style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-        <span style={{ display: 'flex', flexDirection: 'column', gap: '5px', flex: '1' }}>
+      <span className="r-wrap" style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+        <span className="r-full" style={{ display: 'flex', flexDirection: 'column', gap: '5px', flex: '1' }}>
           <span style={{ font: `600 13.5px/1.2 ${FONT}`, color: INK }}>Store hours</span>
           <span style={{ font: `400 11.5px/1.4 ${FONT}`, color: MUTED }}>Melbourne time. Express orders are only accepted while the store is open; scheduled slots still work.</span>
         </span>

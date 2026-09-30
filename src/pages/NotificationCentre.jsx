@@ -94,14 +94,14 @@ export default function NotificationCentre({ v }) {
 
   return (
     <>
-      <div style={{ display: 'flex', alignItems: 'flex-end', gap: '18px', padding: '24px 26px 2px' }}>
+      <div className="sk-topbar" style={{ display: 'flex', alignItems: 'flex-end', gap: '18px', padding: '24px 26px 2px' }}>
         <span style={{ display: 'flex', flexDirection: 'column', gap: '5px', minWidth: '0' }}>
           <span style={{ font: `700 20px/1.2 ${FONT}`, color: INK, whiteSpace: 'nowrap' }}>Notification centre</span>
           <span style={{ font: `400 12.5px/1.2 ${FONT}`, color: MUTED, whiteSpace: 'nowrap' }}>
             {u.total} unread alert{u.total === 1 ? '' : 's'} · operations, inventory, payments, reviews and system · live
           </span>
         </span>
-        <span style={{ marginLeft: 'auto', display: 'flex', alignItems: 'center', gap: '8px' }}>
+        <span className="r-wrap" style={{ marginLeft: 'auto', display: 'flex', alignItems: 'center', gap: '8px' }}>
           <button className="hv1" onClick={v.nav_notif} style={btn}>Campaigns</button>
           <button className="hv1" onClick={markAll} disabled={busy === 'all' || !u.total} style={{ ...btn, opacity: !u.total ? 0.5 : 1 }}>
             <svg width="15" height="15" viewBox="0 0 20 20" fill="none"><path d="M4.6 10.4l3.4 3.4 7.4-7.4" stroke="#4A564E" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" /></svg>
@@ -109,17 +109,17 @@ export default function NotificationCentre({ v }) {
           </button>
         </span>
       </div>
-      <div className="ad-scroll" style={{ flex: '1', minHeight: '0', overflowY: 'auto', padding: '20px 26px 30px', display: 'flex', flexDirection: 'column', gap: '18px' }}>
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4,1fr)', gap: '14px' }}>
+      <div className="ad-scroll sk-page" style={{ flex: '1', minHeight: '0', overflowY: 'auto', padding: '20px 26px 30px', display: 'flex', flexDirection: 'column', gap: '18px' }}>
+        <div className="r-kpi" style={{ display: 'grid', gridTemplateColumns: 'repeat(4,1fr)', gap: '14px' }}>
           <StatTile label="Unread" value={u.total} note={u.oldest ? `Oldest ${timeAgo(u.oldest)}` : 'Nothing waiting'} tone={u.total ? SEVERITY.critical : ['#0B6B33', '#E9F6E3']} />
           <StatTile label="Critical" value={u.critical} note={u.critical ? 'Needs action now' : 'None open'} tone={u.critical ? SEVERITY.critical : ['#0B6B33', '#E9F6E3']} />
           <StatTile label="Delayed orders" value={attention.data?.delayed ?? '–'} note="Past promised window" tone={SEVERITY.warning} />
           <StatTile label="Resolved today" value={resolvedToday} note="Closed automatically" tone={['#0B6B33', '#E9F6E3']} />
         </div>
 
-        <div style={{ display: 'grid', gridTemplateColumns: 'minmax(0,1fr) 290px', gap: '18px', alignItems: 'start' }}>
+        <div className="r-stack" style={{ display: 'grid', gridTemplateColumns: 'minmax(0,1fr) 290px', gap: '18px', alignItems: 'start' }}>
           <div style={{ display: 'flex', flexDirection: 'column', gap: '12px', minWidth: '0' }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '2px', borderBottom: `1px solid ${BORDER}` }}>
+            <div className="r-wrap" style={{ display: 'flex', alignItems: 'center', gap: '2px', borderBottom: `1px solid ${BORDER}` }}>
               {tabs.map(([k, label]) => {
                 const on = cat === k
                 const n = k === 'all' ? u.total : u.byCategory[k] || 0

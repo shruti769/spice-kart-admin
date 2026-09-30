@@ -212,14 +212,14 @@ export default function Analytics({ v }) {
 
   return (
     <>
-      <div style={{ display: "flex", alignItems: "flex-end", gap: "18px", padding: "24px 26px 2px" }}>
+      <div className="sk-topbar" style={{ display: "flex", alignItems: "flex-end", gap: "18px", padding: "24px 26px 2px" }}>
         <span style={{ display: "flex", flexDirection: "column", gap: "5px", minWidth: "0" }}>
           <span style={{ font: `700 20px/1.2 ${FONT}`, color: "#17201A", whiteSpace: "nowrap" }}>Analytics</span>
           <span style={{ font: `400 12.5px/1.2 ${FONT}`, color: "#7C8A81", whiteSpace: "nowrap" }}>
             Performance across orders, customers, products and delivery
           </span>
         </span>
-        <span style={{ marginLeft: "auto", display: "flex", alignItems: "center", gap: "8px" }}>
+        <span className="r-wrap" style={{ marginLeft: "auto", display: "flex", alignItems: "center", gap: "8px" }}>
           <button className="hv1" onClick={() => pickRange('custom')} style={headerBtn}>
             <svg width="15" height="15" viewBox="0 0 20 20" fill="none" style={{ flex: "none" }}>
               <circle cx="10" cy="10" r="7.2" stroke="#4A564E" strokeWidth="1.5" />
@@ -238,7 +238,7 @@ export default function Analytics({ v }) {
           </button>
         </span>
       </div>
-      <div className="ad-scroll" style={{ flex: "1", minHeight: "0", overflowY: "auto", padding: "20px 26px 30px", display: "flex", flexDirection: "column", gap: "18px" }}>
+      <div className="ad-scroll sk-page" style={{ flex: "1", minHeight: "0", overflowY: "auto", padding: "20px 26px 30px", display: "flex", flexDirection: "column", gap: "18px" }}>
         <div className="ad-scroll" style={{ display: "flex", gap: "2px", borderBottom: "1px solid #E4E7E2", overflowX: "auto" }}>
           {TABS.map((t) => (
             <button key={t} onClick={() => setTab(t)} style={{ border: "0", background: "transparent", padding: "0 12px 10px", font: `600 12.5px/1.2 ${FONT}`, color: tab === t ? "#0B3D1F" : "#7C8A81", borderBottom: `2px solid ${tab === t ? "#0B3D1F" : "transparent"}`, cursor: "pointer", whiteSpace: "nowrap", marginBottom: "-1px" }}>
@@ -247,7 +247,7 @@ export default function Analytics({ v }) {
           ))}
         </div>
         <div style={{ display: "flex", alignItems: "center", gap: "10px", flexWrap: "wrap" }}>
-          <div style={{ display: "flex", gap: "6px", padding: "2px", background: "#F6F7F4", border: "1px solid #E4E7E2", borderRadius: "8px", alignSelf: "flex-start" }}>
+          <div className="r-wrap" style={{ display: "flex", gap: "6px", padding: "2px", background: "#F6F7F4", border: "1px solid #E4E7E2", borderRadius: "8px", alignSelf: "flex-start" }}>
             {RANGES.map(([k, label]) => (
               <button key={k} onClick={() => pickRange(k)} style={{ font: `600 11.5px/1.2 ${FONT}`, color: rng === k ? "#ffffff" : "#4A564E", background: rng === k ? "#0B3D1F" : "transparent", border: "0", padding: "7px 11px", borderRadius: "6px", whiteSpace: "nowrap", cursor: "pointer" }}>
                 {label}
@@ -255,7 +255,7 @@ export default function Analytics({ v }) {
             ))}
           </div>
           {rng === 'custom' && custom && (
-            <span style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+            <span className="r-wrap" style={{ display: "flex", alignItems: "center", gap: "8px" }}>
               <input type="date" aria-label="From" value={custom.from} max={today} onChange={(e) => e.target.value && setCustom((c) => ({ ...c, from: e.target.value }))} style={dateInput} />
               <span style={{ font: `400 11.5px/1.2 ${FONT}`, color: "#7C8A81" }}>to</span>
               <input type="date" aria-label="To" value={custom.to} max={today} onChange={(e) => e.target.value && setCustom((c) => ({ ...c, to: e.target.value }))} style={dateInput} />
@@ -265,7 +265,7 @@ export default function Analytics({ v }) {
           {stats.status === 'off' && <span style={{ font: `400 12px/1.45 ${FONT}`, color: "#7C8A81" }}>Supabase keys are missing · add them to .env to load live numbers.</span>}
         </div>
         {show.has('kpis') && (
-          <div style={{ display: "grid", gridTemplateColumns: "repeat(5,1fr)", gap: "14px" }}>
+          <div className="r-kpi" style={{ display: "grid", gridTemplateColumns: "repeat(5,1fr)", gap: "14px" }}>
             <Kpi icon={ICONS.revenue} label="Revenue" value={ready ? audShort(cur.revenue) : '—'} delta={ready ? { ...dRevenue, text: `${dRevenue.text} vs prior` } : dRevenue} prior={compare && ready ? audShort(prev.revenue) : null} />
             <Kpi icon={ICONS.orders} label="Orders" value={ready ? num(cur.orders) : '—'} delta={dOrders} prior={compare && ready ? num(prev.orders) : null} />
             <Kpi icon={ICONS.aov} label="Average order value" value={ready ? aud(cur.aov) : '—'} delta={dAov} prior={compare && ready ? aud(prev.aov) : null} />
@@ -274,7 +274,7 @@ export default function Analytics({ v }) {
           </div>
         )}
         {charts.length > 0 && (
-          <div style={{ display: "grid", gridTemplateColumns: `repeat(${charts.length},1fr)`, gap: "18px" }}>
+          <div className="r-stack" style={{ display: "grid", gridTemplateColumns: `repeat(${charts.length},1fr)`, gap: "18px" }}>
             {show.has('revenue') && (
               <LineCard label="Revenue over time" delta={dRevenue} values={revenue} prevValues={prevRevenue} color="#0B3D1F" days={days} yearLabels={yearLabels} compare={compare} emptyMsg={chartMsg(revenue, 'No revenue in this period')} />
             )}
@@ -284,7 +284,7 @@ export default function Analytics({ v }) {
           </div>
         )}
         {bottom.length > 0 && (
-          <div style={{ display: "grid", gridTemplateColumns: `repeat(${bottom.length},1fr)`, gap: "18px", alignItems: "start" }}>
+          <div className="r-stack" style={{ display: "grid", gridTemplateColumns: `repeat(${bottom.length},1fr)`, gap: "18px", alignItems: "start" }}>
             {show.has('top') && (
               <div style={{ display: "flex", flexDirection: "column", gap: "10px" }}>
                 <span style={title}>Top products</span>

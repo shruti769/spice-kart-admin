@@ -63,7 +63,7 @@ export default function SecurityCard({ v, form, set, disabled, dirty }) {
         disabled={disabled}
         onChange={(on) => set({ allow_google_sso: on })}
       />
-      <span style={{ display: 'flex', alignItems: 'center', gap: '11px', padding: '11px 0', borderBottom: '1px solid #EFF1ED' }}>
+      <span className="r-wrap" style={{ display: 'flex', alignItems: 'center', gap: '11px', padding: '11px 0', borderBottom: '1px solid #EFF1ED' }}>
         <span style={{ display: 'flex', flexDirection: 'column', gap: '3px', flex: '1' }}>
           <span style={{ font: `500 12.5px/1.2 ${FONT}`, color: INK }}>Session timeout</span>
           <span style={{ font: `400 11px/1.4 ${FONT}`, color: MUTED }}>Signs an admin out after this long without using the console</span>
@@ -73,7 +73,7 @@ export default function SecurityCard({ v, form, set, disabled, dirty }) {
         </select>
       </span>
 
-      <span style={{ display: 'flex', alignItems: 'center', gap: '9px', paddingTop: '12px' }}>
+      <span className="r-wrap" style={{ display: 'flex', alignItems: 'center', gap: '9px', paddingTop: '12px' }}>
         <button type="button" className="hv1" onClick={v.openPassword} style={btn}>
           <svg width="15" height="15" viewBox="0 0 20 20" fill="none"><rect x="4.6" y="8.6" width="10.8" height="8" rx="2" stroke="#4A564E" strokeWidth="1.5" /><path d="M7.2 8.6V6.8a2.8 2.8 0 015.6 0v1.8" stroke="#4A564E" strokeWidth="1.5" /></svg>
           Change password

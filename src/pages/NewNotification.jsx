@@ -118,12 +118,12 @@ export default function NewNotification({ v }) {
 
   return (
     <>
-      <div style={{ display: 'flex', alignItems: 'flex-end', gap: '18px', padding: '24px 26px 2px' }}>
+      <div className="sk-topbar" style={{ display: 'flex', alignItems: 'flex-end', gap: '18px', padding: '24px 26px 2px' }}>
         <span style={{ display: 'flex', flexDirection: 'column', gap: '5px', minWidth: '0' }}>
           <span style={{ font: `700 20px/1.2 ${FONT}`, color: INK, whiteSpace: 'nowrap' }}>{editing ? 'Edit notification' : 'Create notification'}</span>
           <span style={{ font: `400 12.5px/1.2 ${FONT}`, color: MUTED, whiteSpace: 'nowrap' }}>Push notification to the Spice Kart app, also saved in each customer’s inbox</span>
         </span>
-        <span style={{ marginLeft: 'auto', display: 'flex', alignItems: 'center', gap: '8px' }}>
+        <span className="r-wrap" style={{ marginLeft: 'auto', display: 'flex', alignItems: 'center', gap: '8px' }}>
           <button className="hv1" onClick={v.campaignDone} disabled={saving} style={btn}>Cancel</button>
           <button className="hv1" onClick={() => submit('draft')} disabled={saving} style={btn}>Save as draft</button>
           <button className="hv2" onClick={() => submit(primary[0])} disabled={saving} style={{ ...btn, border: '0', background: '#0B3D1F', color: '#fff', opacity: saving ? 0.7 : 1 }}>
@@ -132,12 +132,12 @@ export default function NewNotification({ v }) {
           </button>
         </span>
       </div>
-      <div className="ad-scroll" style={{ flex: '1', minHeight: '0', overflowY: 'auto', padding: '20px 26px 30px' }}>
-        <div style={{ display: 'grid', gridTemplateColumns: 'minmax(0,1.5fr) minmax(280px,1fr)', gap: '18px', alignItems: 'start' }}>
+      <div className="ad-scroll sk-page" style={{ flex: '1', minHeight: '0', overflowY: 'auto', padding: '20px 26px 30px' }}>
+        <div className="r-stack" style={{ display: 'grid', gridTemplateColumns: 'minmax(0,1.5fr) minmax(280px,1fr)', gap: '18px', alignItems: 'start' }}>
           <div style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
             <div style={card}>
               <span style={cardTitle}>Message</span>
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
+              <div className="r-stack-sm" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
                 <Field label="Title" error={errors.title} hint={`${title.length}/65`}>
                   <input value={title} maxLength={65} placeholder="e.g. 20% off fresh produce" onChange={(e) => { setTitle(e.target.value); clear('title') }} style={withError(box, errors.title)} />
                 </Field>
@@ -194,7 +194,7 @@ export default function NewNotification({ v }) {
                 ))}
               </span>
               {mode === 'scheduled' && (
-                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
+                <div className="r-stack-sm" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
                   <Field label="Date & time" error={errors.when} hint={`Your time zone (${tz})`}>
                     <input type="datetime-local" value={when} onChange={(e) => { setWhen(e.target.value); clear('when') }} style={withError(box, errors.when)} />
                   </Field>

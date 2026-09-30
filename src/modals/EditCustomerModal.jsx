@@ -83,7 +83,7 @@ function EditCustomerForm({ customer, onClose, onSaved, flash }) {
         </span>
       )}
     >
-      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '11px' }}>
+      <div className="r-stack-sm" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '11px' }}>
         {field('first_name', 'First name', { autoFocus: true, maxLength: 60 })}
         {field('last_name', 'Last name', { maxLength: 60 })}
         {field('email', 'Email', { type: 'email', maxLength: 254 })}

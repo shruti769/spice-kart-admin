@@ -133,7 +133,7 @@ function RecentOrders({ v, detail, now }) {
       return (
         <div
           key={o.id}
-          className="hv3"
+          className="hv3 r-table"
           role="button"
           tabIndex={0}
           onClick={open}
@@ -160,8 +160,8 @@ function RecentOrders({ v, detail, now }) {
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
       <span style={{ font: `600 13.5px/1.2 ${FONT}`, color: '#17201A' }}>Recent orders with this product</span>
-      <div style={{ ...card, overflow: 'hidden', flex: 'none' }}>
-        <div style={{ display: 'grid', gridTemplateColumns: ORDER_GRID, gap: '14px', padding: '11px 16px', background: '#F6F7F4', borderBottom: '1px solid #E4E7E2' }}>
+      <div className="r-table-wrap" style={{ ...card, overflow: 'hidden', flex: 'none' }}>
+        <div className="r-table" style={{ display: 'grid', gridTemplateColumns: ORDER_GRID, gap: '14px', padding: '11px 16px', background: '#F6F7F4', borderBottom: '1px solid #E4E7E2' }}>
           {['Order', 'Customer', 'Qty', 'Value', 'Status', 'Date'].map((h) => <span key={h} style={headCell}>{h}</span>)}
         </div>
         {body}
@@ -204,13 +204,13 @@ export default function ProductDetail({ v }) {
 
   const shell = (title, subtitle, content) => (
     <>
-      <div style={{ display: 'flex', alignItems: 'flex-end', gap: '18px', padding: '24px 26px 2px' }}>
+      <div className="sk-topbar" style={{ display: 'flex', alignItems: 'flex-end', gap: '18px', padding: '24px 26px 2px' }}>
         <span style={{ display: 'flex', flexDirection: 'column', gap: '5px', minWidth: '0' }}>
           <span style={{ font: `700 20px/1.2 ${FONT}`, color: '#17201A', ...ellipsis }}>{title}</span>
           <span style={{ font: `400 12.5px/1.2 ${FONT}`, color: '#7C8A81', ...ellipsis }}>{subtitle}</span>
         </span>
       </div>
-      <div className="ad-scroll" style={{ flex: '1', minHeight: '0', overflowY: 'auto', padding: '20px 26px 30px', display: 'flex', flexDirection: 'column', gap: '18px' }}>
+      <div className="ad-scroll sk-page" style={{ flex: '1', minHeight: '0', overflowY: 'auto', padding: '20px 26px 30px', display: 'flex', flexDirection: 'column', gap: '18px' }}>
         <BackLink v={v} />
         {content}
       </div>
@@ -256,12 +256,12 @@ export default function ProductDetail({ v }) {
 
   return (
     <>
-      <div style={{ display: 'flex', alignItems: 'flex-end', gap: '18px', padding: '24px 26px 2px' }}>
+      <div className="sk-topbar" style={{ display: 'flex', alignItems: 'flex-end', gap: '18px', padding: '24px 26px 2px' }}>
         <span style={{ display: 'flex', flexDirection: 'column', gap: '5px', minWidth: '0' }}>
           <span title={p.name} style={{ font: `700 20px/1.2 ${FONT}`, color: '#17201A', ...ellipsis }}>{p.name}</span>
           <span title={subtitle} style={{ font: `400 12.5px/1.2 ${FONT}`, color: '#7C8A81', ...ellipsis }}>{subtitle}</span>
         </span>
-        <span style={{ marginLeft: 'auto', display: 'flex', alignItems: 'center', gap: '8px' }}>
+        <span className="r-wrap" style={{ marginLeft: 'auto', display: 'flex', alignItems: 'center', gap: '8px' }}>
           <button className="hv1" onClick={() => v.duplicateRecord(p)} style={btn}>Duplicate</button>
           <button className="hv1" onClick={() => v.archiveRecord(p)} title={p.published ? 'Hide from the app · sales history is kept' : 'Make visible in the app again'} style={btn}>
             {p.published ? 'Archive' : 'Publish'}
@@ -272,10 +272,10 @@ export default function ProductDetail({ v }) {
           <button className="hv2" onClick={() => v.editProduct(p)} style={primaryBtn}>Edit product</button>
         </span>
       </div>
-      <div className="ad-scroll" style={{ flex: '1', minHeight: '0', overflowY: 'auto', padding: '20px 26px 30px', display: 'flex', flexDirection: 'column', gap: '18px' }}>
+      <div className="ad-scroll sk-page" style={{ flex: '1', minHeight: '0', overflowY: 'auto', padding: '20px 26px 30px', display: 'flex', flexDirection: 'column', gap: '18px' }}>
         <BackLink v={v} />
         {q.status === 'error' && <span style={{ ...muted, whiteSpace: 'normal', color: '#B3402F' }}>Couldn’t refresh · {q.error} · showing the last loaded data</span>}
-        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1.7fr', gap: '18px', alignItems: 'start' }}>
+        <div className="r-stack" style={{ display: 'grid', gridTemplateColumns: '1fr 1.7fr', gap: '18px', alignItems: 'start' }}>
           <div style={{ ...card, padding: '18px', display: 'flex', flexDirection: 'column', gap: '14px', minWidth: '0' }}>
             <span style={{ position: 'relative', height: '186px', borderRadius: '9px', overflow: 'hidden', border: '1px solid #E4E7E2', background: '#F6F7F4', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
               {p.image_url
@@ -297,7 +297,7 @@ export default function ProductDetail({ v }) {
             <InfoRow label="Warehouse" value={p.warehouse} />
           </div>
           <div style={{ display: 'flex', flexDirection: 'column', gap: '14px', minWidth: '0' }}>
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4,minmax(0,1fr))', gap: '14px' }}>
+            <div className="r-kpi" style={{ display: 'grid', gridTemplateColumns: 'repeat(4,minmax(0,1fr))', gap: '14px' }}>
               <Kpi icon={ICONS.units} label="Units sold (30d)" value={salesKnown ? num(sales.units30) : '—'} pillLabel={unitsPill} colors={unitsColors} title={unitsTitle} />
               <Kpi icon={ICONS.revenue} label="Revenue (30d)" value={salesKnown ? moneyAU(sales.revenue30) : '—'} pillLabel={revPill} colors={revColors} title={revTitle} />
               <Kpi

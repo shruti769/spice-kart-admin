@@ -81,7 +81,7 @@ export default function OfferTilesCard({ v }) {
         const list = tiles.rows.filter((t) => t.kind === kind)
         return (
           <div key={kind} style={{ display: 'flex', flexDirection: 'column', gap: '9px' }}>
-            <span style={{ display: 'flex', alignItems: 'flex-end', gap: '12px' }}>
+            <span className="r-wrap" style={{ display: 'flex', alignItems: 'flex-end', gap: '12px' }}>
               <span style={{ display: 'flex', flexDirection: 'column', gap: '4px', flex: 1, minWidth: 0 }}>
                 <span style={{ font: `600 12.5px/1.2 ${FONT}`, color: INK }}>{title}</span>
                 <span style={{ font: `400 11px/1.3 ${FONT}`, color: MUTED }}>{sub}</span>
@@ -95,7 +95,7 @@ export default function OfferTilesCard({ v }) {
                 const busy = busyId === t.id
                 const img = tileImageSrc(t.image_url)
                 return (
-                  <span key={t.id} style={{ display: 'flex', alignItems: 'center', gap: '12px', padding: '9px 12px', borderTop: i ? '1px solid #EFF1ED' : '0', opacity: busy ? 0.6 : 1 }}>
+                  <span key={t.id} className="r-wrap" style={{ display: 'flex', alignItems: 'center', gap: '12px', padding: '9px 12px', borderTop: i ? '1px solid #EFF1ED' : '0', opacity: busy ? 0.6 : 1 }}>
                     <span style={{ display: 'flex', flexDirection: 'column', gap: '2px' }}>
                       <button aria-label="Move up" disabled={!i} onClick={() => move(list, i, -1)} style={{ ...iconBtn, width: '22px', height: '16px', border: 0, opacity: i ? 1 : 0.25 }}><Arrow up /></button>
                       <button aria-label="Move down" disabled={i === list.length - 1} onClick={() => move(list, i, 1)} style={{ ...iconBtn, width: '22px', height: '16px', border: 0, opacity: i === list.length - 1 ? 0.25 : 1 }}><Arrow /></button>
@@ -105,7 +105,7 @@ export default function OfferTilesCard({ v }) {
                         {img && <img src={img} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }} />}
                       </span>
                     )}
-                    <span style={{ display: 'flex', flexDirection: 'column', gap: '4px', flex: 1, minWidth: 0 }}>
+                    <span className="r-full" style={{ display: 'flex', flexDirection: 'column', gap: '4px', flex: 1, minWidth: 0 }}>
                       <span style={{ font: `600 12.5px/1.2 ${FONT}`, color: INK, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{tileText(t.title, freeOver)}</span>
                       <span style={{ font: `400 11px/1.2 ${FONT}`, color: MUTED, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
                         {[tileText(t.subtitle, freeOver), kind === 'deal' ? `Opens ${catName(t.category_id) ?? 'Categories tab'}` : t.badge && `Badge: ${t.badge}`].filter(Boolean).join(' · ')}

@@ -397,12 +397,12 @@ export default function ProductForm({ v }) {
 
   return (
     <>
-      <div style={{ display: "flex", alignItems: "flex-end", gap: "18px", padding: "24px 26px 2px" }}>
+      <div className="sk-topbar" style={{ display: "flex", alignItems: "flex-end", gap: "18px", padding: "24px 26px 2px" }}>
         <span style={{ display: "flex", flexDirection: "column", gap: "5px", minWidth: "0" }}>
           <span style={{ font: "700 20px/1.2 Inter,system-ui,sans-serif", color: "#17201A", whiteSpace: "nowrap" }}>{v.formTitle}</span>
           <span style={{ font: "400 12.5px/1.2 Inter,system-ui,sans-serif", color: "#7C8A81", whiteSpace: "nowrap" }}>{subtitle}</span>
         </span>
-        <span style={{ marginLeft: "auto", display: "flex", alignItems: "center", gap: "8px" }}>
+        <span className="r-wrap" style={{ marginLeft: "auto", display: "flex", alignItems: "center", gap: "8px" }}>
           {row && (
             <button onClick={() => v.openDeleteProduct(row)} disabled={saving} style={{ ...btnSecondary, color: ERROR_RED, borderColor: "#EEDAD5", background: "#FDF7F5", ...busy }}>
               Delete product
@@ -426,12 +426,12 @@ export default function ProductForm({ v }) {
           </button>
         </span>
       </div>
-      <div ref={scrollRef} className="ad-scroll" style={{ flex: "1", minHeight: "0", overflowY: "auto", padding: "20px 26px 30px", display: "flex", flexDirection: "column", gap: "18px" }}>
-        <div style={{ display: "grid", gridTemplateColumns: "1.7fr 1fr", gap: "18px", alignItems: "start" }}>
+      <div ref={scrollRef} className="ad-scroll sk-page" style={{ flex: "1", minHeight: "0", overflowY: "auto", padding: "20px 26px 30px", display: "flex", flexDirection: "column", gap: "18px" }}>
+        <div className="r-stack" style={{ display: "grid", gridTemplateColumns: "1.7fr 1fr", gap: "18px", alignItems: "start" }}>
           <div style={{ display: "flex", flexDirection: "column", gap: "14px" }}>
             <div style={cardStyle}>
               <span style={cardTitle}>Basic information</span>
-              <div style={{ display: "grid", gridTemplateColumns: "repeat(2,1fr)", gap: "11px" }}>
+              <div className="r-stack-sm" style={{ display: "grid", gridTemplateColumns: "repeat(2,1fr)", gap: "11px" }}>
                 <Field label="PRODUCT NAME" error={errors.name}>
                   <TextInput value={form.name} onChange={set('name')} error={errors.name} placeholder="e.g. Basmati Rice 5kg" maxLength={200} />
                 </Field>
@@ -464,11 +464,11 @@ export default function ProductForm({ v }) {
             </div>
             <div style={cardStyle}>
               <span style={cardTitle}>Pricing</span>
-              <div style={{ display: "grid", gridTemplateColumns: "repeat(3,1fr)", gap: "11px" }}>
+              <div className="r-stack-sm" style={{ display: "grid", gridTemplateColumns: "repeat(3,1fr)", gap: "11px" }}>
                 <Field label="SELLING PRICE (AUD)" error={errors.price}>
                   <NumberInput prefix="$" value={form.price} onChange={set('price')} error={errors.price} placeholder="24.50" />
                 </Field>
-                <Field label="COMPARE-AT PRICE" error={errors.compare_at_price}>
+                <Field label="ORIGINAL PRICE (WAS)" error={errors.compare_at_price}>
                   <NumberInput prefix="$" value={form.compare_at_price} onChange={set('compare_at_price')} error={errors.compare_at_price} placeholder="28.00" />
                 </Field>
                 <Field label="COST PRICE" error={errors.cost_price}>
@@ -478,7 +478,7 @@ export default function ProductForm({ v }) {
                   <ReadOnly>10% included</ReadOnly>
                 </Field>
                 <Field label="DISCOUNT">
-                  <ReadOnly muted={!discount}>{discount || 'Set a compare-at price'}</ReadOnly>
+                  <ReadOnly muted={!discount}>{discount ? `${discount.toUpperCase()} badge in the app` : 'Set an original price above the selling price'}</ReadOnly>
                 </Field>
                 <Field label="MARGIN">
                   <ReadOnly muted={!margin}>{margin || 'Set a cost price'}</ReadOnly>
@@ -487,7 +487,7 @@ export default function ProductForm({ v }) {
             </div>
             <div style={cardStyle}>
               <span style={cardTitle}>Inventory</span>
-              <div style={{ display: "grid", gridTemplateColumns: "repeat(2,1fr)", gap: "11px" }}>
+              <div className="r-stack-sm" style={{ display: "grid", gridTemplateColumns: "repeat(2,1fr)", gap: "11px" }}>
                 <Field label="STOCK QUANTITY" error={errors.stock_qty}>
                   <NumberInput integer value={form.stock_qty} onChange={set('stock_qty')} error={errors.stock_qty} placeholder="0" />
                 </Field>
@@ -504,7 +504,7 @@ export default function ProductForm({ v }) {
             </div>
             <div style={cardStyle}>
               <span style={cardTitle}>Product information</span>
-              <div style={{ display: "grid", gridTemplateColumns: "repeat(2,1fr)", gap: "11px" }}>
+              <div className="r-stack-sm" style={{ display: "grid", gridTemplateColumns: "repeat(2,1fr)", gap: "11px" }}>
                 <Field label="WEIGHT">
                   <TextInput value={form.weight} onChange={set('weight')} placeholder="e.g. 5 kg" maxLength={40} />
                 </Field>

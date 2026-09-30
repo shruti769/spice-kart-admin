@@ -257,13 +257,13 @@ export default function Delivery({ v }) {
 
   return (
     <>
-      <div style={{ display: 'flex', alignItems: 'flex-end', gap: '18px', padding: '24px 26px 2px' }}>
+      <div className="sk-topbar" style={{ display: 'flex', alignItems: 'flex-end', gap: '18px', padding: '24px 26px 2px' }}>
         <span style={{ display: 'flex', flexDirection: 'column', gap: '5px', minWidth: '0' }}>
           <span style={{ font: `700 20px/1.2 ${FONT}`, color: INK, whiteSpace: 'nowrap' }}>Delivery operations</span>
           <span style={{ font: `400 12.5px/1.2 ${FONT}`, color: MUTED, whiteSpace: 'nowrap' }}>{subtitle}</span>
         </span>
-        <span style={{ marginLeft: 'auto', display: 'flex', alignItems: 'center', gap: '8px' }}>
-          <span style={{ display: 'flex', alignItems: 'center', gap: '8px', height: '34px', width: '220px', padding: '0 11px', border: `1px solid ${BORDER}`, borderRadius: '8px', background: '#fff' }}>
+        <span className="r-wrap" style={{ marginLeft: 'auto', display: 'flex', alignItems: 'center', gap: '8px' }}>
+          <span className="r-full" style={{ display: 'flex', alignItems: 'center', gap: '8px', height: '34px', width: '220px', padding: '0 11px', border: `1px solid ${BORDER}`, borderRadius: '8px', background: '#fff' }}>
             <Search />
             <input value={q} onChange={(e) => setQ(e.target.value)} placeholder="Search order or driver…" style={{ border: '0', outline: 'none', background: 'transparent', font: `400 12.5px/1.2 ${FONT}`, color: INK, width: '100%', minWidth: '0' }} />
           </span>
@@ -277,8 +277,8 @@ export default function Delivery({ v }) {
           </button>
         </span>
       </div>
-      <div className="ad-scroll" style={{ flex: '1', minHeight: '0', overflowY: 'auto', padding: '20px 26px 30px', display: 'flex', flexDirection: 'column', gap: '18px' }}>
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(6,1fr)', gap: '14px' }}>
+      <div className="ad-scroll sk-page" style={{ flex: '1', minHeight: '0', overflowY: 'auto', padding: '20px 26px 30px', display: 'flex', flexDirection: 'column', gap: '18px' }}>
+        <div className="r-kpi" style={{ display: 'grid', gridTemplateColumns: 'repeat(6,1fr)', gap: '14px' }}>
           <Kpi icon={<Truck />} label="Active deliveries" value={ready ? b.onRoad.length : dash} tag="On the road now" />
           <Kpi icon={<Check />} label="Available drivers" value={ready ? b.available.length : dash}
             tag={!ready ? 'Ready to assign' : drivers.length ? (b.available.length ? 'Ready to assign' : 'None free right now') : 'No drivers yet — add one'}
@@ -317,7 +317,7 @@ export default function Delivery({ v }) {
                 ? `${plural(b.available.length, 'active driver')} ${b.available.length === 1 ? 'is' : 'are'} free right now. Auto-reassign moves each delayed order to the least-busy active driver.`
                 : 'There are no active drivers — add one to reassign these orders.'}
             </span>
-            <span style={{ display: 'flex', gap: '9px' }}>
+            <span className="r-wrap" style={{ display: 'flex', gap: '9px' }}>
               <button onClick={() => runRpc('reassign')} disabled={Boolean(busy) || !b.active.length} style={{ height: '34px', padding: '0 13px', border: '0', borderRadius: '8px', background: '#8A6100', color: '#fff', font: `600 12px/1.2 ${FONT}`, cursor: busy || !b.active.length ? 'default' : 'pointer', whiteSpace: 'nowrap', opacity: busy || !b.active.length ? 0.55 : 1 }}>
                 {busy === 'reassign' ? 'Reassigning…' : `Auto-reassign ${plural(b.delayed.length, 'order')}`}
               </button>
@@ -328,7 +328,7 @@ export default function Delivery({ v }) {
           </div>
         )}
 
-        <div style={{ display: 'grid', gridTemplateColumns: '1.85fr 1fr', gap: '18px', alignItems: 'start' }}>
+        <div className="r-stack" style={{ display: 'grid', gridTemplateColumns: '1.85fr 1fr', gap: '18px', alignItems: 'start' }}>
           {/* Live delivery map */}
           <div style={{ ...card, display: 'flex', flexDirection: 'column' }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: '10px', padding: '13px 16px', borderBottom: `1px solid ${BORDER}`, flexWrap: 'wrap' }}>
@@ -469,7 +469,7 @@ export default function Delivery({ v }) {
           {b.zonePerf.length === 0 ? (
             <div style={emptyBox}>{ready ? 'No deliveries today yet · zones fill in from the delivery suburbs of orders' : 'Loading…'}</div>
           ) : (
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(5,1fr)', gap: '0' }}>
+            <div className="r-stack-sm" style={{ display: 'grid', gridTemplateColumns: 'repeat(5,1fr)', gap: '0' }}>
               {b.zonePerf.slice(0, 5).map((z, i, arr) => {
                 const rateColor = z.onTime == null ? MUTED : z.onTime >= 90 ? '#17693A' : z.onTime >= 75 ? '#8A6100' : '#A93826'
                 return (
@@ -512,9 +512,9 @@ export default function Delivery({ v }) {
               </span>
             </span>
           </span>
-          <div style={card}>
+          <div className="r-table-wrap" style={card}>
             <div style={{ display: 'flex', alignItems: 'center', gap: '9px', padding: '12px 16px', borderBottom: `1px solid ${BORDER}`, flexWrap: 'wrap' }}>
-              <span style={{ display: 'flex', alignItems: 'center', gap: '8px', height: '34px', width: '230px', padding: '0 11px', border: `1px solid ${BORDER}`, borderRadius: '8px', background: '#fff' }}>
+              <span className="r-full" style={{ display: 'flex', alignItems: 'center', gap: '8px', height: '34px', width: '230px', padding: '0 11px', border: `1px solid ${BORDER}`, borderRadius: '8px', background: '#fff' }}>
                 <Search />
                 <input value={dq} onChange={(e) => setDq(e.target.value)} placeholder="Search drivers…" style={{ border: '0', outline: 'none', background: 'transparent', font: `400 12.5px/1.2 ${FONT}`, color: INK, width: '100%', minWidth: '0' }} />
               </span>
@@ -526,7 +526,7 @@ export default function Delivery({ v }) {
                 Assign orders
               </button>
             </div>
-            <div style={{ display: 'grid', gridTemplateColumns: DCOLS, gap: '14px', padding: '11px 16px', background: '#F6F7F4', borderBottom: `1px solid ${BORDER}` }}>
+            <div className="r-table" style={{ '--r-min': '1000px', display: 'grid', gridTemplateColumns: DCOLS, gap: '14px', padding: '11px 16px', background: '#F6F7F4', borderBottom: `1px solid ${BORDER}` }}>
               {['Driver', 'Phone', 'Status', 'Load', 'This week', 'Vehicle', 'Today', 'Zone', 'Actions'].map((h) => <span key={h} style={headCell}>{h}</span>)}
             </div>
             {dRows.length === 0 && (
@@ -540,7 +540,7 @@ export default function Delivery({ v }) {
               const n = b.load[d.id] || 0
               const late = b.lateLoad[d.id] || 0
               return (
-                <div key={d.id} className="hv3" style={{ display: 'grid', gridTemplateColumns: DCOLS, gap: '14px', padding: '13px 16px', borderBottom: '1px solid #EFF1ED', alignItems: 'center', opacity: kind === 'inactive' ? 0.7 : 1 }}>
+                <div key={d.id} className="hv3 r-table" style={{ '--r-min': '1000px', display: 'grid', gridTemplateColumns: DCOLS, gap: '14px', padding: '13px 16px', borderBottom: '1px solid #EFF1ED', alignItems: 'center', opacity: kind === 'inactive' ? 0.7 : 1 }}>
                   <span style={{ display: 'flex', alignItems: 'center', gap: '9px', minWidth: '0' }}>
                     <span style={{ width: '28px', height: '28px', borderRadius: '7px', background: '#F6F7F4', border: `1px solid ${BORDER}`, display: 'flex', alignItems: 'center', justifyContent: 'center', font: `600 10.5px/1.2 ${FONT}`, color: '#4A564E', flex: 'none' }}>
                       {driverInitials(d.name)}

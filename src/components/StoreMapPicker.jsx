@@ -85,7 +85,7 @@ export default function StoreMapPicker({ form, onChange, disabled }) {
             loading="lazy"
             style={{ width: '100%', height: '220px', border: `1px solid ${BORDER}`, borderRadius: '9px' }}
           />
-          <span style={{ display: 'flex', gap: '10px', font: `400 11px/1.3 ${FONT}`, color: MUTED }}>
+          <span className="r-wrap" style={{ display: 'flex', gap: '10px', font: `400 11px/1.3 ${FONT}`, color: MUTED }}>
             <span style={{ flex: '1' }}>Changed the address? Press “Find again on map” so the pin moves too. Save settings to keep it.</span>
             <a href={mapLink(lat, lon)} target="_blank" rel="noreferrer" style={{ color: '#1B5E30' }}>Open larger map</a>
             <span>© <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noreferrer" style={{ color: MUTED }}>OpenStreetMap</a></span>

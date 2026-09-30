@@ -61,7 +61,7 @@ export default function GlobalSearch({ v, placeholder, width, background = '#fff
 
   const showPanel = open && query.trim().length > 0
   return (
-    <span ref={root} style={{ position: 'relative', display: 'flex', flex: 'none' }}>
+    <span ref={root} className="sk-search-root" style={{ position: 'relative', display: 'flex', flex: 'none' }}>
       <span className="sk-search" style={{ display: 'flex', alignItems: 'center', gap: '8px', height: '34px', width, padding: '0 11px', border: '1px solid #E4E7E2', borderRadius: '8px', background, boxSizing: 'border-box', cursor: 'text' }} onClick={() => input.current?.focus()}>
         <svg width="15" height="15" viewBox="0 0 20 20" fill="none" style={{ flex: 'none' }}>
           <circle cx="9" cy="9" r="6" stroke="#7C8A81" strokeWidth="1.6" />
@@ -87,7 +87,7 @@ export default function GlobalSearch({ v, placeholder, width, background = '#fff
         )}
       </span>
       {showPanel && (
-        <span className="ad-scroll" style={{ position: 'absolute', top: '40px', [align]: '0', zIndex: 80, width: '380px', maxHeight: '440px', overflowY: 'auto', background: '#fff', border: '1px solid #E4E7E2', borderRadius: '11px', boxShadow: '0 16px 38px rgba(16,24,16,.18)', display: 'flex', flexDirection: 'column', padding: '4px 0' }}>
+        <span className="ad-scroll sk-search-pop" style={{ position: 'absolute', top: '40px', [align]: '0', zIndex: 80, width: '380px', maxHeight: '440px', overflowY: 'auto', background: '#fff', border: '1px solid #E4E7E2', borderRadius: '11px', boxShadow: '0 16px 38px rgba(16,24,16,.18)', display: 'flex', flexDirection: 'column', padding: '4px 0' }}>
           {results.length === 0 && (
             <span style={{ padding: '18px 14px', font: font(400, 12, 1.5), color: '#7C8A81' }}>
               {searching ? 'Searching…' : `No results for “${query.trim()}”. Try an order number, customer, product, driver, category or page.`}

@@ -142,14 +142,14 @@ export default function DriverDetail({ v }) {
 
   return (
     <>
-      <div style={{ display: 'flex', alignItems: 'flex-end', gap: '18px', padding: '24px 26px 2px' }}>
+      <div className="sk-topbar" style={{ display: 'flex', alignItems: 'flex-end', gap: '18px', padding: '24px 26px 2px' }}>
         <span style={{ display: 'flex', flexDirection: 'column', gap: '5px', minWidth: '0' }}>
           <span style={{ font: `700 20px/1.2 ${FONT}`, color: INK, ...ell }}>{d.name}</span>
           <span style={{ font: `400 12.5px/1.2 ${FONT}`, color: MUTED, ...ell }}>
             Driver · {d.zone ? `${d.zone} zone` : 'No zone set'}{d.vehicle ? ` · ${d.vehicle}` : ''}
           </span>
         </span>
-        <span style={{ marginLeft: 'auto', display: 'flex', alignItems: 'center', gap: '8px' }}>
+        <span className="r-wrap" style={{ marginLeft: 'auto', display: 'flex', alignItems: 'center', gap: '8px' }}>
           <button className="hv1" onClick={() => setModal('call')} style={topBtn}>
             <svg width="15" height="15" viewBox="0 0 20 20" fill="none" style={{ flex: 'none' }}>
               <path d="M4.3 3.4h2.9a.9.9 0 01.86.63l.83 2.6a.9.9 0 01-.36 1l-1.44.99a9.4 9.4 0 004.29 4.29l.99-1.44a.9.9 0 011-.36l2.6.83a.9.9 0 01.63.86v2.9a1 1 0 01-1.09 1A13 13 0 013.3 4.49a1 1 0 011-1.09z" stroke="#4A564E" strokeWidth="1.5" strokeLinejoin="round" />
@@ -166,7 +166,7 @@ export default function DriverDetail({ v }) {
           )}
         </span>
       </div>
-      <div className="ad-scroll" style={{ flex: '1', minHeight: '0', overflowY: 'auto', padding: '20px 26px 30px', display: 'flex', flexDirection: 'column', gap: '18px' }}>
+      <div className="ad-scroll sk-page" style={{ flex: '1', minHeight: '0', overflowY: 'auto', padding: '20px 26px 30px', display: 'flex', flexDirection: 'column', gap: '18px' }}>
         <button onClick={v.nav_del} style={{ display: 'flex', alignItems: 'center', gap: '6px', border: '0', background: 'transparent', font: `600 11.5px/1.2 ${FONT}`, color: '#17693A', cursor: 'pointer', padding: '0', whiteSpace: 'nowrap', alignSelf: 'flex-start' }}>
           <svg width="13" height="13" viewBox="0 0 20 20" fill="none" style={{ flex: 'none' }}>
             <path d="M12.4 4.4L6.8 10l5.6 5.6" stroke="#17693A" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round" />
@@ -174,7 +174,7 @@ export default function DriverDetail({ v }) {
           Back to delivery
         </button>
         {detail.error && <span style={{ font: `400 12px/1.4 ${FONT}`, color: '#A93826' }}>{detail.error}</span>}
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(5,1fr)', gap: '14px' }}>
+        <div className="r-kpi" style={{ display: 'grid', gridTemplateColumns: 'repeat(5,1fr)', gap: '14px' }}>
           <Kpi icon="truck" label="Today’s deliveries" value={s.today.toLocaleString('en-AU')} note={`${data.deliveredTotal.toLocaleString('en-AU')} completed all time`} />
           <Kpi
             icon="check"
@@ -207,7 +207,7 @@ export default function DriverDetail({ v }) {
             tone={s.late ? AMBER : GREY}
           />
         </div>
-        <div style={{ display: 'grid', gridTemplateColumns: '1fr 2fr', gap: '18px', alignItems: 'start' }}>
+        <div className="r-stack" style={{ display: 'grid', gridTemplateColumns: '1fr 2fr', gap: '18px', alignItems: 'start' }}>
           <div style={{ background: '#fff', border: `1px solid ${BORDER}`, borderRadius: '10px', padding: '18px', display: 'flex', flexDirection: 'column', gap: '14px' }}>
             <span style={{ display: 'flex', alignItems: 'center', gap: '11px' }}>
               <span style={{ width: '46px', height: '46px', borderRadius: '12px', background: '#0B3D1F', display: 'flex', alignItems: 'center', justifyContent: 'center', font: `700 16px/1.2 ${FONT}`, color: '#8BE000', flex: 'none' }}>
@@ -251,8 +251,8 @@ export default function DriverDetail({ v }) {
                 ))}
               </div>
             </div>
-            <div style={{ background: '#fff', border: `1px solid ${BORDER}`, borderRadius: '10px', overflow: 'hidden', flex: 'none' }}>
-              <div style={{ display: 'grid', gridTemplateColumns: COLS, gap: '14px', padding: '11px 16px', background: '#F6F7F4', borderBottom: `1px solid ${BORDER}` }}>
+            <div className="r-table-wrap" style={{ background: '#fff', border: `1px solid ${BORDER}`, borderRadius: '10px', overflow: 'hidden', flex: 'none' }}>
+              <div className="r-table" style={{ display: 'grid', gridTemplateColumns: COLS, gap: '14px', padding: '11px 16px', background: '#F6F7F4', borderBottom: `1px solid ${BORDER}` }}>
                 {['Order', 'Customer', 'Address', 'Status', 'ETA', 'Value'].map((h) => <span key={h} style={head}>{h}</span>)}
               </div>
               {rows.length === 0 && (
@@ -278,7 +278,7 @@ export default function DriverDetail({ v }) {
                   }
                 }
                 return (
-                  <div key={o.id} className="hv3" onClick={() => v.openOrder(o)} style={{ display: 'grid', gridTemplateColumns: COLS, gap: '14px', padding: '13px 16px', borderBottom: i < rows.length - 1 ? '1px solid #EFF1ED' : '0', alignItems: 'center', cursor: 'pointer' }}>
+                  <div key={o.id} className="hv3 r-table" onClick={() => v.openOrder(o)} style={{ display: 'grid', gridTemplateColumns: COLS, gap: '14px', padding: '13px 16px', borderBottom: i < rows.length - 1 ? '1px solid #EFF1ED' : '0', alignItems: 'center', cursor: 'pointer' }}>
                     <span style={cellWrap}><span style={{ font: `700 12.5px/1.2 ${FONT}`, color: INK, ...ell }}>#{o.number}</span></span>
                     <span style={cellWrap}>
                       <button onClick={(e) => { e.stopPropagation(); v.openCustomer(o.customer_id) }} style={{ border: '0', background: 'transparent', padding: '0', cursor: 'pointer', textAlign: 'left', minWidth: '0', font: `500 12.5px/1.2 ${FONT}`, color: INK, ...ell }}>

@@ -191,13 +191,13 @@ export default function Payments({ v }) {
 
   return (
     <>
-      <div style={{ display: 'flex', alignItems: 'flex-end', gap: '18px', padding: '24px 26px 2px' }}>
+      <div className="sk-topbar" style={{ display: 'flex', alignItems: 'flex-end', gap: '18px', padding: '24px 26px 2px' }}>
         <span style={{ display: 'flex', flexDirection: 'column', gap: '5px', minWidth: '0' }}>
           <span style={{ font: `700 20px/1.2 ${FONT}`, color: INK, whiteSpace: 'nowrap' }}>Payments</span>
           <span style={{ font: `400 12.5px/1.2 ${FONT}`, color: MUTED, whiteSpace: 'nowrap' }}>{subtitle}</span>
         </span>
-        <span style={{ marginLeft: 'auto', display: 'flex', alignItems: 'center', gap: '8px' }}>
-          <span style={{ display: 'flex', alignItems: 'center', gap: '8px', height: '34px', width: '240px', padding: '0 11px', border: `1px solid ${BORDER}`, borderRadius: '8px', background: '#fff' }}>
+        <span className="r-wrap" style={{ marginLeft: 'auto', display: 'flex', alignItems: 'center', gap: '8px' }}>
+          <span className="r-full" style={{ display: 'flex', alignItems: 'center', gap: '8px', height: '34px', width: '240px', padding: '0 11px', border: `1px solid ${BORDER}`, borderRadius: '8px', background: '#fff' }}>
             <svg width="15" height="15" viewBox="0 0 20 20" fill="none" style={{ flex: 'none' }}>
               <circle cx="9" cy="9" r="6" stroke={MUTED} strokeWidth="1.6" />
               <path d="M13.4 13.4L18 18" stroke={MUTED} strokeWidth="1.6" strokeLinecap="round" />
@@ -218,9 +218,9 @@ export default function Payments({ v }) {
           </button>
         </span>
       </div>
-      <div className="ad-scroll" style={{ flex: '1', minHeight: '0', overflowY: 'auto', padding: '20px 26px 30px', display: 'flex', flexDirection: 'column', gap: '18px' }}>
+      <div className="ad-scroll sk-page" style={{ flex: '1', minHeight: '0', overflowY: 'auto', padding: '20px 26px 30px', display: 'flex', flexDirection: 'column', gap: '18px' }}>
         {summary.status === 'error' && <span style={{ font: `400 12px/1.4 ${FONT}`, color: '#A93826' }}>{summary.error}</span>}
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(5,1fr)', gap: '14px' }}>
+        <div className="r-kpi" style={{ display: 'grid', gridTemplateColumns: 'repeat(5,1fr)', gap: '14px' }}>
           {(s?.cards ?? [
             { icon: 'revenue', label: 'Today’s revenue' }, { icon: 'ok', label: 'Successful' }, { icon: 'failed', label: 'Failed' },
             { icon: 'refund', label: 'Refunds' }, { icon: 'pending', label: 'Pending' },
@@ -240,7 +240,7 @@ export default function Payments({ v }) {
         </div>
 
         {(showFilters || filtered) && (
-          <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginTop: '-6px' }}>
+          <div className="r-wrap" style={{ display: 'flex', alignItems: 'center', gap: '8px', marginTop: '-6px' }}>
             {showFilters && (
               <>
                 <select value={method} onChange={(e) => reset(setMethod)(e.target.value)} style={selectBox} aria-label="Payment method">
@@ -258,8 +258,8 @@ export default function Payments({ v }) {
           </div>
         )}
 
-        <div style={{ background: '#fff', border: `1px solid ${BORDER}`, borderRadius: '10px', overflow: 'hidden', flex: 'none' }}>
-          <div style={{ display: 'grid', gridTemplateColumns: COLS, gap: '14px', padding: '11px 16px', background: '#F6F7F4', borderBottom: `1px solid ${BORDER}` }}>
+        <div className="r-table-wrap" style={{ background: '#fff', border: `1px solid ${BORDER}`, borderRadius: '10px', overflow: 'hidden', flex: 'none' }}>
+          <div className="r-table" style={{ '--r-min': '880px', display: 'grid', gridTemplateColumns: COLS, gap: '14px', padding: '11px 16px', background: '#F6F7F4', borderBottom: `1px solid ${BORDER}` }}>
             {['Transaction', 'Order', 'Customer', 'Amount', 'Method', 'Status', 'Date'].map((h) => <span key={h} style={head}>{h}</span>)}
             <span />
           </div>
@@ -270,7 +270,7 @@ export default function Payments({ v }) {
             const ref = txReference(o)
             const failed = o.payment_status === 'failed' && o.charge?.failure_reason
             return (
-              <div key={o.id} className="hv3" onClick={() => v.openOrder(o)} style={{ display: 'grid', gridTemplateColumns: COLS, gap: '14px', padding: '13px 16px', borderBottom: i < shown.length - 1 ? '1px solid #EFF1ED' : '0', alignItems: 'center', cursor: 'pointer' }}>
+              <div key={o.id} className="hv3 r-table" onClick={() => v.openOrder(o)} style={{ '--r-min': '880px', display: 'grid', gridTemplateColumns: COLS, gap: '14px', padding: '13px 16px', borderBottom: i < shown.length - 1 ? '1px solid #EFF1ED' : '0', alignItems: 'center', cursor: 'pointer' }}>
                 <span style={cellWrap}><span style={ref === '—' ? { ...soft, fontSize: '12px' } : strong} title={ref === '—' ? 'No payment attempt yet' : undefined}>{ref}</span></span>
                 <span style={cellWrap}><span style={link}>#{o.number}</span></span>
                 <span style={cellWrap}><span style={soft}>{customerName(o.customer)}</span></span>
@@ -307,14 +307,14 @@ export default function Payments({ v }) {
               All refunds →
             </button>
           </div>
-          <div style={{ background: '#fff', border: `1px solid ${BORDER}`, borderRadius: '10px', overflow: 'hidden', flex: 'none' }}>
-            <div style={{ display: 'grid', gridTemplateColumns: RCOLS, gap: '14px', padding: '11px 16px', background: '#F6F7F4', borderBottom: `1px solid ${BORDER}` }}>
+          <div className="r-table-wrap" style={{ background: '#fff', border: `1px solid ${BORDER}`, borderRadius: '10px', overflow: 'hidden', flex: 'none' }}>
+            <div className="r-table" style={{ '--r-min': '960px', display: 'grid', gridTemplateColumns: RCOLS, gap: '14px', padding: '11px 16px', background: '#F6F7F4', borderBottom: `1px solid ${BORDER}` }}>
               {['Refund', 'Order', 'Customer', 'Amount', 'Reason', 'Method', 'Status', 'Requested', 'Actions'].map((h) => <span key={h} style={head}>{h}</span>)}
             </div>
             {reqMessage ? (
               <div style={{ padding: '26px 16px', textAlign: 'center', font: `400 12.5px/1.5 ${FONT}`, color: MUTED }}>{reqMessage}</div>
             ) : req.rows.map((r, i) => (
-              <div key={r.id} className="hv3" style={{ display: 'grid', gridTemplateColumns: RCOLS, gap: '14px', padding: '13px 16px', borderBottom: i < req.rows.length - 1 ? '1px solid #EFF1ED' : '0', alignItems: 'center' }}>
+              <div key={r.id} className="hv3 r-table" style={{ '--r-min': '960px', display: 'grid', gridTemplateColumns: RCOLS, gap: '14px', padding: '13px 16px', borderBottom: i < req.rows.length - 1 ? '1px solid #EFF1ED' : '0', alignItems: 'center' }}>
                 <span style={cellWrap}><span style={strong}>{r.number}</span></span>
                 <span style={cellWrap}>
                   {r.order ? <button onClick={() => v.openOrder(r.order)} style={{ ...link, border: '0', background: 'transparent', padding: '0', cursor: 'pointer' }}>#{r.order.number}</button> : <span style={soft}>—</span>}

@@ -44,7 +44,7 @@ function CannedReplyModal({ reply, flash, onClose }) {
         </span>
       )}
     >
-      <div style={{ display: 'grid', gridTemplateColumns: '1fr 150px', gap: '11px' }}>
+      <div className="r-stack-sm" style={{ display: 'grid', gridTemplateColumns: '1fr 150px', gap: '11px' }}>
         <label style={{ display: 'flex', flexDirection: 'column', gap: '7px', minWidth: '0' }}>
           <span style={labelStyle}>Title</span>
           <input autoFocus value={title} maxLength={80} placeholder="e.g. Missing item – refund issued" onChange={(e) => setTitle(e.target.value)} style={inputStyle} />
@@ -88,7 +88,7 @@ export default function CannedRepliesTab({ v, adding, setAdding }) {
   else if (!rows.length) empty = 'No canned replies yet · add your first one.'
 
   return (
-    <div className="ad-scroll" style={{ flex: '1', minHeight: '0', overflowY: 'auto', padding: '18px 26px 30px', display: 'flex', flexDirection: 'column', gap: '16px' }}>
+    <div className="ad-scroll sk-page" style={{ flex: '1', minHeight: '0', overflowY: 'auto', padding: '18px 26px 30px', display: 'flex', flexDirection: 'column', gap: '16px' }}>
       <span style={{ font: `400 12.5px/1.5 ${FONT}`, color: MUTED, maxWidth: '640px' }}>
         Saved answers agents can insert from the inbox composer. Keep them short and friendly — agents edit before sending.
       </span>

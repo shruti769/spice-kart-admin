@@ -189,7 +189,7 @@ export default function Staff({ v }) {
 
   return (
     <>
-      <div style={{ display: 'flex', alignItems: 'flex-end', gap: '18px', padding: '24px 26px 2px' }}>
+      <div className="sk-topbar" style={{ display: 'flex', alignItems: 'flex-end', gap: '18px', padding: '24px 26px 2px' }}>
         <span style={{ display: 'flex', flexDirection: 'column', gap: '5px', minWidth: '0' }}>
           <span style={{ font: `700 20px/1.2 ${FONT}`, color: INK, whiteSpace: 'nowrap' }}>Staff & admins</span>
           <span style={{ font: `400 12.5px/1.2 ${FONT}`, color: MUTED, whiteSpace: 'nowrap' }}>
@@ -198,8 +198,8 @@ export default function Staff({ v }) {
               : 'Who can sign in to this admin'}
           </span>
         </span>
-        <span style={{ marginLeft: 'auto', display: 'flex', alignItems: 'center', gap: '8px' }}>
-          <span style={{ display: 'flex', alignItems: 'center', gap: '8px', height: '34px', width: '210px', padding: '0 11px', border: `1px solid ${BORDER}`, borderRadius: '8px', background: '#fff' }}>
+        <span className="r-wrap" style={{ marginLeft: 'auto', display: 'flex', alignItems: 'center', gap: '8px' }}>
+          <span className="r-full" style={{ display: 'flex', alignItems: 'center', gap: '8px', height: '34px', width: '210px', padding: '0 11px', border: `1px solid ${BORDER}`, borderRadius: '8px', background: '#fff' }}>
             <svg width="15" height="15" viewBox="0 0 20 20" fill="none" style={{ flex: 'none' }}>
               <circle cx="9" cy="9" r="6" stroke={MUTED} strokeWidth="1.6" />
               <path d="M13.4 13.4L18 18" stroke={MUTED} strokeWidth="1.6" strokeLinecap="round" />
@@ -217,15 +217,15 @@ export default function Staff({ v }) {
           </button>
         </span>
       </div>
-      <div className="ad-scroll" style={{ flex: '1', minHeight: '0', overflowY: 'auto', padding: '20px 26px 30px', display: 'flex', flexDirection: 'column', gap: '18px' }}>
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4,1fr)', gap: '14px' }}>
+      <div className="ad-scroll sk-page" style={{ flex: '1', minHeight: '0', overflowY: 'auto', padding: '20px 26px 30px', display: 'flex', flexDirection: 'column', gap: '18px' }}>
+        <div className="r-kpi" style={{ display: 'grid', gridTemplateColumns: 'repeat(4,1fr)', gap: '14px' }}>
           <Kpi icon="team" label="Team members" value={ready ? stats.total : '—'} note={ready ? [`${stats.invitedThisMonth} invited this month`, ...GREY] : ['—', ...GREY]} />
           <Kpi icon="active" label="Active now" value={ready ? stats.activeToday : '—'} note={ready ? ['Used the admin today', ...(stats.activeToday ? GREEN : GREY)] : ['—', ...GREY]} />
           <Kpi icon="roles" label="Roles" value={ready ? stats.rolesInUse : '—'} note={[`In use, of ${ROLES.length} roles`, ...GREY]} />
           <Kpi icon="pending" label="Pending invites" value={ready ? stats.pending : '—'} note={ready ? [stats.pending ? 'Awaiting first sign-in' : 'None waiting', ...(stats.pending ? AMBER : GREY)] : ['—', ...GREY]} />
         </div>
 
-        <div ref={listRef} style={{ background: '#fff', border: `1px solid ${BORDER}`, borderRadius: '10px', overflow: 'hidden', flex: 'none', scrollMarginTop: '12px' }}>
+        <div ref={listRef} className="r-table-wrap" style={{ background: '#fff', border: `1px solid ${BORDER}`, borderRadius: '10px', overflow: 'hidden', flex: 'none', scrollMarginTop: '12px' }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: '9px', padding: '10px 14px', borderBottom: `1px solid ${BORDER}`, background: '#FAFBF9', flexWrap: 'wrap' }}>
             <span style={{ font: `500 11.5px/1.2 ${FONT}`, color: MUTED, whiteSpace: 'nowrap' }}>Showing</span>
             {STATUS_CHIPS.map(([k, label]) => (
@@ -243,7 +243,7 @@ export default function Staff({ v }) {
               )}
             </span>
           </div>
-          <div style={{ display: 'grid', gridTemplateColumns: COLS, gap: '14px', padding: '11px 16px', background: '#F6F7F4', borderBottom: `1px solid ${BORDER}` }}>
+          <div className="r-table" style={{ '--r-min': '880px', display: 'grid', gridTemplateColumns: COLS, gap: '14px', padding: '11px 16px', background: '#F6F7F4', borderBottom: `1px solid ${BORDER}` }}>
             {['Name', 'Email', 'Role', 'Department', 'Last active', 'Status'].map((h) => <span key={h} style={head}>{h}</span>)}
             <span style={{ ...head, textAlign: 'right' }}>Actions</span>
           </div>
@@ -254,7 +254,7 @@ export default function Staff({ v }) {
             const self = s.user_id === me
             const busy = busyId === s.user_id
             return (
-              <div key={s.user_id} className="hv3" style={{ display: 'grid', gridTemplateColumns: COLS, gap: '14px', padding: '13px 16px', borderBottom: i < shown.length - 1 ? '1px solid #EFF1ED' : '0', alignItems: 'center', opacity: busy ? 0.55 : 1 }}>
+              <div key={s.user_id} className="hv3 r-table" style={{ '--r-min': '880px', display: 'grid', gridTemplateColumns: COLS, gap: '14px', padding: '13px 16px', borderBottom: i < shown.length - 1 ? '1px solid #EFF1ED' : '0', alignItems: 'center', opacity: busy ? 0.55 : 1 }}>
                 <span style={cellWrap}>
                   <span style={{ width: '28px', height: '28px', borderRadius: '7px', background: '#F6F7F4', border: `1px solid ${BORDER}`, display: 'flex', alignItems: 'center', justifyContent: 'center', font: `600 10.5px/1.2 ${FONT}`, color: '#4A564E', flex: 'none' }}>
                     {staffInitials(s.name, s.email)}
@@ -294,8 +294,8 @@ export default function Staff({ v }) {
 
         <div ref={rolesRef} style={{ display: 'flex', flexDirection: 'column', gap: '10px', scrollMarginTop: '12px' }}>
           <span style={{ font: `600 14px/1.2 ${FONT}`, color: INK, ...ell }}>Roles</span>
-          <div style={{ background: '#fff', border: `1px solid ${BORDER}`, borderRadius: '10px', overflow: 'hidden', flex: 'none' }}>
-            <div style={{ display: 'grid', gridTemplateColumns: RCOLS, gap: '14px', padding: '11px 16px', background: '#F6F7F4', borderBottom: `1px solid ${BORDER}` }}>
+          <div className="r-table-wrap" style={{ background: '#fff', border: `1px solid ${BORDER}`, borderRadius: '10px', overflow: 'hidden', flex: 'none' }}>
+            <div className="r-table" style={{ display: 'grid', gridTemplateColumns: RCOLS, gap: '14px', padding: '11px 16px', background: '#F6F7F4', borderBottom: `1px solid ${BORDER}` }}>
               <span style={head}>Role</span>
               {['Members', 'Active', 'Pending invites'].map((h) => <span key={h} style={{ ...head, textAlign: 'center' }}>{h}</span>)}
               <span />
@@ -306,7 +306,7 @@ export default function Staff({ v }) {
               </span>
             </div>
             {roleRows.map((r, i) => (
-              <div key={r.role} className="hv3" style={{ display: 'grid', gridTemplateColumns: RCOLS, gap: '14px', padding: '10px 16px', borderBottom: i < roleRows.length - 1 ? '1px solid #EFF1ED' : '0', alignItems: 'center' }}>
+              <div key={r.role} className="hv3 r-table" style={{ display: 'grid', gridTemplateColumns: RCOLS, gap: '14px', padding: '10px 16px', borderBottom: i < roleRows.length - 1 ? '1px solid #EFF1ED' : '0', alignItems: 'center' }}>
                 <span style={{ font: `500 12.5px/1.2 ${FONT}`, color: INK, ...ell }}>{r.role}</span>
                 <span style={{ font: `600 12.5px/1.2 ${FONT}`, color: r.members ? INK : MUTED, textAlign: 'center' }}>{ready ? r.members : '—'}</span>
                 <span style={{ font: `400 12px/1.2 ${FONT}`, color: MUTED, textAlign: 'center' }}>{ready ? r.active : '—'}</span>

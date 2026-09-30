@@ -39,7 +39,7 @@ function RailSettings({ v }) {
   }
 
   return (
-    <div style={{ background: '#fff', border: `1px solid ${BORDER}`, borderRadius: '10px', padding: '16px 18px', display: 'grid', gridTemplateColumns: '1fr 240px', gap: '14px' }}>
+    <div style={{ background: '#fff', border: `1px solid ${BORDER}`, borderRadius: '10px', padding: '16px 18px', display: 'grid', gridTemplateColumns: '1fr 240px', gap: '14px' }} className="r-stack-sm">
       <label style={{ display: 'flex', flexDirection: 'column', gap: '7px' }}>
         <span style={labelStyle}>Rail title in app</span>
         <input value={title} maxLength={40} onChange={(e) => { setDraft(e.target.value); setErr('') }} onBlur={saveTitle} onKeyDown={(e) => { if (e.key === 'Enter') e.currentTarget.blur() }} style={{ ...inputStyle, ...(err ? { borderColor: DANGER } : null) }} />

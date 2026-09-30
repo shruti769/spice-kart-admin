@@ -160,9 +160,9 @@ export default function Promotions({ v }) {
       return (
         <div
           key={c.id}
-          className="hv3"
+          className="hv3 r-table"
           onClick={() => v.editCoupon(c)}
-          style={{ display: 'grid', gridTemplateColumns: GRID, gap: '14px', padding: '13px 16px', borderBottom: last ? '0' : '1px solid #EFF1ED', alignItems: 'center', cursor: 'pointer', opacity: busy ? 0.55 : 1 }}
+          style={{ '--r-min': '1000px', display: 'grid', gridTemplateColumns: GRID, gap: '14px', padding: '13px 16px', borderBottom: last ? '0' : '1px solid #EFF1ED', alignItems: 'center', cursor: 'pointer', opacity: busy ? 0.55 : 1 }}
         >
           <span style={cell}>
             <span style={{ display: 'flex', flexDirection: 'column', gap: '3px', minWidth: '0' }}>
@@ -218,15 +218,15 @@ export default function Promotions({ v }) {
 
   return (
     <>
-      <div style={{ display: "flex", alignItems: "flex-end", gap: "18px", padding: "24px 26px 2px" }}>
+      <div className="sk-topbar" style={{ display: "flex", alignItems: "flex-end", gap: "18px", padding: "24px 26px 2px" }}>
         <span style={{ display: "flex", flexDirection: "column", gap: "5px", minWidth: "0" }}>
           <span style={{ font: "700 20px/1.2 Inter,system-ui,sans-serif", color: "#17201A", whiteSpace: "nowrap" }}>Offers & promotions</span>
           <span style={{ font: "400 12.5px/1.2 Inter,system-ui,sans-serif", color: "#7C8A81", whiteSpace: "nowrap" }}>
             {coupons.status === 'ready' || total ? `${liveCount} live · ${total} coupon${total === 1 ? '' : 's'} in total` : 'Promo codes customers apply at checkout'}
           </span>
         </span>
-        <span style={{ marginLeft: "auto", display: "flex", alignItems: "center", gap: "8px" }}>
-          <span className="sk-input-wrap" style={{ display: "flex", alignItems: "center", gap: "8px", height: "34px", width: "230px", padding: "0 11px", border: "1px solid #E4E7E2", borderRadius: "8px", background: "#fff", boxSizing: "border-box" }}>
+        <span className="r-wrap" style={{ marginLeft: "auto", display: "flex", alignItems: "center", gap: "8px" }}>
+          <span className="sk-input-wrap r-full" style={{ display: "flex", alignItems: "center", gap: "8px", height: "34px", width: "230px", padding: "0 11px", border: "1px solid #E4E7E2", borderRadius: "8px", background: "#fff", boxSizing: "border-box" }}>
             <svg width="15" height="15" viewBox="0 0 20 20" fill="none" style={{ flex: "none" }}>
               <circle cx="9" cy="9" r="6" stroke="#7C8A81" strokeWidth="1.6" />
               <path d="M13.4 13.4L18 18" stroke="#7C8A81" strokeWidth="1.6" strokeLinecap="round" />
@@ -250,8 +250,8 @@ export default function Promotions({ v }) {
           {createBtn}
         </span>
       </div>
-      <div className="ad-scroll" onScroll={menu ? closeMenu : undefined} style={{ flex: "1", minHeight: "0", overflowY: "auto", padding: "20px 26px 30px", display: "flex", flexDirection: "column", gap: "18px" }}>
-        <div style={{ display: "grid", gridTemplateColumns: "repeat(4,1fr)", gap: "14px" }}>
+      <div className="ad-scroll sk-page" onScroll={menu ? closeMenu : undefined} style={{ flex: "1", minHeight: "0", overflowY: "auto", padding: "20px 26px 30px", display: "flex", flexDirection: "column", gap: "18px" }}>
+        <div className="r-kpi" style={{ display: "grid", gridTemplateColumns: "repeat(4,1fr)", gap: "14px" }}>
           <StatCard
             label="Live coupons"
             value={coupons.status === 'ready' || total ? liveCount : '—'}
@@ -304,8 +304,8 @@ export default function Promotions({ v }) {
             </button>
           ))}
         </div>
-        <div style={{ background: "#fff", border: "1px solid #E4E7E2", borderRadius: "10px", overflow: "hidden", flex: "none" }}>
-          <div style={{ display: "grid", gridTemplateColumns: GRID, gap: "14px", padding: "11px 16px", background: "#F6F7F4", borderBottom: "1px solid #E4E7E2" }}>
+        <div className="r-table-wrap" style={{ background: "#fff", border: "1px solid #E4E7E2", borderRadius: "10px", overflow: "hidden", flex: "none" }}>
+          <div className="r-table" style={{ '--r-min': '1000px', display: "grid", gridTemplateColumns: GRID, gap: "14px", padding: "11px 16px", background: "#F6F7F4", borderBottom: "1px solid #E4E7E2" }}>
             {['Offer', 'Code', 'Type', 'Discount', 'Min order', 'Applies to', 'Period', 'Status', 'Actions'].map((h) => (
               <span key={h} style={headCell}>{h}</span>
             ))}

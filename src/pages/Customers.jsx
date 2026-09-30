@@ -207,13 +207,13 @@ export default function Customers({ v }) {
 
   return (
     <>
-      <div style={{ display: 'flex', alignItems: 'flex-end', gap: '18px', padding: '24px 26px 2px' }}>
+      <div className="sk-topbar" style={{ display: 'flex', alignItems: 'flex-end', gap: '18px', padding: '24px 26px 2px' }}>
         <span style={{ display: 'flex', flexDirection: 'column', gap: '5px', minWidth: '0' }}>
           <span style={{ font: `700 20px/1.2 ${FONT}`, color: INK, whiteSpace: 'nowrap' }}>Customers</span>
           <span style={{ font: `400 12.5px/1.2 ${FONT}`, color: MUTED, whiteSpace: 'nowrap' }}>{subtitle}</span>
         </span>
-        <span style={{ marginLeft: 'auto', display: 'flex', alignItems: 'center', gap: '8px' }}>
-          <span style={{ display: 'flex', alignItems: 'center', gap: '8px', height: '34px', width: '230px', padding: '0 11px', border: `1px solid ${BORDER}`, borderRadius: '8px', background: '#fff' }}>
+        <span className="r-wrap" style={{ marginLeft: 'auto', display: 'flex', alignItems: 'center', gap: '8px' }}>
+          <span className="r-full" style={{ display: 'flex', alignItems: 'center', gap: '8px', height: '34px', width: '230px', padding: '0 11px', border: `1px solid ${BORDER}`, borderRadius: '8px', background: '#fff' }}>
             <svg width="15" height="15" viewBox="0 0 20 20" fill="none" style={{ flex: 'none' }}>
               <circle cx="9" cy="9" r="6" stroke={MUTED} strokeWidth="1.6" />
               <path d="M13.4 13.4L18 18" stroke={MUTED} strokeWidth="1.6" strokeLinecap="round" />
@@ -234,8 +234,8 @@ export default function Customers({ v }) {
           </button>
         </span>
       </div>
-      <div className="ad-scroll" style={{ flex: '1', minHeight: '0', overflowY: 'auto', padding: '20px 26px 30px', display: 'flex', flexDirection: 'column', gap: '18px' }}>
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4,1fr)', gap: '14px' }}>
+      <div className="ad-scroll sk-page" style={{ flex: '1', minHeight: '0', overflowY: 'auto', padding: '20px 26px 30px', display: 'flex', flexDirection: 'column', gap: '18px' }}>
+        <div className="r-kpi" style={{ display: 'grid', gridTemplateColumns: 'repeat(4,1fr)', gap: '14px' }}>
           <Kpi icon="total" label="Total customers" value={k.total[0]} pill={k.total[1]} />
           <Kpi icon="new" label="New customers" value={k.week[0]} pill={k.week[1]} />
           <Kpi icon="active" label="Active customers" value={k.active[0]} pill={k.active[1]} />
@@ -254,7 +254,7 @@ export default function Customers({ v }) {
         </div>
 
         {showFilters && (
-          <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginTop: '-4px' }}>
+          <div className="r-wrap" style={{ display: 'flex', alignItems: 'center', gap: '8px', marginTop: '-4px' }}>
             <select value={marketing} onChange={(e) => pick(setMarketing)(e.target.value)} style={selectBox} aria-label="Marketing opt-in">
               <option value="any">Marketing: Any</option>
               <option value="yes">Opted in to marketing</option>
@@ -269,8 +269,8 @@ export default function Customers({ v }) {
           </div>
         )}
 
-        <div style={{ background: '#fff', border: `1px solid ${BORDER}`, borderRadius: '10px', overflow: 'hidden', flex: 'none' }}>
-          <div style={{ display: 'grid', gridTemplateColumns: COLS, gap: '14px', padding: '11px 16px', background: '#F6F7F4', borderBottom: `1px solid ${BORDER}` }}>
+        <div className="r-table-wrap" style={{ background: '#fff', border: `1px solid ${BORDER}`, borderRadius: '10px', overflow: 'hidden', flex: 'none' }}>
+          <div className="r-table" style={{ '--r-min': '980px', display: 'grid', gridTemplateColumns: COLS, gap: '14px', padding: '11px 16px', background: '#F6F7F4', borderBottom: `1px solid ${BORDER}` }}>
             {['Customer', 'Email', 'Phone', 'Orders', 'Total spend', 'Last order', 'Status', 'Joined', 'Actions'].map((h) => <span key={h} style={head}>{h}</span>)}
           </div>
           {message ? (
@@ -278,7 +278,7 @@ export default function Customers({ v }) {
           ) : rows.map((c, i) => {
             const [pl, pfg, pbg] = customerPill(c, now)
             return (
-              <div key={c.id} className="hv3" style={{ display: 'grid', gridTemplateColumns: COLS, gap: '14px', padding: '13px 16px', borderBottom: i < rows.length - 1 ? '1px solid #EFF1ED' : '0', alignItems: 'center' }}>
+              <div key={c.id} className="hv3 r-table" style={{ '--r-min': '980px', display: 'grid', gridTemplateColumns: COLS, gap: '14px', padding: '13px 16px', borderBottom: i < rows.length - 1 ? '1px solid #EFF1ED' : '0', alignItems: 'center' }}>
                 <span style={cellWrap}>
                   <span style={{ width: '28px', height: '28px', borderRadius: '7px', background: '#F6F7F4', border: `1px solid ${BORDER}`, display: 'flex', alignItems: 'center', justifyContent: 'center', font: `600 10.5px/1.2 ${FONT}`, color: '#4A564E', flex: 'none' }}>{initials(c)}</span>
                   <span style={strong} title={customerName(c)}>{customerName(c)}</span>

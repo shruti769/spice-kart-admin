@@ -235,14 +235,14 @@ export default function NewPromotion({ v }) {
 
   return (
     <>
-      <div style={{ display: "flex", alignItems: "flex-end", gap: "18px", padding: "24px 26px 2px" }}>
+      <div className="sk-topbar" style={{ display: "flex", alignItems: "flex-end", gap: "18px", padding: "24px 26px 2px" }}>
         <span style={{ display: "flex", flexDirection: "column", gap: "5px", minWidth: "0" }}>
           <span style={{ font: "700 20px/1.2 Inter,system-ui,sans-serif", color: "#17201A", whiteSpace: "nowrap" }}>{editing ? 'Edit coupon' : 'Create coupon'}</span>
           <span style={{ font: "400 12.5px/1.2 Inter,system-ui,sans-serif", color: "#7C8A81", whiteSpace: "nowrap" }}>
             {editing ? `${editing.code} · ${editing.title}` : 'Set up a new promo code for the Spice Kart app'}
           </span>
         </span>
-        <span style={{ marginLeft: "auto", display: "flex", alignItems: "center", gap: "8px" }}>
+        <span className="r-wrap" style={{ marginLeft: "auto", display: "flex", alignItems: "center", gap: "8px" }}>
           <button className="hv1" onClick={v.couponDone} disabled={saving} style={btnSecondary}>
             {editing ? 'Cancel' : 'Discard'}
           </button>
@@ -269,12 +269,12 @@ export default function NewPromotion({ v }) {
           </button>
         </span>
       </div>
-      <div className="ad-scroll" style={{ flex: "1", minHeight: "0", overflowY: "auto", padding: "20px 26px 30px", display: "flex", flexDirection: "column", gap: "18px" }}>
-        <div style={{ display: "grid", gridTemplateColumns: "1.7fr 1fr", gap: "18px", alignItems: "start" }}>
+      <div className="ad-scroll sk-page" style={{ flex: "1", minHeight: "0", overflowY: "auto", padding: "20px 26px 30px", display: "flex", flexDirection: "column", gap: "18px" }}>
+        <div className="r-stack" style={{ display: "grid", gridTemplateColumns: "1.7fr 1fr", gap: "18px", alignItems: "start" }}>
           <div style={{ display: "flex", flexDirection: "column", gap: "14px" }}>
             <div style={cardStyle}>
               <span style={cardTitle}>Offer type</span>
-              <div role="radiogroup" aria-label="Offer type" style={{ display: "grid", gridTemplateColumns: "repeat(3,1fr)", gap: "8px" }}>
+              <div role="radiogroup" aria-label="Offer type" className="r-stack-sm" style={{ display: "grid", gridTemplateColumns: "repeat(3,1fr)", gap: "8px" }}>
                 {DISCOUNT_TYPES.map(([type, label]) => {
                   const on = form.discount_type === type
                   return (
@@ -294,7 +294,7 @@ export default function NewPromotion({ v }) {
             </div>
             <div style={cardStyle}>
               <span style={cardTitle}>Offer details</span>
-              <div style={{ display: "grid", gridTemplateColumns: "repeat(2,1fr)", gap: "11px" }}>
+              <div className="r-stack-sm" style={{ display: "grid", gridTemplateColumns: "repeat(2,1fr)", gap: "11px" }}>
                 <Field label="OFFER NAME" error={errors.title}>
                   <TextInput value={form.title} onChange={set('title')} error={errors.title} placeholder="e.g. $5 off your first order" maxLength={80} />
                 </Field>
@@ -345,7 +345,7 @@ export default function NewPromotion({ v }) {
             </div>
             <div style={cardStyle}>
               <span style={cardTitle}>Schedule & eligibility</span>
-              <div style={{ display: "grid", gridTemplateColumns: "repeat(2,1fr)", gap: "11px" }}>
+              <div className="r-stack-sm" style={{ display: "grid", gridTemplateColumns: "repeat(2,1fr)", gap: "11px" }}>
                 <Field label="START DATE" error={errors.starts_at} hint="Leave empty to start immediately">
                   <input
                     className="sk-input"

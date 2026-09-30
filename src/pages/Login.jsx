@@ -4,6 +4,7 @@ import { isSupabaseConfigured, supabase } from '../lib/supabase'
 import { fetchIsAdmin } from '../lib/adminAuth'
 import { fetchStoreConfig, nextSignInStep } from '../lib/businessSettings'
 import { useStore } from '../lib/stores'
+import PasswordInput from '../components/PasswordInput'
 
 const inputStyle = { height: "36px", padding: "0 11px", border: "1px solid #E4E7E2", borderRadius: "8px", background: "#fff", font: "500 12.5px/1.2 Inter,system-ui,sans-serif", color: "#17201A", width: "100%", boxSizing: "border-box", outline: "none" }
 
@@ -71,7 +72,7 @@ export default function Login({ v }) {
   return (
     <>
       <div style={{ position: "absolute", inset: "0", zIndex: "60", display: "flex", background: "#fff" }}>
-        <div style={{ flex: "1", minWidth: "0", background: "linear-gradient(150deg,#0B3D1F 0%,#14572A 52%,#1F7135 100%)", padding: "44px", display: "flex", flexDirection: "column", position: "relative", overflow: "hidden" }}>
+        <div className="sk-auth-art" style={{ flex: "1", minWidth: "0", background: "linear-gradient(150deg,#0B3D1F 0%,#14572A 52%,#1F7135 100%)", padding: "44px", display: "flex", flexDirection: "column", position: "relative", overflow: "hidden" }}>
           <span style={{ position: "absolute", right: "-90px", top: "-90px", width: "320px", height: "320px", borderRadius: "160px", background: "rgba(139,224,0,.1)", display: "block" }} />
           <span style={{ position: "absolute", right: "60px", bottom: "-60px", width: "180px", height: "180px", borderRadius: "90px", background: "rgba(139,224,0,.07)", display: "block" }} />
           <span style={{ display: "flex", alignItems: "center", gap: "11px", position: "relative" }}>
@@ -88,7 +89,7 @@ export default function Login({ v }) {
             </span>
           </span>
         </div>
-        <div style={{ width: "460px", flex: "none", display: "flex", flexDirection: "column", justifyContent: "center", padding: "44px 48px", gap: "18px" }}>
+        <div className="sk-auth-form" style={{ width: "460px", flex: "none", display: "flex", flexDirection: "column", justifyContent: "center", padding: "44px 48px", gap: "18px" }}>
           <span style={{ display: "flex", flexDirection: "column", gap: "7px" }}>
             <span style={{ font: "700 22px/1.2 Inter,system-ui,sans-serif", color: "#17201A" }}>Sign in</span>
             <span style={{ font: "400 12.5px/1.6 Inter,system-ui,sans-serif", color: "#7C8A81" }}>Use your Spice Kart staff account to access the operations console.</span>
@@ -113,9 +114,8 @@ export default function Login({ v }) {
             <span style={{ font: "600 10.5px/1.2 Inter,system-ui,sans-serif", letterSpacing: ".4px", color: "#7C8A81", textTransform: "uppercase", whiteSpace: "nowrap" }}>
               PASSWORD
             </span>
-            <input
+            <PasswordInput
               className="sk-input"
-              type="password"
               autoComplete="current-password"
               placeholder="Enter your password"
               value={password}

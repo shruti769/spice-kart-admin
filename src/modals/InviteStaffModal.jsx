@@ -54,8 +54,8 @@ function InviteDialog({ onClose, onDone }) {
   const bad = (err) => (tried && err ? { borderColor: DANGER } : null)
 
   return (
-    <div onClick={close} style={{ position: 'fixed', inset: '0', zIndex: '90', background: 'rgba(14,22,16,.45)', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '40px' }}>
-      <form onSubmit={submit} onClick={(e) => e.stopPropagation()} style={{ width: '500px', maxWidth: '100%', maxHeight: '100%', background: '#fff', borderRadius: '14px', boxShadow: '0 26px 60px rgba(10,18,12,.3)', overflow: 'hidden', display: 'flex', flexDirection: 'column', margin: '0' }}>
+    <div className="sk-overlay" onClick={close} style={{ position: 'fixed', inset: '0', zIndex: '90', background: 'rgba(14,22,16,.45)', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '40px' }}>
+      <form className="sk-modal" onSubmit={submit} onClick={(e) => e.stopPropagation()} style={{ width: '500px', maxWidth: '100%', maxHeight: '100%', background: '#fff', borderRadius: '14px', boxShadow: '0 26px 60px rgba(10,18,12,.3)', overflow: 'hidden', display: 'flex', flexDirection: 'column', margin: '0' }}>
         <div style={{ padding: '16px 18px 14px', display: 'flex', alignItems: 'flex-start', gap: '11px', borderBottom: '1px solid #EFF1ED' }}>
           <span style={{ width: '34px', height: '34px', borderRadius: '9px', background: '#F1F9DF', display: 'flex', alignItems: 'center', justifyContent: 'center', flex: 'none' }}>
             <svg width="17" height="17" viewBox="0 0 20 20" fill="none" style={{ flex: 'none' }}>
@@ -71,7 +71,7 @@ function InviteDialog({ onClose, onDone }) {
           </span>
         </div>
         <div className="ad-scroll" style={{ padding: '15px 18px', display: 'flex', flexDirection: 'column', gap: '11px', overflowY: 'auto' }}>
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '11px' }}>
+          <div className="r-stack-sm" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '11px' }}>
             <label style={{ display: 'flex', flexDirection: 'column', gap: '6px', minWidth: '0' }}>
               <span style={label}>Full name</span>
               <input autoFocus value={form.name} onChange={set('name')} maxLength={80} disabled={busy} placeholder="e.g. Priya Raman" style={{ ...input, ...bad(nameError) }} />

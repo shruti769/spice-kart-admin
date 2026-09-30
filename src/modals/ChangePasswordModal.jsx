@@ -2,6 +2,7 @@ import { useState } from 'react'
 import { changePassword } from '../lib/businessSettings'
 import { FONT, MUTED, btnPrimary, btnSecondary, errorText, hintText, inputStyle, labelStyle, withError } from '../components/content/styles'
 import { Modal } from '../components/content/ui'
+import PasswordInput from '../components/PasswordInput'
 
 /** 0–4 from length and character variety. */
 function strength(pw) {
@@ -47,7 +48,7 @@ export default function ChangePasswordModal({ v }) {
   const field = (key, lbl, value, set, hint) => (
     <label style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
       <span style={labelStyle}>{lbl}</span>
-      <input type="password" value={value} autoComplete={key === 'current' ? 'current-password' : 'new-password'} onChange={(e) => { set(e.target.value); setErrors((x) => ({ ...x, [key]: undefined })) }} onKeyDown={(e) => { if (e.key === 'Enter') submit() }} style={withError(inputStyle, errors[key])} />
+      <PasswordInput value={value} autoComplete={key === 'current' ? 'current-password' : 'new-password'} onChange={(e) => { set(e.target.value); setErrors((x) => ({ ...x, [key]: undefined })) }} onKeyDown={(e) => { if (e.key === 'Enter') submit() }} style={withError(inputStyle, errors[key])} />
       {errors[key] ? <span style={errorText}>{errors[key]}</span> : hint && <span style={hintText}>{hint}</span>}
     </label>
   )

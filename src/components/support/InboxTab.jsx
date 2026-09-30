@@ -44,7 +44,7 @@ function TicketList({ status, setStatus, counts, input, setInput, list, selected
   else if (!rows.length) message = input.trim() ? 'No chats match your search.' : status === 'open' ? 'Inbox zero · no open chats right now.' : 'Nothing here yet.'
 
   return (
-    <div style={{ width: '300px', flex: 'none', borderRight: `1px solid ${BORDER}`, background: '#fff', display: 'flex', flexDirection: 'column', minHeight: '0' }}>
+    <div className="r-full" style={{ width: '300px', flex: 'none', borderRight: `1px solid ${BORDER}`, background: '#fff', display: 'flex', flexDirection: 'column', minHeight: '0' }}>
       <div style={{ padding: '12px 12px 10px', display: 'flex', flexDirection: 'column', gap: '10px', borderBottom: `1px solid ${DIVIDER}` }}>
         <span style={{ display: 'flex', alignItems: 'center', gap: '8px', height: '34px', padding: '0 11px', border: `1px solid ${BORDER}`, borderRadius: '8px', background: '#fff' }}>
           <svg width="14" height="14" viewBox="0 0 20 20" fill="none" style={{ flex: 'none' }}>
@@ -97,19 +97,46 @@ function TicketList({ status, setStatus, counts, input, setInput, list, selected
 }
 
 // ─── Middle column: thread and composer ──────────────────────────────────────────────────
+/** Full-size customer photo over the page. Closes on ×, Esc or a click outside the photo. */
+function PhotoViewer({ url, onClose }) {
+  useEffect(() => {
+    const onKey = (e) => { if (e.key === 'Escape') onClose() }
+    window.addEventListener('keydown', onKey)
+    return () => window.removeEventListener('keydown', onKey)
+  }, [onClose])
+  return (
+    <div role="dialog" aria-modal="true" aria-label="Photo from the customer" onClick={onClose}
+      style={{ position: 'fixed', inset: 0, zIndex: 1000, background: 'rgba(10,14,11,0.82)', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '48px' }}>
+      <img src={url} alt="Photo from the customer" onClick={(e) => e.stopPropagation()}
+        style={{ maxWidth: '100%', maxHeight: '100%', borderRadius: '10px', objectFit: 'contain', boxShadow: '0 12px 40px rgba(0,0,0,0.45)', cursor: 'default' }} />
+      <button type="button" onClick={onClose} aria-label="Close photo" title="Close (Esc)"
+        style={{ position: 'absolute', top: '16px', right: '16px', width: '38px', height: '38px', borderRadius: '50%', border: 0, background: '#fff', color: INK, font: `500 22px/1 ${FONT}`, cursor: 'pointer', boxShadow: '0 2px 8px rgba(0,0,0,0.3)' }}>
+        ×
+      </button>
+      <a href={url} target="_blank" rel="noreferrer" onClick={(e) => e.stopPropagation()}
+        style={{ position: 'absolute', bottom: '16px', font: `600 12px/1 ${FONT}`, color: '#fff', background: 'rgba(255,255,255,0.14)', padding: '9px 13px', borderRadius: '8px', textDecoration: 'none' }}>
+        Open in new tab
+      </a>
+    </div>
+  )
+}
 function Bubble({ m, now }) {
   const agent = m.sender === 'agent'
   const note = m.internal
   const bg = note ? '#FBF1DE' : agent ? FOREST : '#fff'
   const fg = note ? '#5E4300' : agent ? '#fff' : INK
+  const [zoomed, setZoomed] = useState(false)
   return (
     <div style={{ display: 'flex', flexDirection: 'column', alignItems: agent ? 'flex-end' : 'flex-start', gap: '5px' }}>
+      {zoomed && <PhotoViewer url={m.image_url} onClose={() => setZoomed(false)} />}
       <span style={{ font: `500 10.5px/1.2 ${FONT}`, color: MUTED }}>
         {note ? 'Internal note · ' : ''}{m.author_name || (agent ? 'Spice Kart Support' : 'Customer')} · {msgTime(m.created_at, now)}
       </span>
       <div style={{ maxWidth: '72%', background: bg, color: fg, border: agent && !note ? '0' : `1px solid ${note ? '#F0DDB0' : BORDER}`, borderRadius: '10px', padding: '9px 12px', display: 'flex', flexDirection: 'column', gap: '8px' }}>
         {m.image_path && (m.image_url ? (
-          <a href={m.image_url} target="_blank" rel="noreferrer"><img src={m.image_url} alt="Photo from the customer" style={{ display: 'block', maxWidth: '240px', maxHeight: '240px', borderRadius: '7px', objectFit: 'cover' }} /></a>
+          <button type="button" onClick={() => setZoomed(true)} title="View full size" style={{ padding: 0, border: 0, background: 'none', cursor: 'zoom-in' }}>
+            <img src={m.image_url} alt="Photo from the customer" style={{ display: 'block', maxWidth: '240px', maxHeight: '240px', borderRadius: '7px', objectFit: 'cover' }} />
+          </button>
         ) : <span style={{ font: `400 12px/1.4 ${FONT}`, color: MUTED }}>Photo unavailable</span>)}
         {m.body && <span style={{ font: `400 12.5px/1.5 ${FONT}`, whiteSpace: 'pre-wrap', wordBreak: 'break-word' }}>{m.body}</span>}
       </div>
@@ -155,12 +182,12 @@ function Composer({ ticket, flash }) {
 
   return (
     <div style={{ borderTop: `1px solid ${BORDER}`, background: '#fff', padding: '12px 16px 14px', display: 'flex', flexDirection: 'column', gap: '10px', flex: 'none' }}>
-      <span style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+      <span className="r-wrap" style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
         <span style={{ display: 'flex', gap: '2px', padding: '3px', background: '#EEF0EC', borderRadius: '8px' }}>
           {tab('reply', 'Reply')}
           {tab('note', 'Internal note')}
         </span>
-        <select value="" onChange={(e) => insert(e.target.value)} aria-label="Insert canned reply" disabled={!canned.data?.length} style={{ ...plainSelect, marginLeft: 'auto', width: '220px' }}>
+        <select value="" onChange={(e) => insert(e.target.value)} aria-label="Insert canned reply" disabled={!canned.data?.length} className="r-full" style={{ ...plainSelect, marginLeft: 'auto', width: '220px' }}>
           <option value="">{canned.data?.length ? 'Insert canned reply…' : 'No canned replies yet'}</option>
           {(canned.data ?? []).map((c) => <option key={c.id} value={c.id}>{c.title}</option>)}
         </select>
@@ -174,7 +201,7 @@ function Composer({ ticket, flash }) {
         placeholder={note ? 'Add a note for your team — the customer won’t see it' : `Reply to ${first || 'the customer'}…`}
         style={{ width: '100%', boxSizing: 'border-box', minHeight: '76px', padding: '10px 12px', border: `1px solid ${note ? '#F0DDB0' : BORDER}`, borderRadius: '9px', background: note ? '#FFFCF4' : '#fff', font: `400 12.5px/1.5 ${FONT}`, color: INK, outline: 'none', resize: 'vertical' }}
       />
-      <span style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+      <span className="r-wrap" style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
         <span style={{ font: `400 11px/1.3 ${FONT}`, color: MUTED, flex: '1', minWidth: '0', ...ellipsis }}>
           {note ? 'Only visible to your team' : `Sent via ${CHANNEL_LABEL[ticket.channel]?.toLowerCase() ?? 'in-app chat'}} · status stays ${STATUS_PILL[ticket.status]?.[0] ?? ticket.status} · ⌘↵ to send`}
         </span>
@@ -215,7 +242,7 @@ function Thread({ ticket, staff, flash, now }) {
 
   return (
     <div style={{ flex: '1', minWidth: '0', display: 'flex', flexDirection: 'column', minHeight: '0', borderRight: `1px solid ${BORDER}` }}>
-      <div style={{ display: 'flex', alignItems: 'center', gap: '10px', padding: '12px 16px', background: '#fff', borderBottom: `1px solid ${BORDER}`, flex: 'none' }}>
+      <div className="r-wrap" style={{ display: 'flex', alignItems: 'center', gap: '10px', padding: '12px 16px', background: '#fff', borderBottom: `1px solid ${BORDER}`, flex: 'none' }}>
         <span style={{ display: 'flex', flexDirection: 'column', gap: '4px', minWidth: '0', flex: '1' }}>
           <span style={{ font: `700 14px/1.25 ${FONT}`, color: INK, ...ellipsis }} title={ticket.subject}>{ticket.subject}</span>
           <span style={{ display: 'flex', alignItems: 'center', gap: '4px', font: `400 11px/1.3 ${FONT}`, color: MUTED, minWidth: '0' }}>
@@ -283,7 +310,7 @@ function Sidebar({ v, ticket, now, onSelect, onRefund }) {
   }
 
   return (
-    <div className="ad-scroll" style={{ width: '280px', flex: 'none', overflowY: 'auto', padding: '14px', display: 'flex', flexDirection: 'column', gap: '12px', background: '#F6F7F4' }}>
+    <div className="ad-scroll r-full" style={{ width: '280px', flex: 'none', overflowY: 'auto', padding: '14px', display: 'flex', flexDirection: 'column', gap: '12px', background: '#F6F7F4' }}>
       <div style={card}>
         <span style={{ display: 'flex', alignItems: 'center', gap: '10px', minWidth: '0' }}>
           <span style={{ width: '38px', height: '38px', borderRadius: '50%', background: '#F1F9DF', color: FOREST, display: 'flex', alignItems: 'center', justifyContent: 'center', font: `700 12px/1 ${FONT}`, flex: 'none' }}>{initials(c)}</span>
@@ -384,7 +411,7 @@ export default function InboxTab({ v, summary }) {
   const counts = s ? { open: s.open, pending: s.pending, resolved: s.resolved, all: s.all } : null
 
   return (
-    <div style={{ flex: '1', minHeight: '0', display: 'flex', borderTop: `1px solid ${BORDER}` }}>
+    <div className="r-flex-stack" style={{ flex: '1', minHeight: '0', display: 'flex', borderTop: `1px solid ${BORDER}` }}>
       <TicketList status={status} setStatus={setStatus} counts={counts} input={input} setInput={setInput} list={list} selectedId={ticket?.id} onSelect={setSelectedId} now={now} />
       {ticket ? (
         <>

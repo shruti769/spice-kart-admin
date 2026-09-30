@@ -1,3 +1,4 @@
+import { useState } from 'react'
 import { useAdminState } from './state/useAdminState'
 import Sidebar from './components/Sidebar'
 import Header from './components/Header'
@@ -54,11 +55,13 @@ import Toast from './components/Toast'
 
 export default function App() {
   const v = useAdminState()
+  // Phone / tablet: the sidebar slides in as a drawer from the header's menu button.
+  const [navOpen, setNavOpen] = useState(false)
   return (
-    <div style={{ width: "100%", height: "100dvh", minWidth: "1440px", minHeight: "600px", display: "flex", background: "#F6F7F4", position: "relative", overflow: "hidden", fontFamily: "Inter,system-ui,sans-serif" }}>
-      <Sidebar v={v} />
+    <div className="sk-app" style={{ width: "100%", height: "100dvh", minWidth: "1440px", minHeight: "600px", display: "flex", background: "#F6F7F4", position: "relative", overflow: "hidden", fontFamily: "Inter,system-ui,sans-serif" }}>
+      <Sidebar v={v} open={navOpen} onClose={() => setNavOpen(false)} />
       <main style={{ flex: "1", minWidth: "0", display: "flex", flexDirection: "column" }}>
-        <Header v={v} />
+        <Header v={v} onMenu={() => setNavOpen(true)} />
         {v.p_dash && <Dashboard v={v} />}
         {v.p_orders && <Orders v={v} />}
         {v.p_orderdetail && <OrderDetail v={v} />}

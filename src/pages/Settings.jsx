@@ -246,12 +246,12 @@ export default function Settings({ v }) {
 
   return (
     <>
-      <div style={{ display: "flex", alignItems: "flex-end", gap: "18px", padding: "24px 26px 2px" }}>
+      <div className="sk-topbar" style={{ display: "flex", alignItems: "flex-end", gap: "18px", padding: "24px 26px 2px" }}>
         <span style={{ display: "flex", flexDirection: "column", gap: "5px", minWidth: "0" }}>
           <span style={{ font: "700 20px/1.2 Inter,system-ui,sans-serif", color: "#17201A", whiteSpace: "nowrap" }}>Settings</span>
           <span style={{ font: "400 12.5px/1.2 Inter,system-ui,sans-serif", color: "#7C8A81", whiteSpace: "nowrap" }}>{storeQ.store ? `Store configuration for ${storeQ.store.name}` : "Store configuration"}</span>
         </span>
-        <span style={{ marginLeft: "auto", display: "flex", alignItems: "center", gap: "8px" }}>
+        <span className="r-wrap" style={{ marginLeft: "auto", display: "flex", alignItems: "center", gap: "8px" }}>
           <button className="hv1" onClick={discardChanges}style={{ display: "flex", alignItems: "center", gap: "7px", height: "34px", padding: "0 12px", border: "1px solid #E4E7E2", borderRadius: "8px", background: "#fff", color: "#17201A", font: "600 12.5px/1.2 Inter,system-ui,sans-serif", cursor: "pointer", whiteSpace: "nowrap" }}>
             Discard changes
           </button>
@@ -263,9 +263,9 @@ export default function Settings({ v }) {
           </button>
         </span>
       </div>
-      <div ref={scrollRef} className="ad-scroll" style={{ flex: "1", minHeight: "0", overflowY: "auto", padding: "20px 26px 30px", display: "flex", flexDirection: "column", gap: "18px" }}>
-        <div style={{ display: "grid", gridTemplateColumns: "200px 1fr", gap: "18px", alignItems: "start" }}>
-          <div style={{ position: "sticky", top: "0", background: "#fff", border: "1px solid #E4E7E2", borderRadius: "10px", padding: "8px", display: "flex", flexDirection: "column", gap: "2px" }}>
+      <div ref={scrollRef} className="ad-scroll sk-page" style={{ flex: "1", minHeight: "0", overflowY: "auto", padding: "20px 26px 30px", display: "flex", flexDirection: "column", gap: "18px" }}>
+        <div className="r-stack-sm" style={{ display: "grid", gridTemplateColumns: "200px 1fr", gap: "18px", alignItems: "start" }}>
+          <div className="r-hide-sm" style={{ position: "sticky", top: "0", background: "#fff", border: "1px solid #E4E7E2", borderRadius: "10px", padding: "8px", display: "flex", flexDirection: "column", gap: "2px" }}>
             {SECTIONS.map((s) => (
               <button key={s.id} className="hv6" onClick={() => goTo(s.id)} style={{ display: "flex", alignItems: "center", gap: "9px", border: "0", background: active === s.id ? "#F1F9DF" : "transparent", color: active === s.id ? "#0B3D1F" : "#4A564E", borderRadius: "7px", padding: "0 10px", height: "34px", font: "600 12.5px/1.2 Inter,system-ui,sans-serif", cursor: "pointer", textAlign: "left" }}>
                 {s.label}
@@ -284,7 +284,7 @@ export default function Settings({ v }) {
                   No store yet. Add your store's details and press Save settings. Every customer order goes to this store, and the app can't take orders until it exists.
                 </span>
               )}
-              <div style={{ display: "grid", gridTemplateColumns: "repeat(2,1fr)", gap: "11px" }}>
+              <div className="r-stack-sm" style={{ display: "grid", gridTemplateColumns: "repeat(2,1fr)", gap: "11px" }}>
                 {STORE_FIELDS.map(([key, label, placeholder, wide]) => (
                   <label key={key} style={{ display: "flex", flexDirection: "column", gap: "6px", ...(wide ? { gridColumn: "span 2" } : null) }}>
                     <span style={{ font: "600 10.5px/1.2 Inter,system-ui,sans-serif", letterSpacing: ".4px", color: "#7C8A81", textTransform: "uppercase", whiteSpace: "nowrap" }}>{label}</span>
@@ -313,7 +313,7 @@ export default function Settings({ v }) {
                 {deliveryDirty && <span style={{ padding: "3px 8px", borderRadius: "6px", background: "#FFF4DB", color: "#8A5A00", font: "600 10.5px/1.2 Inter,system-ui,sans-serif" }}>Unsaved changes</span>}
                 {delivery.status === "error" && <span style={{ font: "400 11.5px/1.2 Inter,system-ui,sans-serif", color: "#B3402F" }}>Couldn't load · {delivery.error}</span>}
               </span>
-              <div style={{ display: "grid", gridTemplateColumns: "repeat(2,1fr)", gap: "11px" }}>
+              <div className="r-stack-sm" style={{ display: "grid", gridTemplateColumns: "repeat(2,1fr)", gap: "11px" }}>
                 {DELIVERY_FIELDS.map(([key, label, unit]) => (
                   <label key={key} style={{ display: "flex", flexDirection: "column", gap: "6px" }}>
                     <span style={{ font: "600 10.5px/1.2 Inter,system-ui,sans-serif", letterSpacing: ".4px", color: "#7C8A81", textTransform: "uppercase", whiteSpace: "nowrap" }}>

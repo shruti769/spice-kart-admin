@@ -191,13 +191,13 @@ export default function Refunds({ v }) {
 
   return (
     <>
-      <div style={{ display: 'flex', alignItems: 'flex-end', gap: '18px', padding: '24px 26px 2px' }}>
+      <div className="sk-topbar" style={{ display: 'flex', alignItems: 'flex-end', gap: '18px', padding: '24px 26px 2px' }}>
         <span style={{ display: 'flex', flexDirection: 'column', gap: '5px', minWidth: '0' }}>
           <span style={{ font: `700 20px/1.2 ${FONT}`, color: INK, whiteSpace: 'nowrap' }}>Refunds</span>
           <span style={{ font: `400 12.5px/1.2 ${FONT}`, color: MUTED, whiteSpace: 'nowrap' }}>{subtitle}</span>
         </span>
-        <span style={{ marginLeft: 'auto', display: 'flex', alignItems: 'center', gap: '8px' }}>
-          <span style={{ display: 'flex', alignItems: 'center', gap: '8px', height: '34px', width: '230px', padding: '0 11px', border: `1px solid ${BORDER}`, borderRadius: '8px', background: '#fff' }}>
+        <span className="r-wrap" style={{ marginLeft: 'auto', display: 'flex', alignItems: 'center', gap: '8px' }}>
+          <span className="r-full" style={{ display: 'flex', alignItems: 'center', gap: '8px', height: '34px', width: '230px', padding: '0 11px', border: `1px solid ${BORDER}`, borderRadius: '8px', background: '#fff' }}>
             <svg width="15" height="15" viewBox="0 0 20 20" fill="none" style={{ flex: 'none' }}>
               <circle cx="9" cy="9" r="6" stroke={MUTED} strokeWidth="1.6" />
               <path d="M13.4 13.4L18 18" stroke={MUTED} strokeWidth="1.6" strokeLinecap="round" />
@@ -218,9 +218,9 @@ export default function Refunds({ v }) {
           </button>
         </span>
       </div>
-      <div className="ad-scroll" style={{ flex: '1', minHeight: '0', overflowY: 'auto', padding: '20px 26px 30px', display: 'flex', flexDirection: 'column', gap: '18px' }}>
+      <div className="ad-scroll sk-page" style={{ flex: '1', minHeight: '0', overflowY: 'auto', padding: '20px 26px 30px', display: 'flex', flexDirection: 'column', gap: '18px' }}>
         {list.status === 'error' && all.length > 0 && <span style={{ font: `400 12px/1.4 ${FONT}`, color: '#A93826' }}>{list.error}</span>}
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4,1fr)', gap: '14px' }}>
+        <div className="r-kpi" style={{ display: 'grid', gridTemplateColumns: 'repeat(4,1fr)', gap: '14px' }}>
           <Kpi
             icon="refund"
             label="Refunded this month"
@@ -265,7 +265,7 @@ export default function Refunds({ v }) {
         </div>
 
         {(showFilters || filtered) && (
-          <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginTop: '-6px' }}>
+          <div className="r-wrap" style={{ display: 'flex', alignItems: 'center', gap: '8px', marginTop: '-6px' }}>
             {showFilters && (
               <select value={reason} onChange={(e) => { setReason(e.target.value); setPage(1) }} style={selectBox} aria-label="Reason">
                 <option value="all">Reason: All</option>
@@ -278,8 +278,8 @@ export default function Refunds({ v }) {
           </div>
         )}
 
-        <div style={{ background: '#fff', border: `1px solid ${BORDER}`, borderRadius: '10px', overflow: 'hidden', flex: 'none' }}>
-          <div style={{ display: 'grid', gridTemplateColumns: COLS, gap: '14px', padding: '11px 16px', background: '#F6F7F4', borderBottom: `1px solid ${BORDER}` }}>
+        <div className="r-table-wrap" style={{ background: '#fff', border: `1px solid ${BORDER}`, borderRadius: '10px', overflow: 'hidden', flex: 'none' }}>
+          <div className="r-table" style={{ '--r-min': '1020px', display: 'grid', gridTemplateColumns: COLS, gap: '14px', padding: '11px 16px', background: '#F6F7F4', borderBottom: `1px solid ${BORDER}` }}>
             {['Refund', 'Order', 'Customer', 'Amount', 'Reason', 'Method', 'Status', 'Requested', 'Processed', 'Actions'].map((h) => <span key={h} style={head}>{h}</span>)}
           </div>
           {message ? (
@@ -288,7 +288,7 @@ export default function Refunds({ v }) {
             const [, label, fg, bg] = REFUND_STATUS[r.status] ?? REFUND_STATUS.pending
             const custId = r.customer_id ?? r.order?.customer_id
             return (
-              <div key={r.id} className="hv3" style={{ display: 'grid', gridTemplateColumns: COLS, gap: '14px', padding: '13px 16px', borderBottom: i < shown.length - 1 ? '1px solid #EFF1ED' : '0', alignItems: 'center' }}>
+              <div key={r.id} className="hv3 r-table" style={{ '--r-min': '1020px', display: 'grid', gridTemplateColumns: COLS, gap: '14px', padding: '13px 16px', borderBottom: i < shown.length - 1 ? '1px solid #EFF1ED' : '0', alignItems: 'center' }}>
                 <span style={cellWrap}><span style={strong}>{r.number}</span></span>
                 <span style={cellWrap}>
                   {r.order ? <button onClick={() => v.openOrder(r.order)} style={linkBtn}>#{r.order.number}</button> : <span style={soft}>—</span>}

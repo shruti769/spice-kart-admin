@@ -228,14 +228,14 @@ export default function CustomerDetail({ v }) {
 
   return (
     <>
-      <div style={{ display: 'flex', alignItems: 'flex-end', gap: '18px', padding: '24px 26px 2px' }}>
+      <div className="sk-topbar" style={{ display: 'flex', alignItems: 'flex-end', gap: '18px', padding: '24px 26px 2px' }}>
         <span style={{ display: 'flex', flexDirection: 'column', gap: '5px', minWidth: '0' }}>
           <span style={{ font: `700 20px/1.2 ${FONT}`, color: INK, ...ellipsis }}>{name}</span>
           <span style={{ font: `400 12.5px/1.2 ${FONT}`, color: MUTED, whiteSpace: 'nowrap' }}>
             Customer since {new Date(c.created_at).toLocaleDateString('en-AU', { month: 'long', year: 'numeric' })}{location ? ` · ${location}` : ''}
           </span>
         </span>
-        <span style={{ marginLeft: 'auto', display: 'flex', alignItems: 'center', gap: '8px' }}>
+        <span className="r-wrap" style={{ marginLeft: 'auto', display: 'flex', alignItems: 'center', gap: '8px' }}>
           <button className="hv1" onClick={() => setModal('notify')} style={topBtn}>Send notification</button>
           <button className="hv1" onClick={() => setModal('edit')} style={topBtn}>Edit customer</button>
           {suspended ? (
@@ -247,7 +247,7 @@ export default function CustomerDetail({ v }) {
           )}
         </span>
       </div>
-      <div className="ad-scroll" style={{ flex: '1', minHeight: '0', overflowY: 'auto', padding: '20px 26px 30px', display: 'flex', flexDirection: 'column', gap: '18px' }}>
+      <div className="ad-scroll sk-page" style={{ flex: '1', minHeight: '0', overflowY: 'auto', padding: '20px 26px 30px', display: 'flex', flexDirection: 'column', gap: '18px' }}>
         <button onClick={v.nav_cust} style={{ display: 'flex', alignItems: 'center', gap: '6px', border: '0', background: 'transparent', font: `600 11.5px/1.2 ${FONT}`, color: '#17693A', cursor: 'pointer', padding: '0', whiteSpace: 'nowrap', alignSelf: 'flex-start' }}>
           <svg width="13" height="13" viewBox="0 0 20 20" fill="none" style={{ flex: 'none' }}>
             <path d="M12.4 4.4L6.8 10l5.6 5.6" stroke="#17693A" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round" />
@@ -256,14 +256,14 @@ export default function CustomerDetail({ v }) {
         </button>
         {detail.status === 'error' && <span style={{ font: `500 12px/1.4 ${FONT}`, color: '#A93826' }}>Couldn’t refresh · {detail.error}</span>}
 
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4,1fr)', gap: '14px' }}>
+        <div className="r-kpi" style={{ display: 'grid', gridTemplateColumns: 'repeat(4,1fr)', gap: '14px' }}>
           <Kpi icon={ICONS.orders} label="Total orders" value={num(orderCount)} note={thisMonth ? `▲ ${num(thisMonth)} this month` : 'None this month'} tone={thisMonth ? GREEN : GREY} />
           <Kpi icon={ICONS.spend} label="Total spend" value={moneyAU(c.total_spend)} note="Lifetime value" />
           <Kpi icon={ICONS.average} label="Average order" value={orderCount ? moneyAU(avg) : '—'} note={orderCount ? `Across ${plural(orderCount, 'order')}` : 'No orders yet'} tone={orderCount ? GREEN : GREY} />
           <Kpi icon={ICONS.refunds} label="Refunds" value={num(refunds.length)} note={refundNote} tone={GREY} />
         </div>
 
-        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1.8fr', gap: '18px', alignItems: 'start' }}>
+        <div className="r-stack" style={{ display: 'grid', gridTemplateColumns: '1fr 1.8fr', gap: '18px', alignItems: 'start' }}>
           <div style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
             <div style={card('18px', '14px')}>
               <span style={{ display: 'flex', alignItems: 'center', gap: '11px' }}>
@@ -337,8 +337,8 @@ export default function CustomerDetail({ v }) {
           <div style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
             <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
               <span style={cardTitle}>Order history</span>
-              <div style={{ background: '#fff', border: `1px solid ${BORDER}`, borderRadius: '10px', overflow: 'hidden', flex: 'none' }}>
-                <div style={{ display: 'grid', gridTemplateColumns: COLS, gap: '14px', padding: '11px 16px', background: '#F6F7F4', borderBottom: `1px solid ${BORDER}` }}>
+              <div className="r-table-wrap" style={{ background: '#fff', border: `1px solid ${BORDER}`, borderRadius: '10px', overflow: 'hidden', flex: 'none' }}>
+                <div className="r-table" style={{ display: 'grid', gridTemplateColumns: COLS, gap: '14px', padding: '11px 16px', background: '#F6F7F4', borderBottom: `1px solid ${BORDER}` }}>
                   {['Order', 'Items', 'Value', 'Payment', 'Status', 'Date'].map((h) => <span key={h} style={head}>{h}</span>)}
                 </div>
                 {shown.length === 0 && (
@@ -351,7 +351,7 @@ export default function CustomerDetail({ v }) {
                   return (
                     <div
                       key={o.id}
-                      className="hv3"
+                      className="hv3 r-table"
                       role="button"
                       tabIndex={0}
                       onClick={() => v.openOrder(o)}
@@ -378,7 +378,7 @@ export default function CustomerDetail({ v }) {
               </div>
             </div>
 
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '18px' }}>
+            <div className="r-stack" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '18px' }}>
               <div style={card()}>
                 <span style={cardTitle}>Reviews left{d.reviewCount > reviews.length ? ` · ${num(d.reviewCount)}` : ''}</span>
                 {d.reviewsError && <span style={empty}>{d.reviewsError}</span>}

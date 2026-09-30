@@ -107,13 +107,13 @@ export default function Notifications({ v }) {
 
   return (
     <>
-      <div style={{ display: 'flex', alignItems: 'flex-end', gap: '18px', padding: '24px 26px 2px' }}>
+      <div className="sk-topbar" style={{ display: 'flex', alignItems: 'flex-end', gap: '18px', padding: '24px 26px 2px' }}>
         <span style={{ display: 'flex', flexDirection: 'column', gap: '5px', minWidth: '0' }}>
           <span style={{ font: `700 20px/1.2 ${FONT}`, color: INK, whiteSpace: 'nowrap' }}>Notifications</span>
           <span style={{ font: `400 12.5px/1.2 ${FONT}`, color: MUTED, whiteSpace: 'nowrap' }}>Push campaigns to the Spice Kart app · live</span>
         </span>
-        <span style={{ marginLeft: 'auto', display: 'flex', alignItems: 'center', gap: '8px' }}>
-          <span style={{ display: 'flex', alignItems: 'center', gap: '8px', height: '34px', width: '220px', padding: '0 11px', border: `1px solid ${BORDER}`, borderRadius: '8px', background: '#fff' }}>
+        <span className="r-wrap" style={{ marginLeft: 'auto', display: 'flex', alignItems: 'center', gap: '8px' }}>
+          <span className="r-full" style={{ display: 'flex', alignItems: 'center', gap: '8px', height: '34px', width: '220px', padding: '0 11px', border: `1px solid ${BORDER}`, borderRadius: '8px', background: '#fff' }}>
             <svg width="15" height="15" viewBox="0 0 20 20" fill="none" style={{ flex: 'none' }}><circle cx="9" cy="9" r="6" stroke={MUTED} strokeWidth="1.6" /><path d="M13.4 13.4L18 18" stroke={MUTED} strokeWidth="1.6" strokeLinecap="round" /></svg>
             <input value={q} onChange={(e) => setQ(e.target.value)} placeholder="Search campaigns…" style={{ border: '0', outline: 'none', background: 'transparent', font: `400 12.5px/1.2 ${FONT}`, color: INK, width: '100%' }} />
           </span>
@@ -124,15 +124,15 @@ export default function Notifications({ v }) {
           </button>
         </span>
       </div>
-      <div className="ad-scroll" style={{ flex: '1', minHeight: '0', overflowY: 'auto', padding: '20px 26px 30px', display: 'flex', flexDirection: 'column', gap: '18px' }}>
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4,1fr)', gap: '14px' }}>
+      <div className="ad-scroll sk-page" style={{ flex: '1', minHeight: '0', overflowY: 'auto', padding: '20px 26px 30px', display: 'flex', flexDirection: 'column', gap: '18px' }}>
+        <div className="r-kpi" style={{ display: 'grid', gridTemplateColumns: 'repeat(4,1fr)', gap: '14px' }}>
           <Stat label="Notifications sent · 30 days" value={num(totals.recipients)} note={`Across ${recent.length} campaign${recent.length === 1 ? '' : 's'}`} />
           <Stat label="Push delivered" value={pct(totals.pushed, totals.recipients)} note="Reached a device (others are in-app only)" />
           <Stat label="Open rate" value={pct(totals.opened, totals.recipients)} note="Tapped in the app or on the phone" />
           <Stat label="Next scheduled" value={next ? dateTime(next.scheduled_at) : 'None'} note={next ? next.title : `Auto order updates · ${num(automated.data?.total ?? null)} in 30 days`} />
         </div>
 
-        <div style={{ display: 'flex', gap: '2px', borderBottom: `1px solid ${BORDER}` }}>
+        <div className="r-wrap" style={{ display: 'flex', gap: '2px', borderBottom: `1px solid ${BORDER}` }}>
           {TABS.map(([k, label]) => {
             const on = tab === k
             return (
@@ -143,8 +143,8 @@ export default function Notifications({ v }) {
           })}
         </div>
 
-        <div style={{ background: '#fff', border: `1px solid ${BORDER}`, borderRadius: '10px', overflow: 'hidden' }}>
-          <div style={{ display: 'grid', gridTemplateColumns: COLS, gap: '12px', padding: '11px 16px', background: '#F6F7F4', borderBottom: `1px solid ${BORDER}` }}>
+        <div className="r-table-wrap" style={{ background: '#fff', border: `1px solid ${BORDER}`, borderRadius: '10px', overflow: 'hidden' }}>
+          <div className="r-table" style={{ '--r-min': '1040px', display: 'grid', gridTemplateColumns: COLS, gap: '12px', padding: '11px 16px', background: '#F6F7F4', borderBottom: `1px solid ${BORDER}` }}>
             {['Campaign', 'Type', 'Audience', 'Recipients', 'Delivered', 'Opened', 'Schedule', 'Status'].map((h) => <span key={h} style={head}>{h}</span>)}
             <span style={{ ...head, textAlign: 'right' }}>Actions</span>
           </div>
@@ -157,7 +157,7 @@ export default function Notifications({ v }) {
             const s = c.stats
             const editable = st === 'draft' || st === 'scheduled'
             return (
-              <div key={c.id} className="hv3" style={{ display: 'grid', gridTemplateColumns: COLS, gap: '12px', padding: '12px 16px', borderTop: i ? '1px solid #EFF1ED' : '0', alignItems: 'center', opacity: busy === c.id ? 0.5 : 1 }}>
+              <div key={c.id} className="hv3 r-table" style={{ '--r-min': '1040px', display: 'grid', gridTemplateColumns: COLS, gap: '12px', padding: '12px 16px', borderTop: i ? '1px solid #EFF1ED' : '0', alignItems: 'center', opacity: busy === c.id ? 0.5 : 1 }}>
                 <span style={{ display: 'flex', flexDirection: 'column', gap: '4px', minWidth: '0' }}>
                   <span style={{ ...cell, font: `600 13px/1.2 ${FONT}`, color: INK }}>{c.title}</span>
                   <span style={{ ...cell, font: `400 11.5px/1.2 ${FONT}`, color: MUTED }}>{c.message}</span>

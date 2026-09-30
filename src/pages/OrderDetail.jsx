@@ -144,12 +144,12 @@ export default function OrderDetail({ v }) {
 
   return (
     <>
-      <div style={{ display: 'flex', alignItems: 'flex-start', gap: '18px', padding: '24px 26px 4px' }}>
+      <div className="sk-topbar" style={{ display: 'flex', alignItems: 'flex-start', gap: '18px', padding: '24px 26px 4px' }}>
         <span style={{ display: 'flex', flexDirection: 'column', gap: '6px', minWidth: '0' }}>
           <span style={{ font: `700 22px/1.2 ${FONT}`, color: INK, whiteSpace: 'nowrap' }}>Order #{o.number}</span>
           <span style={{ font: `400 13px/1.2 ${FONT}`, color: MUTED }}>Placed {placedLabel(o.placed_at).replace(/^Today /, 'today at ').replace(/^Yesterday /, 'yesterday at ')} · {typeLabel}</span>
         </span>
-        <span style={{ marginLeft: 'auto', display: 'flex', alignItems: 'center', gap: '8px' }}>
+        <span className="r-wrap" style={{ marginLeft: 'auto', display: 'flex', alignItems: 'center', gap: '8px' }}>
           <button className="hv1" onClick={() => { if (!printInvoice(o, gstRate)) v.flash('Allow pop-ups for this site to print the invoice') }} style={btn}>Print invoice</button>
           <span style={{ position: 'relative' }}>
             <button className="hv1" onClick={() => setMenu(menu === 'contact' ? null : 'contact')} style={btn}>Contact customer</button>
@@ -190,8 +190,8 @@ export default function OrderDetail({ v }) {
         </span>
       </div>
 
-      <div className="ad-scroll" style={{ flex: '1', minHeight: '0', overflowY: 'auto', padding: '12px 26px 30px', display: 'flex', flexDirection: 'column', gap: '16px' }}>
-        <span style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+      <div className="ad-scroll sk-page" style={{ flex: '1', minHeight: '0', overflowY: 'auto', padding: '12px 26px 30px', display: 'flex', flexDirection: 'column', gap: '16px' }}>
+        <span className="r-wrap" style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
           <button onClick={v.nav_orders} style={{ display: 'flex', alignItems: 'center', gap: '6px', border: '0', background: 'transparent', padding: '0 12px 0 0', borderRight: `1px solid ${BORDER}`, font: `600 13px/1.2 ${FONT}`, color: '#1B5E30', cursor: 'pointer' }}>
             <svg width="13" height="13" viewBox="0 0 20 20" fill="none"><path d="M12.4 4.4L7 10l5.4 5.6" stroke="#1B5E30" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" /></svg>
             Back to orders
@@ -216,7 +216,7 @@ export default function OrderDetail({ v }) {
           </div>
         )}
 
-        <div style={{ display: 'grid', gridTemplateColumns: 'minmax(0,1.75fr) minmax(290px,1fr)', gap: '18px', alignItems: 'start' }}>
+        <div className="r-stack" style={{ display: 'grid', gridTemplateColumns: 'minmax(0,1.75fr) minmax(290px,1fr)', gap: '18px', alignItems: 'start' }}>
           <div style={{ display: 'flex', flexDirection: 'column', gap: '18px', minWidth: '0' }}>
             <div style={card}>
               <div style={cardHead}>Order items · {items.reduce((n, i) => n + i.qty, 0)}</div>

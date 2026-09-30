@@ -34,7 +34,7 @@ export default function Support({ v }) {
 
   return (
     <>
-      <div style={{ display: 'flex', alignItems: 'flex-end', gap: '18px', padding: '24px 26px 0' }}>
+      <div className="sk-topbar" style={{ display: 'flex', alignItems: 'flex-end', gap: '18px', padding: '24px 26px 0' }}>
         <span style={{ display: 'flex', flexDirection: 'column', gap: '5px', minWidth: '0' }}>
           <span style={{ font: `700 20px/1.2 ${FONT}`, color: '#17201A', whiteSpace: 'nowrap' }}>Support</span>
           <span style={{ font: `400 12.5px/1.2 ${FONT}`, color: '#7C8A81', whiteSpace: 'nowrap' }}>{subtitle(summary)}</span>

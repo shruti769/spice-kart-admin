@@ -100,7 +100,7 @@ function LowStockRows({ v, stats }) {
   return rows.map((p, i) => {
     const [label, fg, bg] = stockPill(p)
     return (
-      <div key={p.id} className="hv3" style={{ display: "grid", gridTemplateColumns: "1.6fr .5fr .6fr .9fr 110px", gap: "14px", padding: "13px 16px", borderBottom: i === rows.length - 1 ? "0" : "1px solid #EFF1ED", alignItems: "center" }}>
+      <div key={p.id} className="hv3 r-table" style={{ display: "grid", gridTemplateColumns: "1.6fr .5fr .6fr .9fr 110px", gap: "14px", padding: "13px 16px", borderBottom: i === rows.length - 1 ? "0" : "1px solid #EFF1ED", alignItems: "center" }}>
         <span style={cellWrap}>
           <span style={{ display: "flex", flexDirection: "column", gap: "3px", minWidth: "0" }}>
             <span style={{ font: `600 12.5px/1.2 ${FONT}`, color: "#17201A", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{p.name}</span>
@@ -144,8 +144,8 @@ function RecentOrders({ v, now }) {
   else if (!rows.length) message = 'No orders yet · orders placed in the app appear here instantly.'
 
   return (
-    <div style={{ background: "#fff", border: "1px solid #E4E7E2", borderRadius: "10px", overflow: "hidden", flex: "none" }}>
-      <div style={{ display: "grid", gridTemplateColumns: ORDER_COLS, gap: "14px", padding: "11px 16px", background: "#F6F7F4", borderBottom: "1px solid #E4E7E2" }}>
+    <div className="r-table-wrap" style={{ background: "#fff", border: "1px solid #E4E7E2", borderRadius: "10px", overflow: "hidden", flex: "none" }}>
+      <div className="r-table" style={{ '--r-min': '900px', display: "grid", gridTemplateColumns: ORDER_COLS, gap: "14px", padding: "11px 16px", background: "#F6F7F4", borderBottom: "1px solid #E4E7E2" }}>
         {['Order', 'Customer', 'Items', 'Value', 'Type', 'Payment', 'Status', 'Time', 'Actions'].map((h) => <span key={h} style={colHead}>{h}</span>)}
       </div>
       {message ? (
@@ -157,7 +157,7 @@ function RecentOrders({ v, now }) {
         const [pl, pfg, pbg] = PAYMENT_STATUS_PILL[o.payment_status] ?? PAYMENT_STATUS_PILL.pending
         const n = itemCount(o)
         return (
-          <div key={o.id} className="hv3" style={{ display: "grid", gridTemplateColumns: ORDER_COLS, gap: "14px", padding: "13px 16px", borderBottom: i === rows.length - 1 ? "0" : "1px solid #EFF1ED", alignItems: "center" }}>
+          <div key={o.id} className="hv3 r-table" style={{ '--r-min': '900px', display: "grid", gridTemplateColumns: ORDER_COLS, gap: "14px", padding: "13px 16px", borderBottom: i === rows.length - 1 ? "0" : "1px solid #EFF1ED", alignItems: "center" }}>
             <span style={cellWrap}><span style={strong}>#{o.number}</span></span>
             <span style={cellWrap}>
               <span style={{ width: "28px", height: "28px", borderRadius: "7px", background: "#F6F7F4", border: "1px solid #E4E7E2", display: "flex", alignItems: "center", justifyContent: "center", font: `600 10.5px/1.2 ${FONT}`, color: "#4A564E", flex: "none" }}>
@@ -188,7 +188,7 @@ function RecentOrders({ v, now }) {
           </div>
         )
       })}
-      <div style={{ display: "flex", alignItems: "center", gap: "12px", padding: "12px 16px", borderTop: "1px solid #E4E7E2", background: "#fff" }}>
+      <div className="r-wrap" style={{ display: "flex", alignItems: "center", gap: "12px", padding: "12px 16px", borderTop: "1px solid #E4E7E2", background: "#fff" }}>
         <span style={{ font: `400 11.5px/1.2 ${FONT}`, color: "#7C8A81", whiteSpace: "nowrap" }}>
           {total ? `Showing ${page * PAGE + 1}–${page * PAGE + rows.length} of ${num(total)} order${total === 1 ? '' : 's'}` : 'Showing 0 orders'}
         </span>
@@ -267,14 +267,14 @@ export default function Dashboard({ v }) {
 
   return (
     <>
-      <div style={{ display: "flex", alignItems: "flex-end", gap: "18px", padding: "24px 26px 2px" }}>
+      <div className="sk-topbar" style={{ display: "flex", alignItems: "flex-end", gap: "18px", padding: "24px 26px 2px" }}>
         <span style={{ display: "flex", flexDirection: "column", gap: "5px", minWidth: "0" }}>
           <span style={{ font: `700 20px/1.2 ${FONT}`, color: "#17201A", whiteSpace: "nowrap" }}>{greeting(now)}, {v.userFirstName}</span>
           <span style={{ font: `400 12.5px/1.2 ${FONT}`, color: "#7C8A81", whiteSpace: "nowrap" }}>
             Here’s what’s happening with Spice Kart today · {longDate(now)}
           </span>
         </span>
-        <span style={{ marginLeft: "auto", display: "flex", alignItems: "center", gap: "8px" }}>
+        <span className="r-wrap" style={{ marginLeft: "auto", display: "flex", alignItems: "center", gap: "8px" }}>
           <GlobalSearch v={v} placeholder="Search anything…" width="210px" align="right" />
           <button className="hv1" onClick={() => pickRange('custom')} style={{ display: "flex", alignItems: "center", gap: "7px", height: "34px", padding: "0 12px", border: "1px solid #E4E7E2", borderRadius: "8px", background: "#fff", color: "#17201A", font: `600 12.5px/1.2 ${FONT}`, cursor: "pointer" }}>
             <svg width="15" height="15" viewBox="0 0 20 20" fill="none" style={{ flex: "none" }}>
@@ -291,14 +291,14 @@ export default function Dashboard({ v }) {
           </button>
         </span>
       </div>
-      <div className="ad-scroll" style={{ flex: "1", minHeight: "0", overflowY: "auto", padding: "20px 26px 30px", display: "flex", flexDirection: "column", gap: "18px" }}>
+      <div className="ad-scroll sk-page" style={{ flex: "1", minHeight: "0", overflowY: "auto", padding: "20px 26px 30px", display: "flex", flexDirection: "column", gap: "18px" }}>
         {stats.status === 'error' && (
           <span style={{ font: `400 12px/1.45 ${FONT}`, color: "#B3402F" }}>Couldn’t load dashboard numbers · {stats.error}</span>
         )}
         {stats.status === 'off' && (
           <span style={{ font: `400 12px/1.45 ${FONT}`, color: "#7C8A81" }}>Supabase keys are missing · add them to .env to load live numbers.</span>
         )}
-        <div style={{ display: "grid", gridTemplateColumns: "repeat(6,1fr)", gap: "14px" }}>
+        <div className="r-kpi" style={{ display: "grid", gridTemplateColumns: "repeat(6,1fr)", gap: "14px" }}>
           <Kpi icon={ICONS.orders} label="Today’s orders" value={ready ? num(d.today.current.orders) : '—'} note={ready ? `${tOrders.text} vs yesterday` : '—'} tone={ready ? tOrders.tone : 'flat'} />
           <Kpi icon={ICONS.revenue} label="Today’s revenue" value={ready ? audShort(d.today.current.revenue) : '—'} note={ready ? `${tRevenue.text} vs yesterday` : '—'} tone={ready ? tRevenue.tone : 'flat'} />
           <Kpi icon={ICONS.customers} label="Active customers" value={ready ? num(d.month.current.customers) : '—'} note={ready ? `${active.text} vs prior 30d` : '—'} tone={ready ? active.tone : 'flat'} />
@@ -306,9 +306,9 @@ export default function Dashboard({ v }) {
           <Kpi icon={ICONS.stock} label="Low stock products" value={ready ? num(lowCount) : '—'} note={ready && !lowCount ? 'All above minimum' : 'Requires action'} tone={ready && !lowCount ? 'flat' : 'bad'} />
           <Kpi icon={ICONS.delivery} label="Active deliveries" value={ready ? num(d.onRoad) : '—'} note="Currently on the road" tone="flat" />
         </div>
-        <div style={{ display: "grid", gridTemplateColumns: "1.55fr 1fr", gap: "18px" }}>
+        <div className="r-stack" style={{ display: "grid", gridTemplateColumns: "1.55fr 1fr", gap: "18px" }}>
           <div style={{ background: "#fff", border: "1px solid #E4E7E2", borderRadius: "10px", padding: "15px", display: "flex", flexDirection: "column", gap: "14px" }}>
-            <div style={{ display: "flex", alignItems: "flex-start", gap: "12px" }}>
+            <div className="r-wrap" style={{ display: "flex", alignItems: "flex-start", gap: "12px" }}>
               <span style={{ display: "flex", flexDirection: "column", gap: "4px" }}>
                 <span style={{ font: `600 13.5px/1.2 ${FONT}`, color: "#17201A", whiteSpace: "nowrap" }}>Revenue & orders</span>
                 <span style={{ font: `400 11.5px/1.2 ${FONT}`, color: "#7C8A81", whiteSpace: "nowrap" }}>{range.label} · {d?.bucketUnit ?? (range.days === 1 ? 'hourly' : 'daily')}</span>
@@ -344,7 +344,7 @@ export default function Dashboard({ v }) {
                 </span>
               )}
             </div>
-            <div style={{ display: "flex", alignItems: "center", gap: "16px", borderTop: "1px solid #EFF1ED", paddingTop: "11px" }}>
+            <div className="r-wrap" style={{ display: "flex", alignItems: "center", gap: "16px", borderTop: "1px solid #EFF1ED", paddingTop: "11px" }}>
               <span style={{ display: "flex", alignItems: "center", gap: "6px" }}>
                 <span style={{ width: "9px", height: "9px", borderRadius: "3px", background: "#0B3D1F", display: "block" }} />
                 <span style={{ font: `500 11.5px/1.2 ${FONT}`, color: "#4A564E", whiteSpace: "nowrap" }}>Revenue · {ready ? audShort(d.range.current.revenue) : '—'}</span>
@@ -379,7 +379,7 @@ export default function Dashboard({ v }) {
             </div>
           </div>
         </div>
-        <div style={{ display: "grid", gridTemplateColumns: "1.55fr 1fr", gap: "18px", alignItems: "start" }}>
+        <div className="r-stack" style={{ display: "grid", gridTemplateColumns: "1.55fr 1fr", gap: "18px", alignItems: "start" }}>
           <div style={{ display: "flex", flexDirection: "column", gap: "10px" }}>
             <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
               <span style={{ font: `600 14px/1.2 ${FONT}`, color: "#17201A", whiteSpace: "nowrap" }}>Recent orders</span>
@@ -396,8 +396,8 @@ export default function Dashboard({ v }) {
                 Inventory →
               </button>
             </div>
-            <div style={{ background: "#fff", border: "1px solid #E4E7E2", borderRadius: "10px", overflow: "hidden", flex: "none" }}>
-              <div style={{ display: "grid", gridTemplateColumns: "1.6fr .5fr .6fr .9fr 110px", gap: "14px", padding: "11px 16px", background: "#F6F7F4", borderBottom: "1px solid #E4E7E2" }}>
+            <div className="r-table-wrap" style={{ background: "#fff", border: "1px solid #E4E7E2", borderRadius: "10px", overflow: "hidden", flex: "none" }}>
+              <div className="r-table" style={{ display: "grid", gridTemplateColumns: "1.6fr .5fr .6fr .9fr 110px", gap: "14px", padding: "11px 16px", background: "#F6F7F4", borderBottom: "1px solid #E4E7E2" }}>
                 {['Product', 'Stock', 'Min', 'Status', 'Action'].map((h) => <span key={h} style={{ ...colHead, textOverflow: "ellipsis" }}>{h}</span>)}
               </div>
               <LowStockRows v={v} stats={stats} />

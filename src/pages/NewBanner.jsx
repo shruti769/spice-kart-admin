@@ -189,7 +189,7 @@ export default function NewBanner({ v }) {
 
   return (
     <>
-      <div style={{ display: 'flex', alignItems: 'flex-end', gap: '18px', padding: '24px 26px 2px' }}>
+      <div className="sk-topbar" style={{ display: 'flex', alignItems: 'flex-end', gap: '18px', padding: '24px 26px 2px' }}>
         <span style={{ display: 'flex', flexDirection: 'column', gap: '5px', minWidth: '0' }}>
           <span style={{ display: 'flex', alignItems: 'center', gap: '9px' }}>
             <span style={{ font: `700 20px/1.2 ${FONT}`, color: '#17201A', whiteSpace: 'nowrap' }}>{editing ? 'Edit banner' : 'Create banner'}</span>
@@ -197,7 +197,7 @@ export default function NewBanner({ v }) {
           </span>
           <span style={{ font: `400 12.5px/1.2 ${FONT}`, color: '#7C8A81', whiteSpace: 'nowrap' }}>{editing ? editing.title : 'Homepage banner for the Spice Kart app'}</span>
         </span>
-        <span style={{ marginLeft: 'auto', display: 'flex', alignItems: 'center', gap: '8px' }}>
+        <span className="r-wrap" style={{ marginLeft: 'auto', display: 'flex', alignItems: 'center', gap: '8px' }}>
           <button className="hv1" onClick={v.bannerDone} disabled={saving} style={btnSecondary}>{editing ? 'Cancel' : 'Discard'}</button>
           {editing && confirmDelete && <button className="hv1" onClick={() => setConfirmDelete(false)} disabled={saving} style={btnSecondary}>Keep banner</button>}
           {editing && (
@@ -216,12 +216,12 @@ export default function NewBanner({ v }) {
           </button>
         </span>
       </div>
-      <div className="ad-scroll" style={{ flex: '1', minHeight: '0', overflowY: 'auto', padding: '20px 26px 30px', display: 'flex', flexDirection: 'column', gap: '18px' }}>
-        <div style={{ display: 'grid', gridTemplateColumns: '1.5fr 1fr', gap: '18px', alignItems: 'start' }}>
+      <div className="ad-scroll sk-page" style={{ flex: '1', minHeight: '0', overflowY: 'auto', padding: '20px 26px 30px', display: 'flex', flexDirection: 'column', gap: '18px' }}>
+        <div className="r-stack" style={{ display: 'grid', gridTemplateColumns: '1.5fr 1fr', gap: '18px', alignItems: 'start' }}>
           <div style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
             <div style={cardStyle}>
               <span style={cardTitle}>Banner content</span>
-              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2,1fr)', gap: '11px' }}>
+              <div className="r-stack-sm" style={{ display: 'grid', gridTemplateColumns: 'repeat(2,1fr)', gap: '11px' }}>
                 <Field label="Title" error={errors.title} hint={`${form.title.length}/40`}>
                   <input className="sk-input" value={form.title} maxLength={40} placeholder="e.g. Fresh picks for your kitchen" onChange={onText('title')} style={withError(boxBase, errors.title)} />
                 </Field>

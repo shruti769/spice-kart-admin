@@ -145,7 +145,7 @@ function AssignDriver({ orders = [], drivers, load = {}, preselect, preselectDri
         </span>
 
         {form && (
-          <div style={{ border: `1px solid #C7E88A`, background: '#F7FCEE', borderRadius: '9px', padding: '12px', display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '9px' }}>
+          <div className="r-stack-sm" style={{ border: `1px solid #C7E88A`, background: '#F7FCEE', borderRadius: '9px', padding: '12px', display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '9px' }}>
             <input autoFocus value={form.name} maxLength={80} onChange={(e) => setForm({ ...form, name: e.target.value })} placeholder="Name *" style={inputStyle} />
             <input value={form.phone} maxLength={20} onChange={(e) => setForm({ ...form, phone: e.target.value })} placeholder="Mobile, e.g. 0412 345 678" inputMode="tel" style={inputStyle} />
             <input value={form.vehicle} maxLength={60} onChange={(e) => setForm({ ...form, vehicle: e.target.value })} placeholder="Vehicle, e.g. Car · ABC123" style={inputStyle} />

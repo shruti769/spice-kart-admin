@@ -1,8 +1,8 @@
 export default function CancelOrderModal({ v }) {
   return (
     <>
-      <div onClick={v.closeModal} style={{ position: "absolute", inset: "0", zIndex: "90", background: "rgba(14,22,16,.45)", display: "flex", alignItems: "center", justifyContent: "center", padding: "40px" }}>
-        <div style={{ width: "460px", maxWidth: "100%", background: "#fff", borderRadius: "14px", boxShadow: "0 26px 60px rgba(10,18,12,.3)", overflow: "hidden", display: "flex", flexDirection: "column" }}>
+      <div className="sk-overlay" onClick={v.closeModal} style={{ position: "absolute", inset: "0", zIndex: "90", background: "rgba(14,22,16,.45)", display: "flex", alignItems: "center", justifyContent: "center", padding: "40px" }}>
+        <div className="sk-modal" style={{ width: "460px", maxWidth: "100%", background: "#fff", borderRadius: "14px", boxShadow: "0 26px 60px rgba(10,18,12,.3)", overflow: "hidden", display: "flex", flexDirection: "column" }}>
           <div style={{ padding: "16px 18px 14px", display: "flex", alignItems: "flex-start", gap: "11px", borderBottom: "1px solid #EFF1ED" }}>
             <span style={{ width: "34px", height: "34px", borderRadius: "9px", background: "#FAEDEA", display: "flex", alignItems: "center", justifyContent: "center", flex: "none" }}>
               <svg width="17" height="17" viewBox="0 0 20 20" fill="none" style={{ flex: "none" }}>
