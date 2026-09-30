@@ -126,7 +126,8 @@ export function useAdminState() {
     ['_notif', 6],
     ['_analytics', 7],
     ['_settings', 6],
-    ['_notifcentre', 6]
+    ['_notifcentre', 6],
+    ['_support', 3]
   ];
   const tabState = s.tabs || {};
   TABS.forEach(([gid, n]) => {
@@ -144,6 +145,7 @@ export function useAdminState() {
   v.catProductTab = tabState._catalogue ?? 0;
   v.catStockTab = tabState._catalogue2 ?? 0;
   v.promoTab = tabState._promo ?? 0;
+  v.supportTab = tabState._support ?? 0;
   // ---- segmented ranges & filter chips ----
   const RANGES = [['rng6', 5, 1], ['rng7', 5, 1]];
   const rngState = s.ranges || {};
@@ -324,6 +326,9 @@ export function useAdminState() {
   v.nav_content = () => go('content');
   v.navBg_content = active === 'content' ? 'rgba(139,224,0,.14)' : 'transparent';
   v.navFg_content = active === 'content' ? '#8BE000' : 'rgba(255,255,255,.72)';
+  v.nav_support = () => go('support');
+  v.navBg_support = active === 'support' ? 'rgba(139,224,0,.14)' : 'transparent';
+  v.navFg_support = active === 'support' ? '#8BE000' : 'rgba(255,255,255,.72)';
   v.nav_notif = () => go('notif');
   v.navBg_notif = active === 'notif' ? 'rgba(139,224,0,.14)' : 'transparent';
   v.navFg_notif = active === 'notif' ? '#8BE000' : 'rgba(255,255,255,.72)';
@@ -350,6 +355,7 @@ export function useAdminState() {
   v.p_pay = s.page === 'pay';
   v.p_refunds = s.page === 'refunds';
   v.p_rev = s.page === 'rev';
+  v.p_support = s.page === 'support';
   v.p_content = s.page === 'content';
   v.p_bannernew = s.page === 'bannernew';
   v.p_notif = s.page === 'notif';

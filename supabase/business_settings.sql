@@ -283,14 +283,17 @@ $$;
 revoke execute on function public.claim_pending_messages(int) from public, anon, authenticated;
 grant execute on function public.claim_pending_messages(int) to service_role;
 
--- Order placed → confirmation email.
+-- The app's Privacy & data → Email updates toggle (also added by the app's privacy migration).
+alter table public.customers add column if not exists email_opt_in boolean not null default true;
+
+-- Order placed → confirmation email (skipped when the customer turned email updates off).
 create or replace function public.messages_on_order_insert() returns trigger
 language plpgsql security definer set search_path = public as $$
 declare s public.business_settings; c public.customers; st text;
 begin
   select * into s from public.business_settings where id;
   select * into c from public.customers where id = new.customer_id;
-  if not coalesce(s.notify_order_email, false) or c.email is null then return null; end if;
+  if not coalesce(s.notify_order_email, false) or c.email is null or not c.email_opt_in then return null; end if;
   select name into st from public.stores where id = new.store_id;
   insert into public.outbound_messages (channel, recipient, subject, body, kind, order_id)
   values ('email', c.email, 'Your ' || coalesce(st, 'Spice Kart') || ' order #' || new.number || ' is confirmed',

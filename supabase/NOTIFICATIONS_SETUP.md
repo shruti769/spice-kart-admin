@@ -20,6 +20,7 @@ delivery) are assumed to be run already.
 9. `notifications.sql`: admin alerts, campaigns, customer inbox, push tokens, minutely job
 10. `business_settings.sql`: Settings → minimum order, payments & tax, notifications (email / SMS / Slack / digest), store hours and security. It replaces `public.is_admin()`; if you ever re-run the app's `20260924000000_catalogue.sql`, run this file again afterwards.
 11. `admin_data.sql`: staff and invites, drivers, customer suspension and stats, review replies, payment references and refunds, Dashboard / Analytics numbers
+12. `support.sql`: Support inbox (in-app chat tickets, internal notes, chat photos in the private `support-photos` bucket), canned replies and the app's Help centre articles. Seeds the 5 canned replies and the app's 20 help questions if those tables are empty.
 
 Also turn on **Authentication → Sign In / Providers → Allow anonymous sign-ins** (the app signs customers in anonymously for now).
 
@@ -86,6 +87,8 @@ The app still has to:
 | Admin changes an order's status | A trigger adds an "order update" inbox row, then calls `send-push` |
 | `send-push` runs | Claims pending rows, sends them to Expo in batches of 100, marks them sent / failed / skipped (no device), and deletes dead tokens |
 | Stock drops, payment fails, 1–2★ review, refund request, order past ETA, coupon ends within 24 h | An `admin_alerts` row appears in the Notification centre live. It resolves itself when the problem goes away. |
+| Customer sends a support message | The ticket reopens and a Notification centre alert links to Support (it resolves when an agent replies or resolves the chat) |
+| Agent replies in Support → Inbox | The status stays as it is (the agent changes it), the reply appears live in the app's chat, and a "Spice Kart Support replied" inbox row + push goes out |
 
 Promotional campaigns only reach customers with `marketing_opt_in = true`, as the Spam Act requires.
 All pushes also need `push_opt_in = true`.

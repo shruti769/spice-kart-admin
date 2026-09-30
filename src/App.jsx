@@ -16,6 +16,7 @@ import NewPromotion from './pages/NewPromotion'
 import Payments from './pages/Payments'
 import Refunds from './pages/Refunds'
 import Reviews from './pages/Reviews'
+import Support from './pages/Support'
 import Content from './pages/Content'
 import NewBanner from './pages/NewBanner'
 import Notifications from './pages/Notifications'
@@ -73,6 +74,7 @@ export default function App() {
         {v.p_pay && <Payments v={v} />}
         {v.p_refunds && <Refunds v={v} />}
         {v.p_rev && <Reviews v={v} />}
+        {v.p_support && <Support v={v} />}
         {v.p_content && <Content v={v} />}
         {v.p_bannernew && <NewBanner key={v.editingBanner?.id ?? 'new'} v={v} />}
         {v.p_notif && <Notifications v={v} />}

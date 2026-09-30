@@ -15,7 +15,7 @@ const EMPTY_FORM = {
   stock_qty: '', min_stock: '', max_stock: '', warehouse: '',
   weight: '', unit: '', size: '', country_of_origin: '', ingredients: '', storage: '',
   attributes: [],
-  express_delivery: true, scheduled_delivery: true, track_inventory: true, published: true,
+  express_delivery: true, scheduled_delivery: true, track_inventory: true, published: true, sensitive: false,
 }
 
 // Form values for an existing `public.products` row (edit mode).
@@ -33,6 +33,7 @@ function rowToForm(row) {
     attributes: Array.isArray(row.attributes) ? row.attributes : [],
     express_delivery: flag(row.express_delivery, true), scheduled_delivery: flag(row.scheduled_delivery, true),
     track_inventory: flag(row.track_inventory, true), published: flag(row.published, true),
+    sensitive: flag(row.sensitive, false),
   }
 }
 
@@ -198,6 +199,7 @@ function toRow(f, imageUrl) {
     scheduled_delivery: f.scheduled_delivery,
     track_inventory: f.track_inventory,
     published: f.published,
+    sensitive: f.sensitive,
   }
 }
 
@@ -582,6 +584,7 @@ export default function ProductForm({ v }) {
               <ToggleRow title="Express delivery" subtitle="Available for 25-minute delivery" on={form.express_delivery} onChange={set('express_delivery')} />
               <ToggleRow title="Scheduled delivery" subtitle="Available in booked windows" on={form.scheduled_delivery} onChange={set('scheduled_delivery')} />
               <ToggleRow title="Track inventory" on={form.track_inventory} onChange={set('track_inventory')} />
+              <ToggleRow title="Sensitive item" subtitle="Personal care · blurred in customers' orders if they choose" on={form.sensitive} onChange={set('sensitive')} />
               <ToggleRow title="Publish immediately" subtitle={form.published ? 'Visible in the customer app' : 'Otherwise saved as draft'} on={form.published} onChange={set('published')} />
             </div>
           </div>

@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import { BORDER, DANGER, DIVIDER, FONT, INK, MUTED, btnSecondary, ellipsis, headCell, inputStyle } from './styles'
 
 export function Toggle({ on, onChange, label, disabled }) {
@@ -6,6 +6,78 @@ export function Toggle({ on, onChange, label, disabled }) {
     <button type="button" role="switch" aria-checked={on} aria-label={label} disabled={disabled} onClick={() => onChange(!on)} style={{ width: '38px', height: '22px', borderRadius: '11px', background: on ? '#1B5E30' : '#DCDDD8', position: 'relative', flex: 'none', display: 'block', border: '0', padding: '0', cursor: disabled ? 'default' : 'pointer', transition: 'background .15s', opacity: disabled ? 0.6 : 1 }}>
       <span style={{ position: 'absolute', top: '2.5px', left: on ? '18px' : '2.5px', width: '17px', height: '17px', borderRadius: '9px', background: '#fff', boxShadow: '0 1px 3px rgba(0,0,0,.2)', display: 'block', transition: 'left .15s' }} />
     </button>
+  )
+}
+
+/**
+ * Select that always opens below the field (the native macOS menu opens around the current
+ * option, so a value near the end of the list pops the menu upwards). The list is `fixed`, so a
+ * scrolling modal body never clips it. `options`: [[value, label]].
+ */
+export function Dropdown({ value, options, onChange, label, style }) {
+  const btn = useRef(null)
+  const [pos, setPos] = useState(null)
+  const open = !!pos
+  const current = options.find(([k]) => k === value)?.[1] ?? ''
+
+  useEffect(() => {
+    if (!open) return
+    // Clicks and scrolling inside the dropdown (e.g. a long list) keep it open.
+    const close = (e) => { if (!e.target?.closest?.('[data-sk-dropdown]')) setPos(null) }
+    window.addEventListener('mousedown', close)
+    window.addEventListener('resize', close)
+    window.addEventListener('scroll', close, true)
+    return () => {
+      window.removeEventListener('mousedown', close)
+      window.removeEventListener('resize', close)
+      window.removeEventListener('scroll', close, true)
+    }
+  }, [open])
+
+  const toggle = () => {
+    if (open) return setPos(null)
+    const r = btn.current.getBoundingClientRect()
+    setPos({ top: r.bottom + 4, left: r.left, width: r.width, maxHeight: Math.max(160, window.innerHeight - r.bottom - 16) })
+  }
+  const pick = (k) => {
+    setPos(null)
+    if (k !== value) onChange(k)
+    btn.current?.focus()
+  }
+  // Escape closes the list only (stopPropagation keeps the modal open).
+  const onKeyDown = (e) => {
+    if (e.key === 'Escape' && open) { e.stopPropagation(); setPos(null) }
+    else if ((e.key === 'ArrowDown' || e.key === 'ArrowUp') && !open) { e.preventDefault(); toggle() }
+  }
+
+  return (
+    <span data-sk-dropdown style={{ display: 'block', minWidth: '0' }} onKeyDown={onKeyDown}>
+      <button ref={btn} type="button" aria-haspopup="listbox" aria-expanded={open} aria-label={label} onClick={toggle}
+        style={{ ...inputStyle, display: 'flex', alignItems: 'center', gap: '8px', textAlign: 'left', cursor: 'pointer', borderColor: open ? '#0B3D1F' : BORDER, ...style }}>
+        <span style={{ flex: '1', minWidth: '0', ...ellipsis }}>{current}</span>
+        <svg width="14" height="14" viewBox="0 0 20 20" fill="none" style={{ flex: 'none', transform: open ? 'rotate(180deg)' : 'none', transition: 'transform .15s' }}>
+          <path d="M6 8l4 4 4-4" stroke={INK} strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" />
+        </svg>
+      </button>
+      {open && (
+        <div role="listbox" aria-label={label} className="ad-scroll" style={{ position: 'fixed', top: `${pos.top}px`, left: `${pos.left}px`, width: `${pos.width}px`, maxHeight: `${pos.maxHeight}px`, overflowY: 'auto', zIndex: '120', background: '#fff', border: `1px solid ${BORDER}`, borderRadius: '10px', boxShadow: '0 12px 30px rgba(10,18,12,.16)', padding: '4px', boxSizing: 'border-box' }}>
+          {options.map(([k, l]) => {
+            const on = k === value
+            return (
+              <button key={k} type="button" role="option" aria-selected={on} className={on ? undefined : 'hv3'} autoFocus={on} onClick={() => pick(k)}
+                style={{ width: '100%', display: 'flex', alignItems: 'center', gap: '8px', height: '34px', padding: '0 10px', border: '0', borderRadius: '7px', background: on ? '#F1F9DF' : 'transparent', font: `${on ? 600 : 500} 12.5px/1.2 ${FONT}`, color: on ? '#0B3D1F' : INK, cursor: 'pointer', textAlign: 'left' }}>
+                <span style={{ flex: '1', minWidth: '0', ...ellipsis }}>{l}</span>
+                {on && (
+                  <svg width="14" height="14" viewBox="0 0 20 20" fill="none" style={{ flex: 'none' }}>
+                    <path d="M5 10.5l3.2 3.2L15 7" stroke="#0B3D1F" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
+                  </svg>
+                )}
+              </button>
+            )
+          })}
+        </div>
+      )}
+    </span>
   )
 }
 

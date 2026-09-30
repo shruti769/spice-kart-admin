@@ -20,7 +20,7 @@ create table if not exists public.admin_alerts (
   severity    text not null default 'info' check (severity in ('info', 'warning', 'critical')),
   title       text not null,
   body        text not null default '',
-  link        text,              -- admin page key: del, inv, orders, pay, refunds, rev, promo, notif, settings
+  link        text,              -- admin page key: del, inv, orders, pay, refunds, rev, promo, notif, settings, support
   link_label  text,
   created_at  timestamptz not null default now(),
   updated_at  timestamptz not null default now(),

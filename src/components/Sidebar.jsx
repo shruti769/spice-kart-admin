@@ -1,6 +1,9 @@
 import imgSpiceKartLogo from '../assets/images/spice-kart-logo.png'
+import { useOpenTicketCount } from '../lib/support'
 
 export default function Sidebar({ v }) {
+  // Only count once an admin is signed in (RLS hides tickets from everyone else anyway).
+  const openTickets = useOpenTicketCount(v.p_login || v.p_twofa || v.p_forgot ? '' : v.authEmail)
   return (
     <>
       <aside style={{ width: "236px", flex: "none", background: "#0B3D1F", display: "flex", flexDirection: "column", padding: "18px 13px 14px" }}>
@@ -89,6 +92,17 @@ export default function Sidebar({ v }) {
               </svg>
             </span>
             <span style={{ font: "500 12.5px/1.2 Inter,system-ui,sans-serif", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>Reviews</span>
+          </button>
+          <button className="hv9" onClick={v.nav_support} style={{ display: "flex", alignItems: "center", gap: "10px", width: "100%", border: "0", background: v.navBg_support, color: v.navFg_support, borderRadius: "8px", padding: "0 10px", height: "37px", cursor: "pointer", textAlign: "left", position: "relative" }}>
+            <span style={{ display: "flex", width: "17px", flex: "none" }}>
+              <svg width="17" height="17" viewBox="0 0 20 20" fill="none" style={{ flex: "none" }}>
+                <path d="M4.6 4h10.8a1.6 1.6 0 011.6 1.6v7a1.6 1.6 0 01-1.6 1.6H9.2L5.6 17v-2.8h-1A1.6 1.6 0 013 12.6v-7A1.6 1.6 0 014.6 4z" stroke="currentColor" strokeWidth="1.5" strokeLinejoin="round" />
+              </svg>
+            </span>
+            <span style={{ font: "500 12.5px/1.2 Inter,system-ui,sans-serif", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis", flex: "1" }}>Support</span>
+            {openTickets > 0 && (
+              <span style={{ minWidth: "20px", height: "18px", padding: "0 6px", boxSizing: "border-box", borderRadius: "9px", background: "#8BE000", color: "#0B3D1F", font: "700 10.5px/18px Inter,system-ui,sans-serif", textAlign: "center", flex: "none" }}>{openTickets > 99 ? '99+' : openTickets}</span>
+            )}
           </button>
           <span style={{ display: "block", font: "700 9.5px/1 Inter,system-ui", letterSpacing: ".9px", color: "rgba(255,255,255,.34)", padding: "14px 10px 7px", whiteSpace: "nowrap" }}>
             GROWTH

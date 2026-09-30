@@ -51,7 +51,7 @@ export default function NotificationCentre({ v }) {
 
   const go = {
     del: v.nav_del, inv: v.nav_inv, orders: v.nav_orders, pay: v.nav_pay, refunds: v.nav_refunds, rev: v.nav_rev,
-    promo: v.nav_promo, notif: v.nav_notif, settings: v.nav_settings,
+    promo: v.nav_promo, notif: v.nav_notif, settings: v.nav_settings, support: v.nav_support,
   }
   const rows = useMemo(() => (alerts.data ?? []).filter((a) => (cat === 'all' || a.category === cat) && (showResolved || !a.resolved_at)), [alerts.data, cat, showResolved])
   const groups = useMemo(() => {
