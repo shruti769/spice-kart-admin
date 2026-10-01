@@ -35,7 +35,7 @@ function DeleteRealProduct({ v, product }) {
           <span style={{ display: "flex", flexDirection: "column", gap: "4px", minWidth: "0" }}>
             <span style={{ font: "700 15px/1.2 Inter,system-ui,sans-serif", color: "#17201A" }}>Are you sure you want to delete this product?</span>
             <span style={{ font: "400 11.5px/1.55 Inter,system-ui,sans-serif", color: "#7C8A81", overflowWrap: "anywhere" }}>
-              {product.name}{product.sku ? ` (${product.sku})` : ""} will be permanently removed from the Spice Kart catalogue{product.image_url ? " along with its image" : ""}, and disappears from the customer app. This cannot be undone.
+              {product.name}{product.sku ? ` (${product.sku})` : ""} will be permanently removed from the Spice Kart catalogue{product.image_url ? ((product.gallery?.length ?? 0) > 0 ? " along with its images" : " along with its image") : ""}, and disappears from the customer app. This cannot be undone.
             </span>
           </span>
         </div>

@@ -10,7 +10,7 @@ import {
 
 const FONT = 'Inter,system-ui,sans-serif'
 const PAGE = 6
-const ORDER_COLS = '84px 1.3fr .8fr .8fr .9fr minmax(74px,.9fr) minmax(118px,1.2fr) minmax(50px,.9fr) 96px'
+const ORDER_COLS = '84px minmax(130px,1.3fr) minmax(56px,.8fr) minmax(64px,.8fr) minmax(70px,.9fr) minmax(74px,.9fr) minmax(104px,1.2fr) minmax(56px,.9fr) 96px'
 
 const RANGES = [['today', 'Today'], ['7d', '7D'], ['30d', '30D'], ['3m', '3M'], ['custom', 'Custom']]
 /** Order status panel rows: [key, label, colour]; "refunded" is a payment bucket. */
@@ -145,7 +145,8 @@ function RecentOrders({ v, now }) {
 
   return (
     <div className="r-table-wrap" style={{ background: "#fff", border: "1px solid #E4E7E2", borderRadius: "10px", overflow: "hidden", flex: "none" }}>
-      <div className="r-table" style={{ '--r-min': '900px', display: "grid", gridTemplateColumns: ORDER_COLS, gap: "14px", padding: "11px 16px", background: "#F6F7F4", borderBottom: "1px solid #E4E7E2" }}>
+      <div style={{ overflowX: "auto", WebkitOverflowScrolling: "touch" }}>
+      <div className="r-table" style={{ '--r-min': '900px', minWidth: "900px", display: "grid", gridTemplateColumns: ORDER_COLS, gap: "14px", padding: "11px 16px", background: "#F6F7F4", borderBottom: "1px solid #E4E7E2" }}>
         {['Order', 'Customer', 'Items', 'Value', 'Type', 'Payment', 'Status', 'Time', 'Actions'].map((h) => <span key={h} style={colHead}>{h}</span>)}
       </div>
       {message ? (
@@ -157,7 +158,7 @@ function RecentOrders({ v, now }) {
         const [pl, pfg, pbg] = PAYMENT_STATUS_PILL[o.payment_status] ?? PAYMENT_STATUS_PILL.pending
         const n = itemCount(o)
         return (
-          <div key={o.id} className="hv3 r-table" style={{ '--r-min': '900px', display: "grid", gridTemplateColumns: ORDER_COLS, gap: "14px", padding: "13px 16px", borderBottom: i === rows.length - 1 ? "0" : "1px solid #EFF1ED", alignItems: "center" }}>
+          <div key={o.id} className="hv3 r-table" style={{ '--r-min': '900px', minWidth: "900px", display: "grid", gridTemplateColumns: ORDER_COLS, gap: "14px", padding: "13px 16px", borderBottom: i === rows.length - 1 ? "0" : "1px solid #EFF1ED", alignItems: "center" }}>
             <span style={cellWrap}><span style={strong}>#{o.number}</span></span>
             <span style={cellWrap}>
               <span style={{ width: "28px", height: "28px", borderRadius: "7px", background: "#F6F7F4", border: "1px solid #E4E7E2", display: "flex", alignItems: "center", justifyContent: "center", font: `600 10.5px/1.2 ${FONT}`, color: "#4A564E", flex: "none" }}>
@@ -188,6 +189,7 @@ function RecentOrders({ v, now }) {
           </div>
         )
       })}
+      </div>
       <div className="r-wrap" style={{ display: "flex", alignItems: "center", gap: "12px", padding: "12px 16px", borderTop: "1px solid #E4E7E2", background: "#fff" }}>
         <span style={{ font: `400 11.5px/1.2 ${FONT}`, color: "#7C8A81", whiteSpace: "nowrap" }}>
           {total ? `Showing ${page * PAGE + 1}–${page * PAGE + rows.length} of ${num(total)} order${total === 1 ? '' : 's'}` : 'Showing 0 orders'}

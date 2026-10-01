@@ -2,7 +2,7 @@ import { useEffect, useRef, useState } from 'react'
 import imgFreshCoriander from '../assets/images/fresh-coriander.jpg'
 import { useCategories } from '../lib/categories'
 import {
-  IMAGE_TYPES, PAGES, PLACEMENTS, STATUS_PILL, bannerStatus, createBanner, deleteBanner, placementLabel, removeBannerImage,
+  FEATURE_PLACEMENT, FEATURE_RATIO, IMAGE_TYPES, PAGES, PLACEMENTS, STATUS_PILL, bannerStatus, createBanner, deleteBanner, placementLabel, removeBannerImage,
   updateBanner, uploadBannerImage, validateImage,
 } from '../lib/banners'
 import { isSupabaseConfigured } from '../lib/supabase'
@@ -85,7 +85,7 @@ function Toggle({ on, onChange, label }) {
 }
 
 // ---- validation (mirrors the `public.banners` check constraints) ----
-function validate(f, publishing) {
+function validate(f, publishing, hasImage) {
   const errors = {}
   if (!f.title.trim()) errors.title = 'Title is required'
   if (f.starts && f.ends && f.ends < f.starts) errors.ends = 'End date must be on or after the start date'
@@ -96,6 +96,7 @@ function validate(f, publishing) {
   if (!f.destination) errors.destination = 'Pick where the banner links to'
   if (!f.starts) errors.starts = 'Pick a start date'
   if (!f.ends) errors.ends = errors.ends || 'Pick an end date'
+  if (f.placement === FEATURE_PLACEMENT && !hasImage) errors.image = 'Feature banners need an image to publish'
   return errors
 }
 
@@ -121,6 +122,7 @@ export default function NewBanner({ v }) {
 
   const savedImageUrl = !savedImageRemoved ? editing?.image_url : null
   const imageUrl = picked?.url ?? savedImageUrl ?? null
+  const isFeature = form.placement === FEATURE_PLACEMENT
 
   const pickImage = (file) => {
     if (!file) return
@@ -136,7 +138,7 @@ export default function NewBanner({ v }) {
 
   const save = async (publishing) => {
     if (saving) return
-    const found = validate(form, publishing)
+    const found = validate(form, publishing, !!imageUrl)
     setErrors(found)
     if (Object.keys(found).length) return v.flash('Check the highlighted fields before saving')
     if (!isSupabaseConfigured) return v.flash('Supabase keys are missing · add VITE_SUPABASE_URL and VITE_SUPABASE_PUBLISHABLE_KEY to .env and restart the dev server')
@@ -272,13 +274,27 @@ export default function NewBanner({ v }) {
                   ? <img src={imageUrl} alt="Banner" style={{ position: 'absolute', inset: '0', width: '100%', height: '100%', objectFit: 'cover' }} />
                   : <span style={{ font: `500 12.5px/1.4 ${FONT}`, color: '#4A564E' }}>Click to upload a banner image<br /><span style={{ color: '#7C8A81', fontWeight: 400 }}>The preview uses a sample image until you add one</span></span>}
               </button>
-              <span style={{ font: `400 11px/1.2 ${FONT}`, color: errors.image ? ERROR_RED : '#7C8A81' }}>{errors.image ?? 'Recommended 1200 × 420px · JPG, PNG or WebP · under 400 KB'}</span>
+              <span style={{ font: `400 11px/1.2 ${FONT}`, color: errors.image ? ERROR_RED : '#7C8A81' }}>{errors.image ?? `Recommended ${isFeature ? '1080 × 1175px (large, sharp photo)' : '1200 × 420px'} · JPG, PNG or WebP · under 400 KB`}</span>
             </div>
           </div>
           <div style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
             <div style={{ ...cardStyle, gap: '13px' }}>
               <span style={cardTitle}>App preview</span>
               <span style={{ border: '1px solid #E4E7E2', borderRadius: '12px', padding: '12px', background: '#F6F7F4', display: 'flex', flexDirection: 'column', gap: '10px' }}>
+                {isFeature ? (
+                  <span style={{ position: 'relative', aspectRatio: String(FEATURE_RATIO), borderRadius: '10px', overflow: 'hidden', background: '#E7F1DA', display: 'block' }}>
+                    <img src={imageUrl ?? imgFreshCoriander} alt="" style={{ position: 'absolute', inset: '0', width: '100%', height: '100%', objectFit: 'cover' }} />
+                    <span style={{ position: 'absolute', left: '0', right: '0', bottom: '0', padding: '44px 12px 12px', display: 'flex', flexDirection: 'column', gap: '6px', background: 'linear-gradient(180deg,rgba(12,43,26,0) 0%,rgba(12,43,26,.55) 40%,rgba(12,43,26,.92) 100%)' }}>
+                      {subtitle && (
+                        <span style={{ font: `700 9px/1.2 ${FONT}`, letterSpacing: '.7px', color: '#0B3D1F', background: '#8BE000', padding: '4px 6px', borderRadius: '4px', alignSelf: 'flex-start', maxWidth: '100%', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', textTransform: 'uppercase' }}>
+                          {subtitle}
+                        </span>
+                      )}
+                      <span style={{ font: `800 15px/1.2 ${FONT}`, color: form.title.trim() ? '#fff' : 'rgba(255,255,255,.6)', overflow: 'hidden', display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical' }}>{title}</span>
+                      {form.cta.trim() && <span style={{ font: `700 10px/1.2 ${FONT}`, color: '#0B3D1F', background: '#8BE000', padding: '6px 9px', borderRadius: '6px', alignSelf: 'flex-start', whiteSpace: 'nowrap' }}>{form.cta.trim()} →</span>}
+                    </span>
+                  </span>
+                ) : (
                 <span style={{ position: 'relative', height: '96px', borderRadius: '10px', overflow: 'hidden', flex: 'none', background: '#E7F1DA', border: '1px solid #D8E4C8', display: 'block' }}>
                   <img src={imageUrl ?? imgFreshCoriander} alt="" style={{ position: 'absolute', right: '0', top: '0', width: '112px', height: '100%', objectFit: 'cover' }} />
                   <span style={{ position: 'absolute', left: '0', top: '0', bottom: '0', width: '186px', padding: '12px', display: 'flex', flexDirection: 'column', justifyContent: 'center', gap: '5px', background: 'linear-gradient(90deg,#E7F1DA 74%,rgba(231,241,218,0))' }}>
@@ -291,6 +307,7 @@ export default function NewBanner({ v }) {
                     {form.cta.trim() && <span style={{ font: `600 10px/1.2 ${FONT}`, color: '#4C6B52', whiteSpace: 'nowrap' }}>{form.cta.trim()} →</span>}
                   </span>
                 </span>
+                )}
                 <span style={{ font: `400 10.5px/1.2 ${FONT}`, color: '#7C8A81', textAlign: 'center' }}>{placementLabel(form.placement)}, position {form.priority || '–'}</span>
               </span>
             </div>

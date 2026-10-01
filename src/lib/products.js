@@ -115,7 +115,7 @@ export async function removeProductImage(url) {
   }
 }
 
-/** Deletes a product row, then (best effort) its image object. */
+/** Deletes a product row, then (best effort) its image objects (main + gallery). */
 export async function deleteProduct(row) {
   const { data, error } = await supabase.from('products').delete().eq('id', row.id).select('id')
   if (error) {
@@ -123,7 +123,7 @@ export async function deleteProduct(row) {
     throw error
   }
   if (!data?.length) throw new Error('This product no longer exists or you don’t have permission to delete it')
-  await removeProductImage(row.image_url)
+  await Promise.all([row.image_url, ...(row.gallery ?? [])].map(removeProductImage))
 }
 
 /**

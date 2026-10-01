@@ -7,6 +7,8 @@ const FONT = 'Inter,system-ui,sans-serif'
 const ERROR_RED = '#B3402F'
 const MAX_IMAGE_BYTES = 5 * 1024 * 1024
 const IMAGE_TYPES = ['image/jpeg', 'image/png', 'image/webp']
+/** Main image + up to 5 more (`products.gallery`, see the app's product_gallery migration). */
+const MAX_IMAGES = 6
 const ATTRIBUTES = ['Vegetarian', 'Vegan', 'Gluten Free', 'Organic', 'Halal', 'Imported', 'Frozen Foods & Vegetables', 'Bestseller']
 
 const EMPTY_FORM = {
@@ -171,7 +173,9 @@ function validate(f) {
 
 // Row for `public.products`: trimmed strings, empty optional fields → null, numbers parsed.
 // brand, description and weight are NOT NULL (default '') in the schema, so they stay strings.
-function toRow(f, imageUrl) {
+// `gallery` is sent only when there's something to save in it or the column exists (edit mode),
+// so products still save before the product_gallery migration has run.
+function toRow(f, imageUrls, hasGallery = false) {
   return {
     name: f.name.trim(),
     brand: f.brand.trim(),
@@ -194,7 +198,8 @@ function toRow(f, imageUrl) {
     ingredients: optionalText(f.ingredients),
     storage: optionalText(f.storage),
     attributes: f.attributes,
-    image_url: imageUrl,
+    image_url: imageUrls[0] ?? null,
+    ...(imageUrls.length > 1 || hasGallery ? { gallery: imageUrls.slice(1) } : null),
     express_delivery: f.express_delivery,
     scheduled_delivery: f.scheduled_delivery,
     track_inventory: f.track_inventory,
@@ -210,16 +215,43 @@ function storagePath(file) {
   return `${id}-${base}.${ext}`
 }
 
+/** A row's saved images, main first. */
+function savedImages(row) {
+  if (!row) return []
+  return [row.image_url, ...(row.gallery ?? [])].filter(Boolean).map((url) => ({ url }))
+}
+
+/** Uploads the newly picked images (recording each storage path in `uploaded`); returns every URL in order. */
+async function uploadImages(images, uploaded) {
+  const bucket = supabase.storage.from('product-images')
+  const urls = []
+  for (const img of images) {
+    if (img.url) {
+      urls.push(img.url)
+      continue
+    }
+    const path = storagePath(img.file)
+    const { error } = await bucket.upload(path, img.file, { contentType: img.file.type, upsert: false })
+    if (error) throw error
+    uploaded.push(path)
+    urls.push(bucket.getPublicUrl(path).data.publicUrl)
+  }
+  return urls
+}
+
+/** The `gallery` column doesn't exist yet (migration not run). */
+const isMissingGallery = (err) => err?.code === 'PGRST204' && /gallery/.test(err?.message ?? '')
+
 export default function ProductForm({ v }) {
   const isAdd = v.isAddMode
   // The product being edited (null in add mode, or when edit mode was opened without one).
   const row = isAdd ? null : v.editingProduct
   const [form, setForm] = useState(() => (row ? rowToForm(row) : EMPTY_FORM))
   const [errors, setErrors] = useState({})
-  const [imageFile, setImageFile] = useState(null)
-  const [preview, setPreview] = useState(null)
-  // Edit mode: the saved image was removed (saving clears image_url and deletes the object).
-  const [imageRemoved, setImageRemoved] = useState(false)
+  // Product images in order, the first is MAIN: saved `{ url }` or newly picked `{ file, preview }`.
+  // Saving uploads the new ones and deletes saved ones that were removed.
+  const [images, setImages] = useState(() => savedImages(row))
+  const pickMode = useRef('add')
   const [saving, setSaving] = useState(false)
   const fileInput = useRef(null)
   const scrollRef = useRef(null)
@@ -228,8 +260,10 @@ export default function ProductForm({ v }) {
   const missingProduct = !isAdd && !row
   const navProducts = v.nav_products
 
-  // Release the local preview URL when it is replaced or the form unmounts.
-  useEffect(() => () => { if (preview) URL.revokeObjectURL(preview) }, [preview])
+  // Release local preview URLs when the form unmounts.
+  const imagesRef = useRef(images)
+  useEffect(() => { imagesRef.current = images }, [images])
+  useEffect(() => () => imagesRef.current.forEach((img) => img.preview && URL.revokeObjectURL(img.preview)), [])
 
   // Edit mode without a product (e.g. stale state): go back to the list.
   useEffect(() => { if (missingProduct) navProducts() }, [missingProduct, navProducts])
@@ -257,9 +291,7 @@ export default function ProductForm({ v }) {
   const isRemovedSubcategory = (sc) => !!category && !category.subcategories.includes(sc)
   // Attributes saved on the product that aren't in the standard list stay visible (and toggleable).
   const attributeOptions = [...ATTRIBUTES, ...(row?.attributes ?? []).filter((a) => !ATTRIBUTES.includes(a))]
-  // Image shown in the main slot: a newly picked file, else the saved image unless removed.
-  const savedImage = row && !imageRemoved ? row.image_url : null
-  const shownImage = preview || savedImage
+  const shownImage = images[0] ? images[0].preview || images[0].url : null
   const subtitle = row
     ? [
         row.name,
@@ -271,28 +303,47 @@ export default function ProductForm({ v }) {
   const discount = discountLabel(price, toNumber(form.compare_at_price))
   const margin = marginLabel(price, toNumber(form.cost_price))
 
-  const openPicker = () => { if (!saving) fileInput.current?.click() }
+  // 'main' replaces the main image (or adds the first one); 'add' appends more.
+  const openPicker = (mode) => {
+    if (saving) return
+    if (mode === 'add' && images.length >= MAX_IMAGES) return v.flash(`Up to ${MAX_IMAGES} images per product`)
+    pickMode.current = mode
+    if (fileInput.current) fileInput.current.multiple = mode === 'add'
+    fileInput.current?.click()
+  }
   const pickImage = (e) => {
-    const file = e.target.files?.[0]
+    const files = [...(e.target.files ?? [])]
     e.target.value = ''
-    if (!file) return
-    if (!IMAGE_TYPES.includes(file.type)) return v.flash('Use a JPG, PNG or WebP image')
-    if (file.size > MAX_IMAGE_BYTES) return v.flash(`Image is ${(file.size / 1024 / 1024).toFixed(1)} MB · the limit is 5 MB`)
-    setImageFile(file)
-    setPreview(URL.createObjectURL(file))
+    if (!files.length) return
+    const bad = files.find((file) => !IMAGE_TYPES.includes(file.type))
+    if (bad) return v.flash('Use a JPG, PNG or WebP image')
+    const big = files.find((file) => file.size > MAX_IMAGE_BYTES)
+    if (big) return v.flash(`Image is ${(big.size / 1024 / 1024).toFixed(1)} MB · the limit is 5 MB`)
+    const picked = files.map((file) => ({ file, preview: URL.createObjectURL(file) }))
+    if (pickMode.current === 'main' && images.length) {
+      if (images[0].preview) URL.revokeObjectURL(images[0].preview)
+      setImages([picked[0], ...images.slice(1)])
+      return
+    }
+    const room = MAX_IMAGES - images.length
+    if (picked.length > room) {
+      picked.slice(room).forEach((img) => URL.revokeObjectURL(img.preview))
+      v.flash(`Up to ${MAX_IMAGES} images per product · added the first ${room}`)
+    }
+    setImages([...images, ...picked.slice(0, room)])
   }
-  const removeImage = (e) => {
+  const removeImage = (i) => (e) => {
     e.stopPropagation()
-    setImageFile(null)
-    setPreview(null)
-    if (row) setImageRemoved(true)
+    if (images[i].preview) URL.revokeObjectURL(images[i].preview)
+    setImages(images.filter((_, n) => n !== i))
   }
+  const makeMain = (i) => setImages([images[i], ...images.filter((_, n) => n !== i)])
 
   const resetForm = () => {
     setForm(EMPTY_FORM)
     setErrors({})
-    setImageFile(null)
-    setPreview(null)
+    images.forEach((img) => img.preview && URL.revokeObjectURL(img.preview))
+    setImages([])
     scrollRef.current?.scrollTo({ top: 0 })
   }
 
@@ -306,23 +357,17 @@ export default function ProductForm({ v }) {
     if (!isSupabaseConfigured) return v.flash('Supabase keys are missing · add VITE_SUPABASE_URL and VITE_SUPABASE_PUBLISHABLE_KEY to .env and restart the dev server')
 
     setSaving(true)
-    const bucket = supabase.storage.from('product-images')
-    let uploadedPath = null
+    const uploaded = []
     try {
-      let imageUrl = null
-      if (imageFile) {
-        const path = storagePath(imageFile)
-        const { error: uploadError } = await bucket.upload(path, imageFile, { contentType: imageFile.type, upsert: false })
-        if (uploadError) throw uploadError
-        uploadedPath = path
-        imageUrl = bucket.getPublicUrl(path).data.publicUrl
-      }
-      const { error: insertError } = await supabase.from('products').insert(toRow(form, imageUrl))
+      const imageUrls = await uploadImages(images, uploaded)
+      const { error: insertError } = await supabase.from('products').insert(toRow(form, imageUrls))
       if (insertError) throw insertError
     } catch (err) {
-      // Don't leave an orphaned image behind if the row insert failed.
-      if (uploadedPath) await bucket.remove([uploadedPath])
-      if (err?.code === '23505') {
+      // Don't leave orphaned images behind if the row insert failed.
+      if (uploaded.length) await supabase.storage.from('product-images').remove(uploaded)
+      if (isMissingGallery(err)) {
+        v.flash('Could not save · run the app repo’s product_gallery migration in the Supabase SQL Editor first')
+      } else if (err?.code === '23505') {
         setErrors((e) => ({ ...e, sku: 'This SKU is already in use' }))
         v.flash('Could not save · this SKU is already in use')
       } else {
@@ -351,27 +396,20 @@ export default function ProductForm({ v }) {
     if (!isSupabaseConfigured) return v.flash('Supabase keys are missing · add VITE_SUPABASE_URL and VITE_SUPABASE_PUBLISHABLE_KEY to .env and restart the dev server')
 
     setSaving(true)
-    const bucket = supabase.storage.from('product-images')
-    const oldUrl = row.image_url || null
-    let uploadedPath = null
-    let imageUrl = oldUrl
+    const oldUrls = savedImages(row).map((img) => img.url)
+    const uploaded = []
+    let imageUrls
     try {
-      if (imageFile) {
-        const path = storagePath(imageFile)
-        const { error: uploadError } = await bucket.upload(path, imageFile, { contentType: imageFile.type, upsert: false })
-        if (uploadError) throw uploadError
-        uploadedPath = path
-        imageUrl = bucket.getPublicUrl(path).data.publicUrl
-      } else if (imageRemoved) {
-        imageUrl = null
-      }
-      const { data, error: updateError } = await supabase.from('products').update(toRow(form, imageUrl)).eq('id', row.id).select('id')
+      imageUrls = await uploadImages(images, uploaded)
+      const { data, error: updateError } = await supabase.from('products').update(toRow(form, imageUrls, 'gallery' in row)).eq('id', row.id).select('id')
       if (updateError) throw updateError
       if (!data?.length) throw new Error('this product no longer exists or you don’t have permission to edit it')
     } catch (err) {
-      // Don't leave an orphaned image behind if the row update failed.
-      if (uploadedPath) await bucket.remove([uploadedPath])
-      if (err?.code === '23505') {
+      // Don't leave orphaned images behind if the row update failed.
+      if (uploaded.length) await supabase.storage.from('product-images').remove(uploaded)
+      if (isMissingGallery(err)) {
+        v.flash('Could not save · run the app repo’s product_gallery migration in the Supabase SQL Editor first')
+      } else if (err?.code === '23505') {
         setErrors((e) => ({ ...e, sku: 'This SKU is already in use' }))
         v.flash('Could not save · this SKU is already in use')
       } else {
@@ -381,8 +419,8 @@ export default function ProductForm({ v }) {
       return
     }
 
-    // The row no longer points at the old image: delete it (best effort).
-    if (oldUrl && imageUrl !== oldUrl) await removeProductImage(oldUrl)
+    // Images the row no longer points at: delete them (best effort).
+    await Promise.all(oldUrls.filter((url) => !imageUrls.includes(url)).map(removeProductImage))
     notifyProductsChanged()
     v.flash('Product updated')
     v.nav_products()
@@ -534,8 +572,8 @@ export default function ProductForm({ v }) {
                 role="button"
                 tabIndex={0}
                 aria-label={shownImage ? 'Replace main image' : 'Upload main image'}
-                onClick={openPicker}
-                onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); openPicker() } }}
+                onClick={() => openPicker('main')}
+                onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); openPicker('main') } }}
                 style={{ position: "relative", height: "150px", borderRadius: "9px", overflow: "hidden", border: shownImage ? "1px solid #E4E7E2" : "1px dashed #C7C7C1", background: "#F6F7F4", display: "block", cursor: "pointer" }}
               >
                 {shownImage ? (
@@ -553,17 +591,39 @@ export default function ProductForm({ v }) {
                   MAIN
                 </span>
                 {shownImage && (
-                  <button onClick={removeImage} disabled={saving} style={{ position: "absolute", top: "8px", right: "8px", border: "0", borderRadius: "5px", background: "rgba(23,32,26,.72)", color: "#fff", font: "600 10.5px/1.2 Inter,system-ui,sans-serif", padding: "5px 8px", cursor: "pointer" }}>
+                  <button onClick={removeImage(0)} disabled={saving} style={{ position: "absolute", top: "8px", right: "8px", border: "0", borderRadius: "5px", background: "rgba(23,32,26,.72)", color: "#fff", font: "600 10.5px/1.2 Inter,system-ui,sans-serif", padding: "5px 8px", cursor: "pointer" }}>
                     Remove
                   </button>
                 )}
               </span>
               <span style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: "8px" }}>
-                <button type="button" onClick={openPicker} aria-label="Add image" style={{ height: "56px", borderRadius: "8px", border: "1px dashed #C7C7C1", background: "#fff", display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer", padding: "0" }}>
-                  <svg width="16" height="16" viewBox="0 0 20 20" fill="none" style={{ flex: "none" }}>
-                    <path d="M10 4.4v11.2M4.4 10h11.2" stroke="#7C8A81" strokeWidth="1.8" strokeLinecap="round" />
-                  </svg>
-                </button>
+                {images.slice(1).map((img, n) => (
+                  <span
+                    key={img.url || img.preview}
+                    role="button"
+                    tabIndex={0}
+                    title="Set as main image"
+                    aria-label={`Image ${n + 2} · set as main image`}
+                    onClick={() => !saving && makeMain(n + 1)}
+                    onKeyDown={(e) => { if (!saving && (e.key === 'Enter' || e.key === ' ')) { e.preventDefault(); makeMain(n + 1) } }}
+                    style={{ position: "relative", height: "56px", borderRadius: "8px", overflow: "hidden", border: "1px solid #E4E7E2", background: "#F6F7F4", display: "block", cursor: "pointer" }}
+                  >
+                    <img src={img.preview || img.url} alt="" style={{ position: "absolute", inset: "0", width: "100%", height: "100%", objectFit: "cover" }} />
+                    <button onClick={removeImage(n + 1)} disabled={saving} aria-label={`Remove image ${n + 2}`} style={{ position: "absolute", top: "3px", right: "3px", width: "18px", height: "18px", border: "0", borderRadius: "9px", background: "rgba(23,32,26,.72)", color: "#fff", font: "600 11px/18px Inter,system-ui,sans-serif", padding: "0", cursor: "pointer" }}>
+                      ×
+                    </button>
+                  </span>
+                ))}
+                {images.length > 0 && images.length < MAX_IMAGES && (
+                  <button type="button" onClick={() => openPicker('add')} aria-label="Add more images" style={{ height: "56px", borderRadius: "8px", border: "1px dashed #C7C7C1", background: "#fff", display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer", padding: "0" }}>
+                    <svg width="16" height="16" viewBox="0 0 20 20" fill="none" style={{ flex: "none" }}>
+                      <path d="M10 4.4v11.2M4.4 10h11.2" stroke="#7C8A81" strokeWidth="1.8" strokeLinecap="round" />
+                    </svg>
+                  </button>
+                )}
+              </span>
+              <span style={{ font: "400 11px/1.4 Inter,system-ui,sans-serif", color: "#7C8A81" }}>
+                {images.length > 1 ? 'Click an image to make it the main one · ' : ''}{images.length}/{MAX_IMAGES} images · shown as a swipeable gallery in the app
               </span>
             </div>
             <div style={{ ...cardStyle, gap: "13px" }}>

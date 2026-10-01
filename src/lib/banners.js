@@ -13,8 +13,12 @@ const IMAGE_EXT = { 'image/jpeg': 'jpg', 'image/png': 'png', 'image/webp': 'webp
 export const PLACEMENTS = [
   ['home_top', 'Home · top carousel'],
   ['home_middle', 'Home · middle strip'],
+  ['home_feature', 'Home · feature (above Deals for you)'],
   ['category_top', 'Category page · top'],
 ]
+/** Large full-width placement: photo with the copy over a dark fade at the bottom; needs an image to publish. */
+export const FEATURE_PLACEMENT = 'home_feature'
+export const FEATURE_RATIO = 1080 / 1175
 export const placementLabel = (p) => PLACEMENTS.find(([k]) => k === p)?.[1] ?? p
 export const PAGES = ['Offers page', 'New arrivals', 'Home']
 

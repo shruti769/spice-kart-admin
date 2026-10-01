@@ -15,7 +15,7 @@ create table if not exists public.banners (
   destination      text,
   starts_on        date,
   ends_on          date,
-  placement        text not null default 'home_top' check (placement in ('home_top', 'home_middle', 'category_top')),
+  placement        text not null default 'home_top' check (placement in ('home_top', 'home_middle', 'home_feature', 'category_top')),
   priority         int  not null default 1 check (priority between 1 and 10),
   status           text not null default 'draft' check (status in ('draft', 'published')),
   image_path       text,  -- object path in the `banners` bucket
@@ -34,6 +34,11 @@ create table if not exists public.banners (
     or (destination is not null and starts_on is not null and ends_on is not null and btrim(cta_label) <> '')
   )
 );
+
+-- Older tables were created before 'home_feature' (full-width image above "Deals for you").
+alter table public.banners drop constraint if exists banners_placement_check;
+alter table public.banners
+  add constraint banners_placement_check check (placement in ('home_top', 'home_middle', 'home_feature', 'category_top'));
 
 create index if not exists banners_live_idx on public.banners (placement, priority) where status = 'published';
 
