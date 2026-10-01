@@ -140,6 +140,38 @@ export function validateImage(file) {
   return null
 }
 
+const MAX_SIDE = 1600
+
+/**
+ * Re-encodes an oversized banner photo as WebP so it fits the 400 KB limit: caps the
+ * longest side at 1600px, then lowers quality step by step until it fits. Files that
+ * already fit are returned unchanged; on any failure the original file is returned.
+ */
+export async function compressImage(file) {
+  if (!file || !IMAGE_TYPES.includes(file.type) || file.size <= MAX_IMAGE_BYTES) return file
+  try {
+    const bitmap = await createImageBitmap(file)
+    const scale = Math.min(1, MAX_SIDE / Math.max(bitmap.width, bitmap.height))
+    const canvas = document.createElement('canvas')
+    canvas.width = Math.round(bitmap.width * scale)
+    canvas.height = Math.round(bitmap.height * scale)
+    const ctx = canvas.getContext('2d')
+    ctx.imageSmoothingQuality = 'high'
+    ctx.drawImage(bitmap, 0, 0, canvas.width, canvas.height)
+    bitmap.close?.()
+    let blob = null
+    for (const quality of [0.9, 0.82, 0.74, 0.66, 0.58, 0.5]) {
+      blob = await new Promise((resolve) => canvas.toBlob(resolve, 'image/webp', quality))
+      if (!blob || blob.type !== 'image/webp') return file
+      if (blob.size <= MAX_IMAGE_BYTES) break
+    }
+    if (blob.size >= file.size) return file
+    return new File([blob], file.name.replace(/\.[^.]+$/, '') + '.webp', { type: 'image/webp' })
+  } catch {
+    return file
+  }
+}
+
 const randomId = () => globalThis.crypto?.randomUUID?.() ?? `${Date.now()}-${Math.random().toString(36).slice(2, 10)}`
 
 /** Uploads an image to the `banners` bucket (optionally under `prefix`, e.g. 'collections/'); returns `{ path, url }`. */

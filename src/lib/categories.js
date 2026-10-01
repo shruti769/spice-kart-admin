@@ -154,6 +154,38 @@ export function validateImage(file) {
   return null
 }
 
+const ICON_SIZE = 512
+
+/**
+ * Downscales an oversized raster image (PNG/WebP/JPEG) to fit 512×512 and re-encodes it
+ * as WebP, so big exports don't trip the size limit. SVGs and files that already fit
+ * are returned unchanged; on any failure the original file is returned.
+ */
+export async function shrinkImage(file) {
+  if (!file || file.type === 'image/svg+xml' || !IMAGE_TYPES.includes(file.type)) return file
+  try {
+    const bitmap = await createImageBitmap(file)
+    const scale = Math.min(1, ICON_SIZE / Math.max(bitmap.width, bitmap.height))
+    if (scale === 1 && file.size <= MAX_IMAGE_BYTES) {
+      bitmap.close?.()
+      return file
+    }
+    const canvas = document.createElement('canvas')
+    canvas.width = Math.round(bitmap.width * scale)
+    canvas.height = Math.round(bitmap.height * scale)
+    const ctx = canvas.getContext('2d')
+    ctx.imageSmoothingQuality = 'high'
+    ctx.drawImage(bitmap, 0, 0, canvas.width, canvas.height)
+    bitmap.close?.()
+    const blob = await new Promise((resolve) => canvas.toBlob(resolve, 'image/webp', 0.9))
+    if (!blob || blob.type !== 'image/webp' || blob.size >= file.size) return file
+    const name = file.name.replace(/\.[^.]+$/, '') + '.webp'
+    return new File([blob], name, { type: 'image/webp' })
+  } catch {
+    return file
+  }
+}
+
 const randomId = () => globalThis.crypto?.randomUUID?.() ?? `${Date.now()}-${Math.random().toString(36).slice(2, 10)}`
 
 /** Uploads a category image; returns `{ path, url }` (public URL). */

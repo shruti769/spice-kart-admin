@@ -2,7 +2,7 @@ import { useEffect, useRef, useState } from 'react'
 import imgFreshCoriander from '../assets/images/fresh-coriander.jpg'
 import { useCategories } from '../lib/categories'
 import {
-  FEATURE_PLACEMENT, FEATURE_RATIO, IMAGE_TYPES, PAGES, PLACEMENTS, STATUS_PILL, bannerStatus, createBanner, deleteBanner, placementLabel, removeBannerImage,
+  FEATURE_PLACEMENT, FEATURE_RATIO, IMAGE_TYPES, PAGES, PLACEMENTS, STATUS_PILL, bannerStatus, compressImage, createBanner, deleteBanner, placementLabel, removeBannerImage,
   updateBanner, uploadBannerImage, validateImage,
 } from '../lib/banners'
 import { isSupabaseConfigured } from '../lib/supabase'
@@ -123,8 +123,9 @@ export default function NewBanner({ v }) {
   const imageUrl = picked?.url ?? savedImageUrl ?? null
   const isFeature = form.placement === FEATURE_PLACEMENT
 
-  const pickImage = (file) => {
-    if (!file) return
+  const pickImage = async (chosen) => {
+    if (!chosen) return
+    const file = await compressImage(chosen)
     const problem = validateImage(file)
     if (problem) return setErrors((e) => ({ ...e, image: problem }))
     setErrors((e) => ({ ...e, image: undefined }))

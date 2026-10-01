@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react'
-import { removeCategory, saveCategory, tileColorFor, uniqueSlug, useCategories, validateImage } from '../lib/categories'
+import { removeCategory, saveCategory, tileColorFor, uniqueSlug, useCategories, shrinkImage, validateImage } from '../lib/categories'
 import { isSupabaseConfigured } from '../lib/supabase'
 
 const FONT = 'Inter,system-ui,sans-serif'
@@ -71,8 +71,9 @@ function CategoryForm({ v, all, original }) {
   // ---- image ----
   const currentImage = preview || (!imageRemoved && original?.image_url) || null
   const openPicker = () => { if (!busy) fileInput.current?.click() }
-  const takeFile = (file) => {
-    if (!file) return
+  const takeFile = async (picked) => {
+    if (!picked) return
+    const file = await shrinkImage(picked)
     const problem = validateImage(file)
     if (problem) {
       setErrors((e) => ({ ...e, image: problem }))

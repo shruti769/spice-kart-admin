@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
-import { IMAGE_TYPES, validateImage } from '../../lib/banners'
+import { IMAGE_TYPES, compressImage, validateImage } from '../../lib/banners'
 import { collectionStatus, deleteCollection, saveCollection, useCollections } from '../../lib/content'
 import { useProducts } from '../../lib/products'
 import { BORDER, DIVIDER, FONT, INK, MUTED, PILL, btnPrimary, btnSecondary, ellipsis, errorText, hintText, inputStyle, labelStyle, shortDate, todayMelbourne, withError } from './styles'
@@ -33,8 +33,9 @@ function CollectionModal({ v, collection, onClose }) {
     setPicked((cur) => (cur.includes(id) ? cur.filter((x) => x !== id) : [...cur, id]))
     setErrors((e) => ({ ...e, products: undefined }))
   }
-  const pickCover = (file) => {
-    if (!file) return
+  const pickCover = async (chosen) => {
+    if (!chosen) return
+    const file = await compressImage(chosen)
     const problem = validateImage(file)
     if (problem) return setErrors((e) => ({ ...e, cover: problem }))
     setErrors((e) => ({ ...e, cover: undefined }))
