@@ -1,11 +1,11 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
-import { authLinkType, isSupabaseConfigured, rememberExpired, supabase } from '../lib/supabase'
+import { authLinkError, authLinkType, isSupabaseConfigured, rememberExpired, supabase } from '../lib/supabase'
 import { fetchIsAdmin } from '../lib/adminAuth'
 import { nextSignInStep } from '../lib/businessSettings'
 import { duplicateProduct, setProductPublished } from '../lib/products'
 
 // Opened from an invite / password-reset email: start on the set-password screen.
-const INITIAL_STATE = { page: authLinkType ? 'forgot' : 'login', passwordMode: authLinkType ? 'set' : 'request', modal: null, toast: '', catTab: 'products', rowMenu: null }
+const INITIAL_STATE = { page: authLinkType || authLinkError ? 'forgot' : 'login', passwordMode: authLinkType && !authLinkError ? 'set' : 'request', modal: null, toast: authLinkError || '', catTab: 'products', rowMenu: null }
 
 // Pages that "Back" returns to from a create/edit flow.
 const BACK_TO = { promonew: 'promo', bannernew: 'content', notifnew: 'notif', addproduct: 'catalogue', editproduct: 'catalogue' }
@@ -62,6 +62,11 @@ export function useAdminState() {
   // (sign-out elsewhere, refresh token revoked) the console returns to the login page.
   useEffect(() => {
     if (!isSupabaseConfigured) return
+    // A failed invite / reset link lands on "Reset your password" with the reason.
+    if (authLinkError) {
+      window.history.replaceState(null, '', window.location.pathname)
+      toastTimer.current = setTimeout(() => setState({ toast: '' }), 6000)
+    }
     let cancelled = false
     supabase.auth.getSession().then(async ({ data }) => {
       const sessionUser = data.session?.user

@@ -9,6 +9,18 @@ const key = import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY;
  */
 export const authLinkType = typeof window === 'undefined' ? null : (/[#&]type=(invite|recovery)\b/.exec(window.location.hash)?.[1] ?? null);
 
+/**
+ * Supabase's message when an invite / reset link failed (expired, already used…), else null.
+ * Supabase redirects back with `#error=…&error_code=…&error_description=…` in that case.
+ */
+export const authLinkError = (() => {
+  if (typeof window === 'undefined') return null;
+  const params = new URLSearchParams(window.location.hash.slice(1));
+  if (!params.get('error')) return null;
+  if (params.get('error_code') === 'otp_expired') return 'This link has expired or was already used · request a new one';
+  return params.get('error_description') || 'This link didn’t work · request a new one';
+})();
+
 /** False until `.env` has the project URL and publishable key. */
 export const isSupabaseConfigured = Boolean(url && key);
 
