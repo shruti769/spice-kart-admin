@@ -11,8 +11,7 @@ const ERROR_RED = '#B3402F'
 
 const labelStyle = { font: `600 10.5px/1.2 ${FONT}`, letterSpacing: '.4px', color: MUTED, textTransform: 'uppercase', whiteSpace: 'nowrap' }
 const box = { height: '36px', padding: '0 11px', border: `1px solid ${BORDER}`, borderRadius: '8px', background: '#fff', font: `500 12.5px/1.2 ${FONT}`, color: INK, width: '100%', minWidth: '0', boxSizing: 'border-box', outline: 'none' }
-const chevron = `url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='14' height='14' viewBox='0 0 20 20' fill='none'%3E%3Cpath d='M6 8l4 4 4-4' stroke='%237C8A81' stroke-width='1.6' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E")`
-const selectBox = { ...box, appearance: 'none', WebkitAppearance: 'none', paddingRight: '30px', background: `#fff ${chevron} no-repeat right 10px center`, cursor: 'pointer' }
+const selectBox = { ...box, appearance: 'none', WebkitAppearance: 'none', paddingRight: '30px', background: '#fff', cursor: 'pointer' }
 const withError = (s, e) => (e ? { ...s, borderColor: ERROR_RED } : s)
 const card = { background: '#fff', border: `1px solid ${BORDER}`, borderRadius: '10px', padding: '18px', display: 'flex', flexDirection: 'column', gap: '14px' }
 const cardTitle = { font: `600 13.5px/1.2 ${FONT}`, color: INK }

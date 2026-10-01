@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
 import imgSpiceKartLogo from '../assets/images/spice-kart-logo.png'
-import { isSupabaseConfigured, supabase } from '../lib/supabase'
+import { isSupabaseConfigured, setRememberMe, supabase } from '../lib/supabase'
 import { fetchIsAdmin } from '../lib/adminAuth'
 import { fetchStoreConfig, nextSignInStep } from '../lib/businessSettings'
 import { useStore } from '../lib/stores'
@@ -27,6 +27,7 @@ export default function Login({ v }) {
 
   const google = async () => {
     setError('')
+    setRememberMe(remember)
     const { error: e } = await supabase.auth.signInWithOAuth({ provider: 'google', options: { redirectTo: `${window.location.origin}/` } })
     if (e) setError(/provider is not enabled/i.test(e.message) ? 'Google sign-in isn’t turned on in Supabase yet · Authentication → Sign In / Providers → Google' : e.message)
   }
@@ -40,6 +41,7 @@ export default function Login({ v }) {
     setError('')
     let signedIn = false
     try {
+      setRememberMe(remember)
       const { data, error: authError } = await supabase.auth.signInWithPassword({ email: email.trim(), password })
       if (authError) throw authError
       signedIn = true

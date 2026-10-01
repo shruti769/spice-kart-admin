@@ -22,8 +22,12 @@ export const REVIEW_PILL = {
 const SELECT = 'id, rating, comment, status, reply, replied_at, hidden_reason, created_at, order_id, customer_id, product_id, customer:customers(first_name, last_name, email), product:products(name, image_url)'
 const clean = (s) => s.replace(/[,()*%\\:"']/g, ' ').trim()
 
-/** Builds the filtered reviews query. Search covers the comment, product name and customer name. */
-async function reviewsQuery({ tab = 'all', q = '', rating = 'all' }, select, opts) {
+/**
+ * Runs the filtered reviews query for rows `from`–`to`. Search covers the comment, product name and
+ * customer name. The range is applied here because an async function can't hand back an unrun
+ * query builder: awaiting it runs the query.
+ */
+async function reviewsQuery({ tab = 'all', q = '', rating = 'all' }, select, opts, from, to) {
   let x = supabase.from('reviews').select(select, opts)
   if (tab === 'pending' || tab === 'published' || tab === 'hidden') x = x.eq('status', tab)
   else if (tab === 'replied') x = x.not('reply', 'is', null)
@@ -41,14 +45,14 @@ async function reviewsQuery({ tab = 'all', q = '', rating = 'all' }, select, opt
     if (customers.data?.length) parts.push(`customer_id.in.(${customers.data.map((c) => c.id).join(',')})`)
     x = x.or(parts.join(','))
   }
-  return x.order('created_at', { ascending: false }).order('id')
+  return x.order('created_at', { ascending: false }).order('id').range(from, to)
 }
 
 /** One page of reviews (`page` from 1) with the total count. Live. */
 export function useReviews(filters, page, pageSize) {
   return useLiveQuery(async () => {
     const from = (page - 1) * pageSize
-    const { data, error, count } = await (await reviewsQuery(filters, SELECT, { count: 'exact' })).range(from, from + pageSize - 1)
+    const { data, error, count } = await reviewsQuery(filters, SELECT, { count: 'exact' }, from, from + pageSize - 1)
     if (error && error.code !== 'PGRST103') throw error
     return { rows: data ?? [], count: count ?? 0 }
   }, ['reviews'], [JSON.stringify(filters), page, pageSize])
@@ -64,7 +68,7 @@ export function useReviewSummary() {
 }
 
 export async function fetchReviewsForExport(filters) {
-  const { data, error, count } = await (await reviewsQuery(filters, SELECT, { count: 'exact' })).range(0, EXPORT_LIMIT - 1)
+  const { data, error, count } = await reviewsQuery(filters, SELECT, { count: 'exact' }, 0, EXPORT_LIMIT - 1)
   if (error) throw friendly(error)
   return { rows: data ?? [], count: count ?? 0 }
 }

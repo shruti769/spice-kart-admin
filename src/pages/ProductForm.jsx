@@ -43,7 +43,6 @@ function rowToForm(row) {
 const labelStyle = { font: `600 10.5px/1.2 ${FONT}`, letterSpacing: '.4px', color: '#7C8A81', textTransform: 'uppercase', whiteSpace: 'nowrap' }
 const boxBase = { height: '36px', padding: '0 11px', border: '1px solid #E4E7E2', borderRadius: '8px', background: '#fff', font: `500 12.5px/1.2 ${FONT}`, color: '#17201A', width: '100%', minWidth: '0', boxSizing: 'border-box', outline: 'none' }
 const areaBase = { display: 'block', minHeight: '64px', padding: '10px 11px', border: '1px solid #E4E7E2', borderRadius: '8px', background: '#fff', font: `400 12.5px/1.6 ${FONT}`, color: '#4A564E', width: '100%', boxSizing: 'border-box', outline: 'none', resize: 'vertical' }
-const chevron = `url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='14' height='14' viewBox='0 0 20 20' fill='none'%3E%3Cpath d='M6 8l4 4 4-4' stroke='%237C8A81' stroke-width='1.6' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E")`
 const withError = (style, err) => (err ? { ...style, borderColor: ERROR_RED } : style)
 const cardStyle = { background: '#fff', border: '1px solid #E4E7E2', borderRadius: '10px', padding: '18px', display: 'flex', flexDirection: 'column', gap: '14px' }
 const cardTitle = { font: `600 13.5px/1.2 ${FONT}`, color: '#17201A', whiteSpace: 'nowrap' }
@@ -92,7 +91,7 @@ function NumberInput({ value, onChange, error, prefix, integer, ...rest }) {
 }
 
 function Select({ value, onChange, error, children, ...rest }) {
-  const style = { ...withError(boxBase, error), appearance: 'none', WebkitAppearance: 'none', paddingRight: '30px', cursor: 'pointer', backgroundImage: chevron, backgroundRepeat: 'no-repeat', backgroundPosition: 'right 10px center', color: value ? '#17201A' : '#A3ADA6' }
+  const style = { ...withError(boxBase, error), appearance: 'none', WebkitAppearance: 'none', paddingRight: '30px', cursor: 'pointer', color: value ? '#17201A' : '#A3ADA6' }
   return (
     <select className="sk-input" value={value} onChange={(e) => onChange(e.target.value)} style={style} aria-invalid={Boolean(error)} {...rest}>
       {children}

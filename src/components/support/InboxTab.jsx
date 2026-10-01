@@ -15,7 +15,7 @@ const CHIPS = [...STATUSES, ['all', 'All']]
 const pill = (fg, bg) => ({ font: `600 10.5px/1.2 ${FONT}`, color: fg, background: bg, padding: '4px 7px', borderRadius: '5px', whiteSpace: 'nowrap', display: 'inline-block' })
 const card = { background: '#fff', border: `1px solid ${BORDER}`, borderRadius: '12px', padding: '14px', display: 'flex', flexDirection: 'column', gap: '10px' }
 const outlineBtn = { flex: '1', height: '34px', border: `1px solid ${BORDER}`, borderRadius: '8px', background: '#fff', font: `600 12px/1.2 ${FONT}`, color: INK, cursor: 'pointer', whiteSpace: 'nowrap' }
-const plainSelect = { height: '34px', padding: '0 28px 0 11px', border: `1px solid ${BORDER}`, borderRadius: '8px', background: `#fff url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='14' height='14' viewBox='0 0 20 20' fill='none'%3E%3Cpath d='M6 8l4 4 4-4' stroke='%2317201A' stroke-width='1.6' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E") no-repeat right 9px center`, appearance: 'none', WebkitAppearance: 'none', font: `600 12px/1.2 ${FONT}`, color: INK, cursor: 'pointer', maxWidth: '100%' }
+const plainSelect = { height: '34px', padding: '0 28px 0 11px', border: `1px solid ${BORDER}`, borderRadius: '8px', background: '#fff', appearance: 'none', WebkitAppearance: 'none', font: `600 12px/1.2 ${FONT}`, color: INK, cursor: 'pointer', maxWidth: '100%' }
 
 function Avatar({ c, size = 34 }) {
   return (

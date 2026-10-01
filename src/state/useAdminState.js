@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
-import { authLinkType, isSupabaseConfigured, supabase } from '../lib/supabase'
+import { authLinkType, isSupabaseConfigured, rememberExpired, supabase } from '../lib/supabase'
 import { fetchIsAdmin } from '../lib/adminAuth'
 import { nextSignInStep } from '../lib/businessSettings'
 import { duplicateProduct, setProductPublished } from '../lib/products'
@@ -67,6 +67,11 @@ export function useAdminState() {
       const sessionUser = data.session?.user
       // The set-password screen continues the sign-in itself once the password is saved.
       if (!sessionUser || cancelled || authLinkType) return
+      if (rememberExpired()) {
+        await supabase.auth.signOut()
+        flash('Your 30-day sign-in has ended · please sign in again')
+        return
+      }
       try {
         const isAdmin = await fetchIsAdmin(sessionUser.id)
         if (cancelled) return
@@ -90,11 +95,20 @@ export function useAdminState() {
         // Could not verify admin access: stay on the login page.
       }
     })
+    // A console left open past the 30 days signs out too.
+    const expiry = setInterval(async () => {
+      if (!rememberExpired()) return
+      const { data } = await supabase.auth.getSession()
+      if (!data.session) return
+      await supabase.auth.signOut()
+      flash('Your 30-day sign-in has ended · please sign in again')
+    }, 60000)
     const { data: sub } = supabase.auth.onAuthStateChange((event) => {
       if (event === 'SIGNED_OUT') setState((st) => (st.page === 'login' ? {} : { page: 'login', modal: null, rowMenu: null, editingProduct: null, actionProduct: null }))
     })
     return () => {
       cancelled = true
+      clearInterval(expiry)
       sub.subscription.unsubscribe()
     }
   }, [setState, flash])

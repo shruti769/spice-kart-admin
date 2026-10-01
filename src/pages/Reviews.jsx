@@ -10,7 +10,10 @@ const INK = '#17201A'
 const MUTED = '#7C8A81'
 const BORDER = '#E4E7E2'
 const PAGE = 20
-const COLS = '1.1fr 1.4fr .6fr 2.2fr .8fr minmax(110px,1.1fr) 190px'
+const COLS = 'minmax(150px,1.2fr) minmax(170px,1.4fr) 56px minmax(200px,2fr) minmax(72px,.7fr) minmax(110px,.9fr) 190px'
+const TABLE_MIN = '1070px'
+// Names wrap to two lines before they're cut off.
+const twoLines = { overflow: 'hidden', display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', wordBreak: 'break-word' }
 const STAR = 'M10 3.2l2.1 4.3 4.7.7-3.4 3.3.8 4.7L10 14l-4.2 2.2.8-4.7L3.2 8.2l4.7-.7L10 3.2z'
 
 const ellipsis = { whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }
@@ -245,7 +248,8 @@ export default function Reviews({ v }) {
               </div>
             )}
             <div className="r-table-wrap" style={{ background: '#fff', border: `1px solid ${BORDER}`, borderRadius: '10px', overflow: 'hidden', flex: 'none' }}>
-              <div className="r-table" style={{ '--r-min': '900px', display: 'grid', gridTemplateColumns: COLS, gap: '14px', padding: '11px 16px', background: '#F6F7F4', borderBottom: `1px solid ${BORDER}` }}>
+              <div style={{ overflowX: 'auto', WebkitOverflowScrolling: 'touch' }}>
+              <div className="r-table" style={{ '--r-min': TABLE_MIN, minWidth: TABLE_MIN, display: 'grid', gridTemplateColumns: COLS, gap: '14px', padding: '11px 16px', background: '#F6F7F4', borderBottom: `1px solid ${BORDER}` }}>
                 {['Customer', 'Product', 'Rating', 'Review', 'Date', 'Status'].map((h) => <span key={h} style={head}>{h}</span>)}
                 <span style={{ ...head, textAlign: 'right' }}>Actions</span>
               </div>
@@ -254,16 +258,16 @@ export default function Reviews({ v }) {
               ) : rows.map((r, i) => {
                 const [pl, pfg, pbg] = REVIEW_PILL[r.status] ?? REVIEW_PILL.pending
                 return (
-                  <div key={r.id} className="hv3 r-table" style={{ '--r-min': '900px', display: 'grid', gridTemplateColumns: COLS, gap: '14px', padding: '13px 16px', borderBottom: i < rows.length - 1 ? '1px solid #EFF1ED' : '0', alignItems: 'center' }}>
+                  <div key={r.id} className="hv3 r-table" style={{ '--r-min': TABLE_MIN, minWidth: TABLE_MIN, display: 'grid', gridTemplateColumns: COLS, gap: '14px', padding: '13px 16px', borderBottom: i < rows.length - 1 ? '1px solid #EFF1ED' : '0', alignItems: 'center' }}>
                     <span style={cellWrap}>
                       <span style={{ width: '28px', height: '28px', borderRadius: '7px', background: '#F6F7F4', border: `1px solid ${BORDER}`, display: 'flex', alignItems: 'center', justifyContent: 'center', font: `600 10.5px/1.2 ${FONT}`, color: '#4A564E', flex: 'none' }}>{initials(r.customer)}</span>
-                      <span style={{ font: `600 12.5px/1.2 ${FONT}`, color: INK, ...ellipsis }}>{customerName(r.customer)}</span>
+                      <span style={{ font: `600 12.5px/1.3 ${FONT}`, color: INK, ...twoLines }} title={customerName(r.customer)}>{customerName(r.customer)}</span>
                     </span>
                     <span style={cellWrap}>
                       <span style={{ width: '30px', height: '30px', borderRadius: '7px', overflow: 'hidden', background: '#F6F7F4', border: `1px solid ${BORDER}`, flex: 'none', display: 'block', position: 'relative' }}>
                         {r.product?.image_url && <img src={r.product.image_url} alt="" loading="lazy" style={{ position: 'absolute', inset: '0', width: '100%', height: '100%', objectFit: 'cover' }} />}
                       </span>
-                      <span style={{ font: `500 12.5px/1.2 ${FONT}`, color: INK, ...ellipsis }} title={productLabel(r)}>{productLabel(r)}</span>
+                      <span style={{ font: `500 12.5px/1.3 ${FONT}`, color: INK, ...twoLines }} title={productLabel(r)}>{productLabel(r)}</span>
                     </span>
                     <span style={cellWrap}>
                       <span style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
@@ -293,6 +297,7 @@ export default function Reviews({ v }) {
                   </div>
                 )
               })}
+              </div>
               {count > 0 && (
                 <div style={{ display: 'flex', alignItems: 'center', gap: '12px', padding: '12px 16px', borderTop: `1px solid ${BORDER}`, background: '#fff' }}>
                   <span style={{ font: `400 11.5px/1.2 ${FONT}`, color: MUTED, whiteSpace: 'nowrap' }}>
