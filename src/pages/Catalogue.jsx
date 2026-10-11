@@ -1,4 +1,11 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
+import { repairCatalogueCategories } from '../lib/catalogueCategoryMapping'
+import { supabase } from '../lib/supabase'
+import { notifyCategoriesChanged } from '../lib/categories'
+import { notifyProductsChanged } from '../lib/products'
+import CatalogueImport from '../components/CatalogueImport'
+import ProductPhotoSamples from '../components/ProductPhotoSamples'
+import { applyCategoryIcons } from '../lib/categoryIcons'
 import CategoryTile from '../components/CategoryTile'
 import LiveProductRows, { InventoryRows, ListFooter } from '../components/LiveProductRows'
 import { useCategories } from '../lib/categories'
@@ -124,7 +131,30 @@ function CategoryRow({ v, c, index, count, last }) {
 }
 
 export default function Catalogue({ v }) {
+  const flash = v.flash
+  useEffect(() => {
+    let active = true
+    repairCatalogueCategories(supabase).then((result) => {
+      if (active && result && (result.moved || result.hidden)) flash(`${result.moved} products moved to the correct categories${result.hidden ? ' · duplicate Snacks hidden' : ''}`)
+    }).catch((error) => {
+      if (active) flash(`Category correction could not finish: ${error.message}. Reload Catalogue to retry.`)
+    }).finally(() => { notifyProductsChanged(); notifyCategoriesChanged() })
+    return () => { active = false }
+  }, [flash])
   // One fetch per visit to the catalogue, shared by every tab below.
+  const [photosOpen, setPhotosOpen] = useState(false)
+  const [iconsBusy, setIconsBusy] = useState(false)
+  const [iconsSaved, setIconsSaved] = useState(0)
+  const saveIcons = async () => {
+    if (iconsBusy) return
+    setIconsBusy(true); setIconsSaved(0)
+    try {
+      const result = await applyCategoryIcons(setIconsSaved)
+      v.flash(`${result.saved} category icons saved${result.skipped ? ` · ${result.skipped} categories have no matching icon` : ''}`)
+    } catch (error) { v.flash(error.message) }
+    finally { setIconsBusy(false) }
+  }
+  const [importOpen, setImportOpen] = useState(false)
   const products = useProducts()
   const categoryState = useCategories()
   const categories = categoryState.rows
@@ -182,6 +212,8 @@ export default function Catalogue({ v }) {
   }
   return (
     <>
+      {photosOpen && <ProductPhotoSamples onClose={() => setPhotosOpen(false)} />}
+      {importOpen && <CatalogueImport onClose={() => setImportOpen(false)} />}
       <div className="sk-topbar" style={{ display: "flex", alignItems: "flex-end", gap: "18px", padding: "24px 26px 2px" }}>
         <span style={{ display: "flex", flexDirection: "column", gap: "5px", minWidth: "0" }}>
           <span style={{ font: "700 20px/1.2 Inter,system-ui,sans-serif", color: "#17201A", whiteSpace: "nowrap" }}>Catalogue</span>
@@ -199,6 +231,9 @@ export default function Catalogue({ v }) {
               {v.catSearch}
             </span>
           </span>
+          {v.isProducts && <button onClick={() => setPhotosOpen(true)} style={{ padding: "8px 12px", border: "1px solid #D7E3CC", borderRadius: 8, background: "#F1F8E9", color: "#245832", fontWeight: 600, cursor: "pointer" }}>Add product photos</button>}
+          {v.isCats && <button disabled={iconsBusy || categoryState.status !== "ready"} onClick={saveIcons} style={{ padding: "8px 12px", border: "1px solid #D7E3CC", borderRadius: 8, background: "#F1F8E9", color: "#245832", fontWeight: 600, cursor: "pointer" }}>{iconsBusy ? `Saving icons… ${iconsSaved}` : "Apply category icons"}</button>}
+          <button onClick={() => setImportOpen(true)} style={{ padding: "8px 12px", border: "1px solid #E4E7E2", borderRadius: 8, background: "#fff", cursor: "pointer" }}>Import Excel</button>
           <button onClick={exportCurrent} title="Download what this tab lists as CSV" style={{ display: "flex", alignItems: "center", gap: "7px", height: "34px", padding: "0 12px", border: "1px solid #E4E7E2", borderRadius: "8px", background: "#fff", color: "#17201A", font: "600 12.5px/1.2 Inter,system-ui,sans-serif", cursor: "pointer", whiteSpace: "nowrap" }}>
             <svg width="15" height="15" viewBox="0 0 20 20" fill="none" style={{ flex: "none" }}>
               <path d="M10 3.6v9M6.4 9.2L10 12.8l3.6-3.6M3.6 16.4h12.8" stroke="#4A564E" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
