@@ -135,7 +135,7 @@ export default function Catalogue({ v }) {
   useEffect(() => {
     let active = true
     repairCatalogueCategories(supabase).then((result) => {
-      if (active && result && (result.moved || result.hidden)) flash(`${result.moved} products moved to the correct categories${result.hidden ? ' · duplicate Snacks hidden' : ''}`)
+      if (active && result && (result.moved || result.hidden)) flash(`${result.moved} products moved to the correct categories${result.hidden ? ` · ${result.hidden} duplicate categories hidden` : ''}`)
     }).catch((error) => {
       if (active) flash(`Category correction could not finish: ${error.message}. Reload Catalogue to retry.`)
     }).finally(() => { notifyProductsChanged(); notifyCategoriesChanged() })

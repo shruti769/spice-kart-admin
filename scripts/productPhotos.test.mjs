@@ -26,6 +26,15 @@ function fakeClient(products, { updateError = null, stale = false, uploadError =
 const row = { name: 'MATCHED PRODUCT', file: 'photo.jpg' }
 const fetchPhoto = async () => new Response(new Blob(['image'], { type: 'image/jpeg' }))
 
+test('replaces only the explicitly approved previous image', async () => {
+  const { client, calls } = fakeClient([{ id: 1, image_url: 'previous-generic' }])
+  assert.equal(await saveProductPhoto(client, { ...row, replaceImageUrl: 'previous-generic' }, '/', fetchPhoto), 'saved')
+  assert(calls.guards.some(([key, value]) => key === 'image_url' && value === 'previous-generic'))
+  const changed = fakeClient([{ id: 1, image_url: 'new-admin-photo' }])
+  assert.equal(await saveProductPhoto(changed.client, { ...row, replaceImageUrl: 'previous-generic' }, '/', fetchPhoto), 'skipped')
+  assert.equal(changed.calls.uploads.length, 0)
+})
+
 for (const [description, products] of [
   ['existing photo', [{ id: 1, image_url: 'existing' }]],
   ['missing product', []],

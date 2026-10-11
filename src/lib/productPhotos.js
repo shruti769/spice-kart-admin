@@ -2,7 +2,7 @@
 export async function saveProductPhoto(client, row, base, fetchImage = fetch) {
   const { data: products, error: readError } = await client.from('products').select('id,image_url').eq('name', row.name)
   if (readError) throw readError
-  if (products.length !== 1 || products[0].image_url) return 'skipped'
+  if (products.length !== 1 || (products[0].image_url && products[0].image_url !== row.replaceImageUrl)) return 'skipped'
   const product = products[0]
   const response = await fetchImage(`${base}${row.file}`)
   if (!response.ok) throw new Error(`Could not load ${row.name}`)

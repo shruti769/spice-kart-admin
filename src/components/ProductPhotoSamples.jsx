@@ -35,7 +35,7 @@ export default function ProductPhotoSamples({ onClose }) {
       }
       const names = new Map()
       for (const product of products) names.set(product.name, [...(names.get(product.name) || []), product])
-      const needsPhoto = (row) => names.get(row.name)?.length === 1 && !names.get(row.name)[0].image_url
+      const needsPhoto = (row) => names.get(row.name)?.length === 1 && (!names.get(row.name)[0].image_url || (row.replaceImageUrl && names.get(row.name)[0].image_url === row.replaceImageUrl))
       const ready = photos.filter(needsPhoto)
       if (!cancelled) {
         setRows(ready)
@@ -109,7 +109,7 @@ export default function ProductPhotoSamples({ onClose }) {
   return <div className="ci-overlay"><div ref={dialog} tabIndex={-1} className="ci-dialog ci-dialog-wide" role="dialog" aria-modal="true" aria-labelledby="photo-samples-title">
     <header className="ci-header"><div className="ci-heading"><div><h2 id="photo-samples-title">Add product photos</h2><p>Matching photos, ready for your catalogue.</p></div></div><button className="ci-close" aria-label="Close photos" disabled={busy} onClick={onClose}>×</button></header>
     <div className="ci-body">
-      <p className="ci-hint">Pack photos match the supplier listing. Generic photos show the product contents without a brand or size label. Click Add photos to save them to your catalogue.</p>
+      <p className="ci-hint">Pack photos match the supplier listing. Generic photos show the product contents without a brand or size label. Photos marked Replace update the previous photo. Click Add photos to save them to your catalogue.</p>
       <div className="pp-toolbar"><label className="pp-search">Search products<input value={query} onChange={(event) => { setQuery(event.target.value); setPage(0) }} placeholder="Search by product name" /></label><button className="ci-secondary" disabled={busy || loading} onClick={() => setSelected(new Set(rows.map((row) => row.name)))}>Select all {rows.length}</button><button className="ci-secondary" disabled={busy} onClick={() => setSelected(new Set())}>Clear selection</button></div>
       {message && <p className="ci-message" role="status">{message}</p>}
       {progress && <progress className="pp-progress" value={progress.processed} max={progress.total} aria-label="Photos saved" />}
@@ -117,6 +117,7 @@ export default function ProductPhotoSamples({ onClose }) {
         <img loading="lazy" src={`${BASE}${row.file}`} alt={row.name} />
         <label className="pp-name"><input type="checkbox" disabled={busy} checked={selected.has(row.name)} onChange={(event) => toggle(row.name, event.target.checked)} />{row.name}</label>
         <span className="pp-badge">{row.kind === 'generated' ? 'Generic · AI image' : row.kind === 'generic' ? 'Generic photo' : 'Pack photo'}</span>
+        {row.replaceImageUrl && <span className="pp-badge">Replace previous photo</span>}
         {row.source && <a href={row.source} target="_blank" rel="noreferrer">View source ↗</a>}
       </article>)}</div>
       {pages > 1 && <nav className="pp-pagination" aria-label="Photo pages"><button className="ci-secondary" disabled={currentPage === 0} onClick={() => setPage(currentPage - 1)}>Previous</button><span>{currentPage + 1} / {pages}</span><button className="ci-secondary" disabled={currentPage === pages - 1} onClick={() => setPage(currentPage + 1)}>Next</button></nav>}

@@ -21,6 +21,7 @@ const groups = [
 ]
 
 export function mappedCatalogueCategory(name, sourceCategory) {
+  if (normalize(sourceCategory) === 'spices') return { category: 'Spices & Masalas', subcategory: '' }
   const group = groups.find((g) => normalize(g.source) === normalize(sourceCategory) && g.names.some((n) => normalize(n) === normalize(name)))
   return group ? { category: group.category, subcategory: group.subcategory } : null
 }
@@ -35,11 +36,13 @@ export function planCatalogueCategoryRepair(products, categories) {
     const target = categories.find((c) => normalize(c.name) === normalize(mapped.category))
     if (!target) throw new Error(`Missing category: ${mapped.category}`)
     if (!target.enabled) throw new Error(`Enable ${mapped.category} before correcting products`)
-    moves.push({ ...product, targetId: target.id, subcategory: mapped.subcategory || null })
+    moves.push({ ...product, targetId: target.id, subcategory: normalize(source?.name) === 'spices' ? product.subcategory || null : mapped.subcategory || null })
   }
   const canonicalSnacks = categories.find((c) => normalize(c.name) === 'snacks and savouries' && c.enabled)
   const duplicate = canonicalSnacks && categories.find((c) => c.id === 'snacks' && normalize(c.name) === 'snacks' && c.enabled && !products.some((p) => p.category_id === c.id))
-  return { moves, duplicate }
+  const canonicalSpices = categories.find((c) => normalize(c.name) === 'spices & masalas' && c.enabled)
+  const duplicateSpices = canonicalSpices && categories.find((c) => c.id === 'spices' && normalize(c.name) === 'spices' && c.enabled)
+  return { moves, duplicate, duplicates: [duplicate, duplicateSpices].filter(Boolean) }
 }
 
 let running = null
@@ -59,12 +62,12 @@ async function performRepair(client) {
   if (catError) throw catError
   const products = []
   for (let offset = 0; ; offset += 1000) {
-    const { data, error } = await client.from('products').select('id,name,category_id').order('id').range(offset, offset + 999)
+    const { data, error } = await client.from('products').select('id,name,category_id,subcategory').order('id').range(offset, offset + 999)
     if (error) throw error
     products.push(...data)
     if (data.length < 1000) break
   }
-  const { moves, duplicate } = planCatalogueCategoryRepair(products, categories)
+  const { moves, duplicates } = planCatalogueCategoryRepair(products, categories)
   let moved = 0, hidden = 0
   for (const row of moves) {
     if (row.subcategory) {
@@ -76,14 +79,14 @@ async function performRepair(client) {
     if (error) throw error
     moved += data.length
   }
-  if (duplicate) {
+  for (const duplicate of duplicates) {
     // Recheck after the reads above; preserve it if a product now uses this aisle.
     const { count, error } = await client.from('products').select('id', { count: 'exact', head: true }).eq('category_id', duplicate.id)
     if (error) throw error
     if (count === 0) {
       const { data, error: hideError } = await client.from('categories').update({ enabled: false }).eq('id', duplicate.id).eq('name', duplicate.name).eq('enabled', true).select('id')
       if (hideError) throw hideError
-      hidden = data.length
+      hidden += data.length
     }
   }
   return { moved, hidden }

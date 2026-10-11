@@ -49,6 +49,16 @@ test('does not read or write catalogue data without a signed-in user', async () 
   assert.equal(await repairCatalogueCategories(client), null)
 })
 
+test('merges legacy SPICES into Spices & Masalas while preserving product subcategories', () => {
+  const cats = [...categories, { id: 'spices', name: 'SPICES', enabled: true }, { id: 'spices-and-masalas', name: 'Spices & Masalas', enabled: true }]
+  const rows = [{ id: 'x', name: 'GANESH CUMIN POWDER', category_id: 'spices', subcategory: 'Ground Spices' }]
+  const plan = planCatalogueCategoryRepair(rows, cats)
+  assert.equal(plan.moves[0].targetId, 'spices-and-masalas')
+  assert.equal(plan.moves[0].subcategory, 'Ground Spices')
+  assert(plan.duplicates.some((c) => c.id === 'spices'))
+  assert.equal(planCatalogueCategoryRepair([{ ...rows[0], category_id: 'spices-and-masalas' }], cats).moves.length, 0)
+})
+
 test('guarded writes retry after a denial and stop overwriting products moved by another admin', async () => {
   const writes = [], subs = []
   let denied = true

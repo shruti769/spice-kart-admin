@@ -30,8 +30,8 @@ if (!pending.length) {
     ['KATOOMBA Poona Beans 1kg', 'red-cowpeas'],
     ['GANESH MAKAI POHA 1 KG', 'corn-poha'],
     ['GREEN MUKHVAS 100GMX20', 'green-mukhwas'],
-    ['FEM', 'bleach-kit'],
     ['PATCHAULI', 'incense'],
   ]) assert.equal(rows.find((row) => row.name === name)?.promptSubject, subject, `Wrong contents photo for ${name}`)
+  assert.equal(rows.find((row) => row.name === 'FEM')?.file, 'fem-pearl-bleach-pack.jpg')
 }
 console.log(`${rows.length} product photo mappings validated; ${pending.length} pending.`)
