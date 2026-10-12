@@ -230,8 +230,8 @@ export default function NewBanner({ v }) {
                 <Field label="Subtitle" hint={`${form.subtitle.length}/40 · shown as the tag`}>
                   <input className="sk-input" value={form.subtitle} maxLength={40} placeholder="e.g. Up to 20% off" onChange={onText('subtitle')} style={boxBase} />
                 </Field>
-                <Field label="CTA label" error={errors.cta}>
-                  <input className="sk-input" value={form.cta} maxLength={20} placeholder="e.g. Shop now" onChange={onText('cta')} style={withError(boxBase, errors.cta)} />
+                <Field label="CTA label" error={errors.cta} hint={`${form.cta.length}/30`}>
+                  <input className="sk-input" value={form.cta} maxLength={30} placeholder="e.g. Shop now" onChange={onText('cta')} style={withError(boxBase, errors.cta)} />
                 </Field>
                 <Field label="Destination" error={errors.destination}>
                   <select value={form.destination} onChange={onText('destination')} style={withError(selectBase, errors.destination)}>

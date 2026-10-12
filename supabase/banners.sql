@@ -9,7 +9,7 @@ create table if not exists public.banners (
   id               uuid primary key default gen_random_uuid(),
   title            text not null check (char_length(btrim(title)) between 1 and 40),
   subtitle         text not null default '' check (char_length(subtitle) <= 40),
-  cta_label        text not null default 'Shop now' check (char_length(cta_label) <= 20),
+  cta_label        text not null default 'Shop now' check (char_length(cta_label) <= 30),
   -- 'category' → destination is a categories.id; 'page' → an app screen name.
   destination_type text check (destination_type in ('category', 'page')),
   destination      text,
@@ -39,6 +39,11 @@ create table if not exists public.banners (
 alter table public.banners drop constraint if exists banners_placement_check;
 alter table public.banners
   add constraint banners_placement_check check (placement in ('home_top', 'home_middle', 'home_feature', 'category_top'));
+
+-- CTA label limit raised from 20 to 30 characters.
+alter table public.banners drop constraint if exists banners_cta_label_check;
+alter table public.banners
+  add constraint banners_cta_label_check check (char_length(cta_label) <= 30);
 
 create index if not exists banners_live_idx on public.banners (placement, priority) where status = 'published';
 
