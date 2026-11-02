@@ -104,8 +104,8 @@ SUPABASE_ACCESS_TOKEN=sbp_XXXX supabase functions deploy send-push --no-verify-j
 Then set whichever providers you use:
 
 ```bash
-# Email (resend.com): verify your domain there first
-supabase secrets set --project-ref posbkqkzkyehmanrbqcj RESEND_API_KEY=re_... RESEND_FROM="Spice Kart <orders@yourdomain.com.au>"
+# Email (brevo.com): verify your sender or domain there first
+supabase secrets set --project-ref posbkqkzkyehmanrbqcj BREVO_API_KEY=xkeysib-... BREVO_SENDER_EMAIL=orders@yourdomain.com.au BREVO_SENDER_NAME="Spice Kart"
 # SMS (twilio.com)
 supabase secrets set --project-ref posbkqkzkyehmanrbqcj TWILIO_ACCOUNT_SID=AC... TWILIO_AUTH_TOKEN=... TWILIO_FROM=+61...
 ```

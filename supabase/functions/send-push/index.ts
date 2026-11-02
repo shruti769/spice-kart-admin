@@ -5,11 +5,12 @@
 // (pg_cron + pg_net) and straight after "Send now" / an order status change.
 //
 // It also delivers public.outbound_messages (business_settings.sql): order-confirmation emails
-// (Resend), delivery SMS (Twilio), Slack low-stock alerts (incoming webhook) and the daily digest.
+// (Brevo), delivery SMS (Twilio), Slack low-stock alerts (incoming webhook) and the daily digest.
 //
 // Auth: the `x-dispatch-secret` header must equal the DISPATCH_SECRET function secret.
 // Env (set with `supabase secrets set`): DISPATCH_SECRET, optional EXPO_ACCESS_TOKEN,
-//   RESEND_API_KEY + RESEND_FROM (e.g. "Spice Kart <orders@yourdomain.com.au>") for email,
+//   BREVO_API_KEY + BREVO_SENDER_EMAIL (e.g. orders@yourdomain.com.au, verified in Brevo) and
+//   optional BREVO_SENDER_NAME (default "Spice Kart") for email,
 //   TWILIO_ACCOUNT_SID + TWILIO_AUTH_TOKEN + TWILIO_FROM (e.g. +61…) for SMS.
 // SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY are provided by Supabase automatically.
 //
@@ -58,14 +59,19 @@ async function deliver(m: Message): Promise<void> {
     return
   }
   if (m.channel === 'email') {
-    const key = Deno.env.get('RESEND_API_KEY'), from = Deno.env.get('RESEND_FROM')
-    if (!key || !from) throw new Error('Email provider not set up · add RESEND_API_KEY and RESEND_FROM to the function secrets')
-    const res = await fetch('https://api.resend.com/emails', {
+    const key = Deno.env.get('BREVO_API_KEY'), email = Deno.env.get('BREVO_SENDER_EMAIL')
+    if (!key || !email) throw new Error('Email provider not set up · add BREVO_API_KEY and BREVO_SENDER_EMAIL to the function secrets')
+    const res = await fetch('https://api.brevo.com/v3/smtp/email', {
       method: 'POST',
-      headers: { Authorization: `Bearer ${key}`, 'Content-Type': 'application/json' },
-      body: JSON.stringify({ from, to: [m.recipient], subject: m.subject ?? 'Spice Kart', text: m.body }),
+      headers: { 'api-key': key, 'Content-Type': 'application/json', Accept: 'application/json' },
+      body: JSON.stringify({
+        sender: { name: Deno.env.get('BREVO_SENDER_NAME') ?? 'Spice Kart', email },
+        to: [{ email: m.recipient }],
+        subject: m.subject ?? 'Spice Kart',
+        textContent: m.body,
+      }),
     })
-    if (!res.ok) throw new Error(`Resend ${res.status}: ${(await res.text()).slice(0, 200)}`)
+    if (!res.ok) throw new Error(`Brevo ${res.status}: ${(await res.text()).slice(0, 200)}`)
     return
   }
   const sid = Deno.env.get('TWILIO_ACCOUNT_SID'), token = Deno.env.get('TWILIO_AUTH_TOKEN'), from = Deno.env.get('TWILIO_FROM')

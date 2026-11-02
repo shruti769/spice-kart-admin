@@ -113,7 +113,7 @@ export function PaymentsCard({ form, set, errors, disabled, dirty }) {
 
 // ─── Notifications ───────────────────────────────────────────────────────────────────────
 const PROVIDER_HINT = {
-  email: 'Needs RESEND_API_KEY + RESEND_FROM in the send-push function secrets',
+  email: 'Needs BREVO_API_KEY + BREVO_SENDER_EMAIL in the send-push function secrets',
   sms: 'Needs TWILIO_ACCOUNT_SID, TWILIO_AUTH_TOKEN + TWILIO_FROM in the send-push function secrets',
 }
 function QueueNote({ stats, channel }) {
@@ -130,9 +130,26 @@ export function NotificationsCard({ form, set, errors, disabled, dirty }) {
   const stats = useOutboundSummary()
   const [emailText, setEmailText] = useState(null)
   const emails = emailText ?? form.digest_emails.join(', ')
+  const [newOrderText, setNewOrderText] = useState(null)
+  const newOrderEmails = newOrderText ?? form.new_order_emails.join(', ')
   return (
     <div data-section="notifications" style={{ ...cardStyle, gap: '2px' }}>
       <span style={{ paddingBottom: '6px' }}><CardTitle title="Notifications" dirty={dirty} /></span>
+      <ToggleRow title="New order email to admin" sub="Sent when an order is paid. The panel also plays a sound while it's open" on={form.notify_admin_new_order} disabled={disabled} onChange={(on) => set({ notify_admin_new_order: on })}>
+        <Field label="Send to" error={errors.new_order_emails} hint="Emails, separated by commas. Leave empty to use the store's support email">
+          <input
+            value={newOrderEmails}
+            placeholder="owner@yourstore.com.au"
+            disabled={disabled}
+            onChange={(e) => {
+              setNewOrderText(e.target.value)
+              set({ new_order_emails: e.target.value.split(/[,\s]+/).map((s) => s.trim()).filter(Boolean) })
+            }}
+            style={withError(inputStyle, errors.new_order_emails)}
+          />
+        </Field>
+        <QueueNote stats={stats} channel="email" />
+      </ToggleRow>
       <ToggleRow title="Order confirmation email" sub="Sent to the customer on every order (when they have an email)" on={form.notify_order_email} disabled={disabled} onChange={(on) => set({ notify_order_email: on })}>
         <QueueNote stats={stats} channel="email" />
       </ToggleRow>

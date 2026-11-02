@@ -11,7 +11,7 @@ import SecurityCard from "../components/settings/SecurityCard"
 
 // business_settings columns edited on this page, by card.
 const PAYMENT_KEYS = ["gst_rate", "prices_include_gst", "refund_destination", "accept_card", "card_brands", "accept_apple_pay", "accept_google_pay", "accept_payid", "restocking_fee_max", "payout_schedule"]
-const NOTIFY_KEYS = ["notify_order_email", "notify_delivery_sms", "allow_promo_push", "slack_low_stock", "slack_webhook_url", "daily_digest", "digest_emails", "digest_hour"]
+const NOTIFY_KEYS = ["notify_order_email", "notify_admin_new_order", "new_order_emails", "notify_delivery_sms", "allow_promo_push", "slack_low_stock", "slack_webhook_url", "daily_digest", "digest_emails", "digest_hour"]
 const SECURITY_KEYS = ["require_2fa", "allow_google_sso", "session_timeout_minutes"]
 // Store hours save straight from their own popup (StoreHoursCard), so they aren't in the draft.
 const BIZ_KEYS = ["min_order_value", ...PAYMENT_KEYS, ...NOTIFY_KEYS, ...SECURITY_KEYS]
@@ -34,6 +34,7 @@ function parseBusiness(draft, saved) {
   if (draft.slack_low_stock && !/^https:\/\/hooks\.slack\.com\//.test(draft.slack_webhook_url ?? "")) errors.slack_webhook_url = "Paste the Slack webhook URL (starts with https://hooks.slack.com/)"
   if (draft.daily_digest && !draft.digest_emails.length) errors.digest_emails = "Add at least one email"
   if (draft.digest_emails.some((e) => !/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(e))) errors.digest_emails = "Check the email addresses"
+  if (draft.new_order_emails.some((e) => !/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(e))) errors.new_order_emails = "Check the email addresses"
   if (![draft.accept_card, draft.accept_apple_pay, draft.accept_google_pay, draft.accept_payid].some(Boolean)) errors.payment_methods = "Keep at least one payment method on"
   if (draft.accept_card && !draft.card_brands.length) errors.payment_methods = "Pick at least one card brand, or turn cards off"
   return { patch, errors }
@@ -144,7 +145,7 @@ export default function Settings({ v }) {
   const [bizErrors, setBizErrors] = useState({})
   const bizForm = bizDraft ?? biz.data ?? {
     min_order_value: 0, gst_rate: 10, prices_include_gst: true, refund_destination: "wallet", accept_card: true, card_brands: [], accept_apple_pay: true,
-    accept_google_pay: true, accept_payid: true, restocking_fee_max: 0, payout_schedule: "daily", notify_order_email: false, notify_delivery_sms: false,
+    accept_google_pay: true, accept_payid: true, restocking_fee_max: 0, payout_schedule: "daily", notify_order_email: false, notify_admin_new_order: true, new_order_emails: [], notify_delivery_sms: false,
     allow_promo_push: true, slack_low_stock: false, slack_webhook_url: null, daily_digest: false, digest_emails: [], digest_hour: 7, hours: {}, public_holidays: [],
     require_2fa: false, allow_google_sso: false, session_timeout_minutes: 30, ip_allowlist_enabled: false, ip_allowlist: [],
   }

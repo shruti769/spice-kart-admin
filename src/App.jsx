@@ -1,5 +1,6 @@
 import { useState } from 'react'
 import { useAdminState } from './state/useAdminState'
+import { useNewOrderAlert } from './lib/newOrderAlert'
 import Sidebar from './components/Sidebar'
 import Header from './components/Header'
 import Dashboard from './pages/Dashboard'
@@ -55,6 +56,7 @@ import Toast from './components/Toast'
 
 export default function App() {
   const v = useAdminState()
+  useNewOrderAlert(!v.p_login && !v.p_twofa && !v.p_forgot, v.flash)
   // Phone / tablet: the sidebar slides in as a drawer from the header's menu button.
   const [navOpen, setNavOpen] = useState(false)
   return (

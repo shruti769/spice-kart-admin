@@ -305,8 +305,8 @@ begin
   if new.status is not distinct from old.status then return new; end if;
   case new.status
     when 'confirmed'        then t := 'Order #' || new.number || ' confirmed'; b := 'We’ve got it and will start picking your groceries shortly.';
-    when 'picking'          then t := 'We’re picking your groceries'; b := 'Your shopper has started on order #' || new.number || '.';
-    when 'packed'           then t := 'Your order is packed'; b := 'Order #' || new.number || ' is packed and waiting for a driver.';
+    when 'picking'          then t := 'We’re picking your groceries'; b := 'We’ve started on order #' || new.number || '.';
+    when 'packed'           then t := 'Your order is packed'; b := 'Order #' || new.number || ' is packed and will be delivered soon.';
     when 'out_for_delivery' then t := 'Your order is on the way'; b := 'Order #' || new.number || ' is out for delivery.';
     when 'delivered'        then t := 'Delivered · enjoy!'; b := 'Order #' || new.number || ' has been delivered. Tap to rate your order.';
     when 'cancelled'        then t := 'Order #' || new.number || ' was cancelled'; b := 'If you were charged, the refund is on its way.';
