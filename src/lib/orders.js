@@ -155,7 +155,14 @@ export async function cancelOrder(id, reason) {
 // ─── Display ─────────────────────────────────────────────────────────────────────────────
 export const customerName = (c) => [c?.first_name, c?.last_name].filter(Boolean).join(' ') || 'Guest customer'
 export const initials = (c) => (customerName(c).split(' ').map((w) => w[0]).join('').slice(0, 2) || '?').toUpperCase()
-export const mobileLabel = (m) => (m ? `+61 ${m.slice(0, 3)} ${m.slice(3, 6)} ${m.slice(6)}` : '')
+// Stored as +614… or +91…, or nine digits after +61 on older records.
+export const mobileHref = (m) => (!m ? '' : m.startsWith('+') ? m : `+61${m}`)
+export const mobileLabel = (m) => {
+  if (!m) return ''
+  const full = mobileHref(m)
+  if (full.startsWith('+91')) return `+91 ${full.slice(3, 8)} ${full.slice(8)}`
+  return `+61 ${full.slice(3, 6)} ${full.slice(6, 9)} ${full.slice(9)}`
+}
 export const itemCount = (o) => (o.order_items ?? []).reduce((n, i) => n + i.qty, 0)
 export const money = (n) => `$${Number(n || 0).toFixed(2)}`
 

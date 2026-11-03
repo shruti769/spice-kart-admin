@@ -120,8 +120,8 @@ function QueueNote({ stats, channel }) {
   const s = stats?.[channel]
   if (!s) return <span style={{ font: `400 11px/1.4 ${FONT}`, color: MUTED }}>Nothing sent in the last 7 days. {PROVIDER_HINT[channel] ?? ''}</span>
   return (
-    <span style={{ font: `400 11px/1.4 ${FONT}`, color: s.failed ? DANGER : MUTED }}>
-      Last 7 days: {s.sent} sent{s.pending ? ` · ${s.pending} waiting` : ''}{s.failed ? ` · ${s.failed} failed · ${s.lastError}` : ''}
+    <span style={{ font: `400 11px/1.4 ${FONT}`, color: s.latestFailed ? DANGER : MUTED }}>
+      Last 7 days: {s.sent} sent{s.pending ? ` · ${s.pending} waiting` : ''}{s.failed ? ` · ${s.failed} failed` : ''}{s.latestFailed ? ` · ${s.lastError}` : ''}
     </span>
   )
 }
@@ -150,7 +150,7 @@ export function NotificationsCard({ form, set, errors, disabled, dirty }) {
         </Field>
         <QueueNote stats={stats} channel="email" />
       </ToggleRow>
-      <ToggleRow title="Order confirmation email" sub="Sent to the customer on every order (when they have an email)" on={form.notify_order_email} disabled={disabled} onChange={(on) => set({ notify_order_email: on })}>
+      <ToggleRow title="Order confirmation email" sub="Sent to the customer once their order is paid (when they have an email)" on={form.notify_order_email} disabled={disabled} onChange={(on) => set({ notify_order_email: on })}>
         <QueueNote stats={stats} channel="email" />
       </ToggleRow>
       <ToggleRow title="Delivery SMS updates" sub="“On the way” and “delivered” texts to the customer’s mobile" on={form.notify_delivery_sms} disabled={disabled} onChange={(on) => set({ notify_delivery_sms: on })}>

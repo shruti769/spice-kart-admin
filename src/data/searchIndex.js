@@ -1,5 +1,6 @@
 // Global search: static pages plus live Supabase records (orders, customers, products, drivers).
 // A record opens its screen with `open(v)` when present, else the view-model handler named `go`.
+import { mobileLabel } from '../lib/orders'
 import { supabase } from '../lib/supabase'
 
 const PAGES = [
@@ -52,7 +53,6 @@ export function searchConsole(query, extra = []) {
 const STATUS = { placed: 'Placed', confirmed: 'Confirmed', picking: 'Picking', packed: 'Packed', out_for_delivery: 'Out for delivery', delivered: 'Delivered', cancelled: 'Cancelled' }
 const money = (n) => `$${Number(n || 0).toFixed(2)}`
 const nameOf = (c) => [c?.first_name, c?.last_name].filter(Boolean).join(' ') || 'Guest customer'
-const phoneOf = (m) => (m ? `+61 ${m.slice(0, 3)} ${m.slice(3, 6)} ${m.slice(6)}` : '')
 // Characters PostgREST's or() filter treats specially.
 const clean = (q) => q.replace(/[,()*%\\]/g, ' ').trim()
 
@@ -77,7 +77,7 @@ export async function liveSearch(query) {
     meta: STATUS[o.status] ?? o.status, badge: 'OR', open: (v) => v.openOrder(o),
   })
   for (const c of customers.data ?? []) out.push({
-    group: 'Customers', title: nameOf(c), subtitle: [c.email, phoneOf(c.mobile)].filter(Boolean).join(' · ') || 'No contact details',
+    group: 'Customers', title: nameOf(c), subtitle: [c.email, mobileLabel(c.mobile)].filter(Boolean).join(' · ') || 'No contact details',
     meta: `${c.orders} order${c.orders === 1 ? '' : 's'}`, badge: initials(nameOf(c)), open: (v) => v.openCustomer(c.id),
   })
   for (const p of products.data ?? []) out.push({

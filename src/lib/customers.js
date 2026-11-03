@@ -204,10 +204,12 @@ async function updateCustomerRow(id, patch) {
   if (!data?.length) throw new Error('This customer no longer exists or you don’t have permission to change them')
 }
 
-/** Normalises what an admin typed into the 9 stored digits, '' when empty, or null when invalid. */
+/** Normalises what an admin typed into the stored form (+614…, +91…, or 9 digits), '' when empty, or null when invalid. */
 export function parseMobile(input) {
   const t = (input ?? '').trim()
   if (!t) return ''
+  const full = t.replace(/[\s-]/g, '')
+  if (/^\+614\d{8}$/.test(full) || /^\+91[6-9]\d{9}$/.test(full)) return full
   const d = mobileDigits(t)
   return /^\d{9}$/.test(d) ? d : null
 }

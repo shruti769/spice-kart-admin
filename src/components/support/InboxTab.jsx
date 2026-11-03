@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { useNow } from '../../lib/customers'
-import { customerName, initials, money, statusLabel, STATUS_PILL as ORDER_PILL } from '../../lib/orders'
+import { customerName, initials, mobileLabel, money, statusLabel, STATUS_PILL as ORDER_PILL } from '../../lib/orders'
 import { useStaff } from '../../lib/staff'
 import {
   CHANNEL_LABEL, PRIORITIES, PRIORITY_TEXT, STATUSES, STATUS_PILL, ago, countCannedUse, msgTime, sendMessage, shortDay,
@@ -319,7 +319,7 @@ function Sidebar({ v, ticket, now, onSelect, onRefund }) {
             <span style={{ font: `400 11.5px/1.2 ${FONT}`, color: MUTED, ...ellipsis }}>{c?.email || 'No email'}</span>
           </span>
         </span>
-        <Stat label="Phone" value={c?.mobile ? `+61 ${c.mobile.slice(0, 3)} ${c.mobile.slice(3, 6)} ${c.mobile.slice(6)}` : '—'} />
+        <Stat label="Phone" value={mobileLabel(c?.mobile) || '—'} />
         <Stat label="Orders" value={d?.stats ? d.stats.orders : '—'} />
         <Stat label="Lifetime spend" value={d?.stats ? money(d.stats.total_spend) : '—'} />
         <Stat label="Customer since" value={d?.stats ? new Date(d.stats.created_at).toLocaleDateString('en-AU', { month: 'short', year: 'numeric' }) : '—'} />

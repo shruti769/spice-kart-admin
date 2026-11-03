@@ -6,16 +6,14 @@ import { updateDeliverySettings, useDeliverySettings } from "../lib/delivery"
 import StoreMapPicker from "../components/StoreMapPicker"
 import { AU_STATES, saveStore, useStore } from "../lib/stores"
 import { fetchStoreConfig, updateBusinessSettings, useBusinessSettings } from "../lib/businessSettings"
-import { Field, Money, NotificationsCard, PaymentsCard } from "../components/settings/BusinessCards"
+import { CardTitle, Field, Money, NotificationsCard, PaymentsCard } from "../components/settings/BusinessCards"
 import StoreHoursCard from "../components/settings/StoreHoursCard"
-import SecurityCard from "../components/settings/SecurityCard"
 
 // business_settings columns edited on this page, by card.
 const PAYMENT_KEYS = ["gst_rate", "prices_include_gst", "refund_destination", "accept_card", "card_brands", "accept_apple_pay", "accept_google_pay", "accept_payid", "restocking_fee_max", "payout_schedule"]
 const NOTIFY_KEYS = ["notify_order_email", "notify_admin_new_order", "new_order_emails", "notify_delivery_sms", "allow_promo_push", "slack_low_stock", "slack_webhook_url", "daily_digest", "digest_emails", "digest_hour"]
-const SECURITY_KEYS = ["require_2fa", "allow_google_sso", "session_timeout_minutes"]
 // Store hours save straight from their own popup (StoreHoursCard), so they aren't in the draft.
-const BIZ_KEYS = ["min_order_value", ...PAYMENT_KEYS, ...NOTIFY_KEYS, ...SECURITY_KEYS]
+const BIZ_KEYS = ["min_order_value", ...PAYMENT_KEYS, ...NOTIFY_KEYS]
 const NUMERIC = { min_order_value: [0, 10000], gst_rate: [0, 100], restocking_fee_max: [0, 1000] }
 const same = (a, b) => JSON.stringify(a) === JSON.stringify(b) || (a != null && b != null && typeof a !== "object" && String(a) === String(b))
 
@@ -108,7 +106,7 @@ const SECTIONS = [
   { id: "payments", label: "Payments & tax" },
   { id: "notifications", label: "Notifications" },
   { id: "hours", label: "Store hours" },
-  { id: "security", label: "Security" },
+  { id: "account", label: "Account" },
 ]
 
 export default function Settings({ v }) {
@@ -339,13 +337,19 @@ export default function Settings({ v }) {
             <DeliveryPostcodesCard v={v} />
             {biz.status === "error" && (
               <span style={{ padding: "12px 14px", borderRadius: "10px", background: "#FBF1DE", color: "#8A6100", font: "500 12.5px/1.5 Inter,system-ui,sans-serif" }}>
-                Payments, notifications, store hours and security can’t load yet · {biz.error}
+                Payments, notifications and store hours can’t load yet · {biz.error}
               </span>
             )}
             <PaymentsCard form={bizForm} set={setBiz} errors={bizErrors} disabled={bizDisabled} dirty={bizDirtyIn(PAYMENT_KEYS)} />
             <NotificationsCard form={bizForm} set={setBiz} errors={bizErrors} disabled={bizDisabled} dirty={bizDirtyIn(NOTIFY_KEYS)} />
             <StoreHoursCard v={v} hours={biz.data?.hours} openNow={openNow} disabled={bizDisabled} onSaved={biz.refetch} />
-            <SecurityCard v={v} form={bizForm} set={setBiz} disabled={bizDisabled} dirty={bizDirtyIn(SECURITY_KEYS)} />
+            <div data-section="account" style={{ background: "#fff", border: "1px solid #E4E7E2", borderRadius: "10px", padding: "18px", display: "flex", flexDirection: "column", alignItems: "flex-start", gap: "12px" }}>
+              <CardTitle title="Account" />
+              <button type="button" className="hv1" onClick={v.openPassword} style={{ display: "flex", alignItems: "center", gap: "7px", height: "34px", padding: "0 12px", border: "1px solid #E4E7E2", borderRadius: "8px", background: "#fff", color: "#17201A", font: "600 12.5px/1.2 Inter,system-ui,sans-serif", cursor: "pointer", whiteSpace: "nowrap" }}>
+                <svg width="15" height="15" viewBox="0 0 20 20" fill="none"><rect x="4.6" y="8.6" width="10.8" height="8" rx="2" stroke="#4A564E" strokeWidth="1.5" /><path d="M7.2 8.6V6.8a2.8 2.8 0 015.6 0v1.8" stroke="#4A564E" strokeWidth="1.5" /></svg>
+                Change password
+              </button>
+            </div>
           </div>
         </div>
       </div>

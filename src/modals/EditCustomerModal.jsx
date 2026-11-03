@@ -29,7 +29,7 @@ function EditCustomerForm({ customer, onClose, onSaved, flash }) {
     first_name: form.first_name.trim().length > 60 ? 'Up to 60 characters' : '',
     last_name: form.last_name.trim().length > 60 ? 'Up to 60 characters' : '',
     email: form.email.trim() && !EMAIL.test(form.email.trim()) ? 'Enter a valid email' : '',
-    mobile: mobile === null ? 'Enter an Australian mobile, e.g. 0412 345 678' : '',
+    mobile: mobile === null ? 'Enter a mobile like 0412 345 678 or +91 98765 43210' : '',
   }
   if (!form.first_name.trim() && !form.last_name.trim()) errs.first_name = 'Enter a name'
   const invalid = Object.values(errs).some(Boolean)

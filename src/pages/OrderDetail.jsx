@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import {
   PAYMENT_LABEL, PAYMENT_STATUS_PILL, STATUSES, STATUS_PILL, cancelOrder, customerName, initials, mobileLabel, money, nextStatus,
-  placedLabel, setOrderStatus, statusLabel, useOrder,
+  placedLabel, setOrderStatus, statusLabel, useOrder, mobileHref,
 } from '../lib/orders'
 import { storeAddress } from '../lib/stores'
 import { useBusinessSettings } from '../lib/businessSettings'
@@ -155,8 +155,8 @@ export default function OrderDetail({ v }) {
             <button className="hv1" onClick={() => setMenu(menu === 'contact' ? null : 'contact')} style={btn}>Contact customer</button>
             {menu === 'contact' && (
               <Popover onClose={() => setMenu(null)}>
-                {c?.mobile && <a className="hv3" href={`tel:+61${c.mobile}`} style={menuItem}><Icon d={PHONE} />Call {mobileLabel(c.mobile)}</a>}
-                {c?.mobile && <a className="hv3" href={`sms:+61${c.mobile}`} style={menuItem}><Icon d={MAIL} />Send SMS</a>}
+                {c?.mobile && <a className="hv3" href={`tel:${mobileHref(c.mobile)}`} style={menuItem}><Icon d={PHONE} />Call {mobileLabel(c.mobile)}</a>}
+                {c?.mobile && <a className="hv3" href={`sms:${mobileHref(c.mobile)}`} style={menuItem}><Icon d={MAIL} />Send SMS</a>}
                 {c?.email && <a className="hv3" href={`mailto:${c.email}?subject=${encodeURIComponent(`Your Spice Kart order #${o.number}`)}`} style={menuItem}><Icon d={MAIL} />Email {c.email}</a>}
                 {!c?.mobile && !c?.email && <span style={{ ...menuItem, color: MUTED, cursor: 'default' }}>No phone or email on this customer yet</span>}
               </Popover>
@@ -294,7 +294,7 @@ export default function OrderDetail({ v }) {
                   </span>
                 </span>
               </span>
-              {c?.mobile && <a href={`tel:+61${c.mobile}`} style={{ display: 'flex', alignItems: 'center', gap: '10px', font: `400 12.5px/1.3 ${FONT}`, color: '#4A564E', textDecoration: 'none' }}><Icon d={PHONE} />{mobileLabel(c.mobile)}</a>}
+              {c?.mobile && <a href={`tel:${mobileHref(c.mobile)}`} style={{ display: 'flex', alignItems: 'center', gap: '10px', font: `400 12.5px/1.3 ${FONT}`, color: '#4A564E', textDecoration: 'none' }}><Icon d={PHONE} />{mobileLabel(c.mobile)}</a>}
               {c?.email && <a href={`mailto:${c.email}`} style={{ display: 'flex', alignItems: 'center', gap: '10px', font: `400 12.5px/1.3 ${FONT}`, color: '#4A564E', textDecoration: 'none' }}><Icon d={MAIL} />{c.email}</a>}
               <span style={{ display: 'flex', alignItems: 'flex-start', gap: '10px', font: `400 12.5px/1.4 ${FONT}`, color: '#4A564E' }}><Icon d={PIN} />{o.address_line}</span>
               {o.delivery_notes && <span style={{ font: `400 12px/1.4 ${FONT}`, color: MUTED }}>Delivery note: {o.delivery_notes}</span>}

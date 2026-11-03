@@ -286,30 +286,45 @@ grant execute on function public.claim_pending_messages(int) to service_role;
 -- The app's Privacy & data → Email updates toggle (also added by the app's privacy migration).
 alter table public.customers add column if not exists email_opt_in boolean not null default true;
 
--- Order placed → confirmation email (skipped when the customer turned email updates off).
-create or replace function public.messages_on_order_insert() returns trigger
-language plpgsql security definer set search_path = public as $$
-declare s public.business_settings; c public.customers; st text;
+-- Order paid → confirmation email (skipped when the customer turned email updates off).
+drop trigger if exists messages_on_order_insert on public.orders;
+drop function if exists public.messages_on_order_insert();
+
+create or replace function public.messages_on_order_paid() returns trigger
+language plpgsql security definer set search_path to 'public' as $$
+declare o public.orders; s public.business_settings; c public.customers; st text;
 begin
-  select * into s from public.business_settings where id;
-  select * into c from public.customers where id = new.customer_id;
-  if not coalesce(s.notify_order_email, false) or c.email is null or not c.email_opt_in then return null; end if;
-  select name into st from public.stores where id = new.store_id;
-  insert into public.outbound_messages (channel, recipient, subject, body, kind, order_id)
-  values ('email', c.email, 'Your ' || coalesce(st, 'Spice Kart') || ' order #' || new.number || ' is confirmed',
-    'Hi ' || coalesce(nullif(c.first_name, ''), 'there') || E',\n\nThanks for your order #' || new.number || E'.\n\n'
-      || coalesce((select string_agg(qty || ' × ' || name || '  $' || to_char(line_total, 'FM999990.00'), E'\n' order by id)
-                     from public.order_items where order_id = new.id), '')
-      || E'\n\nTotal: $' || to_char(new.total, 'FM999990.00')
-      || E'\nDelivery: ' || case when new.delivery_type = 'express' then 'Express' else coalesce(new.slot_label, 'Scheduled') end
-      || E'\nTo: ' || new.address_line || E'\n\n' || coalesce(st, 'Spice Kart'),
-    'order_confirmation', new.id);
+  -- A problem here must never stop a payment being recorded.
+  begin
+    select * into o from public.orders where id = new.id;
+    if o.status = 'cancelled' or o.payment_status <> 'paid' then return null; end if;
+    -- A failed refund can put an order back to paid: it was already confirmed.
+    if exists (select 1 from public.outbound_messages where order_id = o.id and kind = 'order_confirmation') then return null; end if;
+    select * into s from public.business_settings where id;
+    select * into c from public.customers where id = o.customer_id;
+    if not coalesce(s.notify_order_email, false) or c.email is null or not c.email_opt_in then return null; end if;
+    select name into st from public.stores where id = o.store_id;
+    insert into public.outbound_messages (channel, recipient, subject, body, kind, order_id)
+    values ('email', c.email, 'Your ' || coalesce(st, 'Spice Kart') || ' order #' || o.number || ' is confirmed',
+      'Hi ' || coalesce(nullif(c.first_name, ''), 'there') || E',\n\nThanks for your order #' || o.number || E'.\n\n'
+        || coalesce((select string_agg(qty || ' × ' || name || '  $' || to_char(line_total, 'FM999990.00'), E'\n' order by id)
+                       from public.order_items where order_id = o.id), '')
+        || E'\n\nTotal: $' || to_char(o.total, 'FM999990.00')
+        || E'\nDelivery: ' || case when o.delivery_type = 'express' then 'Express' else coalesce(o.slot_label, 'Scheduled') end
+        || E'\nTo: ' || o.address_line || E'\n\n' || coalesce(st, 'Spice Kart'),
+      'order_confirmation', o.id);
+  exception when others then
+    raise warning 'Order confirmation failed for %: %', new.id, sqlerrm;
+  end;
   return null;
 end $$;
--- Deferred to the end of the transaction so place_order() has added the line items.
-drop trigger if exists messages_on_order_insert on public.orders;
-create constraint trigger messages_on_order_insert after insert on public.orders
-  deferrable initially deferred for each row execute function public.messages_on_order_insert();
+
+-- Deferred to the end of the transaction: a wallet order is paid before place_order() adds the line items.
+drop trigger if exists messages_on_order_paid on public.orders;
+create constraint trigger messages_on_order_paid after update of payment_status on public.orders
+  deferrable initially deferred for each row
+  when (new.payment_status = 'paid' and old.payment_status is distinct from 'paid')
+  execute function public.messages_on_order_paid();
 
 -- Out for delivery / delivered → SMS.
 create or replace function public.messages_on_order_status() returns trigger
@@ -322,7 +337,7 @@ begin
   if not coalesce(s.notify_delivery_sms, false) or m is null then return null; end if;
   select name into st from public.stores where id = new.store_id;
   insert into public.outbound_messages (channel, recipient, body, kind, order_id)
-  values ('sms', '+61' || m,
+  values ('sms', case when m like '+%' then m else '+61' || m end,
     coalesce(st, 'Spice Kart') || ': ' || case new.status
       when 'out_for_delivery' then 'your order #' || new.number || ' is on the way.'
       else 'your order #' || new.number || ' has been delivered. Enjoy!' end,

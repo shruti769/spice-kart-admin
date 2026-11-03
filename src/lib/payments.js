@@ -228,6 +228,12 @@ export const walletReturnInfo = (customerId) => stripeRefund({ action: 'wallet-i
 export const returnWalletToCard = (customerId, amount, requestId) =>
   stripeRefund({ action: 'wallet-to-card', customerId, amount, requestId })
 
+/** Adds Spice Kart Money to a customer's wallet. `note` shows in their wallet history. */
+export async function creditWallet(customerId, amount, note) {
+  const { error } = await supabase.rpc('wallet_adjust', { p_customer: customerId, p_amount: amount, p_note: note })
+  if (error) throw new Error(error.message)
+}
+
 // ═══ Export ══════════════════════════════════════════════════════════════════════════════
 const csvCell = (v) => {
   const s = v == null ? '' : String(v)

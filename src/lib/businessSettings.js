@@ -3,12 +3,11 @@ import { useCallback, useEffect, useState } from 'react'
 import { isSupabaseConfigured, supabase } from './supabase'
 import { useRealtime } from './notifications'
 
-// Settings → Delivery minimum, Payments & tax, Notifications, Store hours, Security.
+// Settings → Delivery minimum, Payments & tax, Notifications, Store hours.
 // One row of `public.business_settings` (schema + enforcement: supabase/business_settings.sql).
 
 export const CARD_BRANDS = [['visa', 'Visa'], ['mastercard', 'Mastercard'], ['amex', 'Amex']]
 export const WALLETS = [['accept_apple_pay', 'Apple Pay'], ['accept_google_pay', 'Google Pay'], ['accept_payid', 'PayID']]
-export const TIMEOUTS = [[0, 'Off'], [15, '15 minutes'], [30, '30 minutes'], [60, '1 hour'], [120, '2 hours'], [480, '8 hours']]
 
 function friendly(error) {
   if (error.code === '42P01' || error.code === 'PGRST205' || error.code === 'PGRST202') {
@@ -71,9 +70,9 @@ export function useOutboundSummary() {
         if (cancelled || error) return
         const by = {}
         for (const r of rows) {
-          const c = (by[r.channel] ||= { sent: 0, failed: 0, pending: 0, lastError: null })
-          if (r.status === 'sent') c.sent++
-          else if (r.status === 'failed') { c.failed++; c.lastError ||= r.error }
+          const c = (by[r.channel] ||= { sent: 0, failed: 0, pending: 0, lastError: null, latestFailed: null })
+          if (r.status === 'sent') { c.sent++; c.latestFailed ??= false }
+          else if (r.status === 'failed') { c.failed++; c.lastError ||= r.error; c.latestFailed ??= true }
           else c.pending++
         }
         setData(by)
@@ -137,11 +136,6 @@ export async function startTotpEnrollment() {
 export async function verifyTotp(factorId, code) {
   const { error } = await supabase.auth.mfa.challengeAndVerify({ factorId, code })
   if (error) throw new Error(/invalid|expired/i.test(error.message) ? 'That code didn’t work · check your authenticator app and try again' : error.message)
-}
-
-export async function removeTotp(factorId) {
-  const { error } = await supabase.auth.mfa.unenroll({ factorId })
-  if (error) throw new Error(/aal2/i.test(error.message) ? 'Sign in with your authenticator code first, then remove it' : error.message)
 }
 
 /**

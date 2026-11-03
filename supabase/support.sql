@@ -393,7 +393,7 @@ select * from (values
    ''),
   ('delivery', 1, 'Delivery times & fees', 'Express vs scheduled',
    'Express delivery arrives in about {eta_minutes} minutes while the store is open. Scheduled delivery lets you pick a delivery window up to {book_ahead_days} days ahead.',
-   'FEES AT A GLANCE', array['Express: {express_fee}, free over {free_over}.', 'Scheduled: from {scheduled_fee} — each window shows its own fee.', 'Handling fee: {handling_fee} per order.', 'Every fee is shown at checkout before you place the order.'],
+   'FEES AT A GLANCE', array['Express: {express_fee}, free over {free_over}.', 'Scheduled: each window shows its own fee at checkout.', 'Handling fee: {handling_fee} per order.', 'Every fee is shown at checkout before you place the order.'],
    'Outside store hours Express shows as Closed — choose Schedule instead.'),
   ('delivery', 2, 'Booking a scheduled slot', 'Choose a delivery window',
    'Pick a day and a delivery window at checkout. Windows close {slot_cutoff} before they start.',
