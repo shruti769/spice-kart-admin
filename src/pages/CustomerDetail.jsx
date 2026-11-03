@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import WalletReturnCard from '../components/WalletReturnCard'
 import { moneyAU, num, useCustomerDetail, useNow } from '../lib/customers'
 import { PAYMENT_STATUS_PILL, STATUS_PILL, customerName, initials, itemCount, mobileLabel, placedLabel, statusLabel } from '../lib/orders'
 import { REFUND_REASONS } from '../lib/payments'
@@ -298,6 +299,8 @@ export default function CustomerDetail({ v }) {
                 <span style={small}>{mobileLabel(c.mobile) || 'No mobile on file'}</span>
               </span>
             </div>
+
+            <WalletReturnCard customerId={c.id} flash={v.flash} style={card()} />
 
             <div style={card()}>
               <span style={cardTitle}>Delivery addresses</span>

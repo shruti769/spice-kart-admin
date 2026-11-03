@@ -31,6 +31,8 @@ function RefundDialog({ order: orderProp, request, onClose, onDone }) {
   const [reason, setReason] = useState('')
   const [busy, setBusy] = useState('')
   const [error, setError] = useState('')
+  // One per refund attempt: retrying after an error can't send the money twice.
+  const [requestId] = useState(() => crypto.randomUUID())
   const close = () => { if (!busy) onClose?.() }
 
   useEffect(() => {
@@ -51,11 +53,11 @@ function RefundDialog({ order: orderProp, request, onClose, onDone }) {
     setError('')
     try {
       if (request) {
-        await decideRefund(request.id, kind !== 'reject', kind === 'reject' ? null : amt)
-        onDone?.(kind === 'reject' ? `${request.number} rejected · customer notified` : unpaid ? `${request.number} approved · pay ${aud(amt)} back manually · customer notified` : `${request.number} approved · ${aud(amt)} recorded as refunded · customer notified`)
+        const { toCard } = await decideRefund(request.id, kind !== 'reject', kind === 'reject' ? null : amt, requestId)
+        onDone?.(kind === 'reject' ? `${request.number} rejected · customer notified` : toCard ? `${request.number} approved · ${aud(amt)} sent to the card` : unpaid ? `${request.number} approved · pay ${aud(amt)} back by hand` : `${request.number} approved · ${aud(amt)} refunded`)
       } else {
-        await refundOrder(order.id, amt, reason.trim())
-        onDone?.(`${aud(amt)} refund recorded on #${order.number}`)
+        const { toCard } = await refundOrder(order.id, amt, reason.trim(), requestId)
+        onDone?.(toCard ? `${aud(amt)} sent to the card for #${order.number}` : `${aud(amt)} refund recorded on #${order.number}`)
       }
       onClose?.()
     } catch (e) {

@@ -138,9 +138,18 @@ export async function setOrderStatus(id, status) {
   if (!data?.length) throw new Error('This order no longer exists or you don’t have permission to change it')
 }
 
+/** Cancels an order and refunds what was paid. Returns `{ refunded, toCard }`. */
 export async function cancelOrder(id, reason) {
-  const { error } = await supabase.rpc('cancel_order', { p_id: id, p_reason: reason || null })
-  if (error) throw friendly(error)
+  const { data, error } = await supabase.functions.invoke('stripe-refund', {
+    body: { action: 'cancel', orderId: id, reason: reason || null, requestId: crypto.randomUUID() },
+  })
+  if (error) {
+    const reply = await error.context?.clone?.().json().catch(() => null)
+    throw new Error(reply?.error || 'Couldn’t reach the refund service. Please try again')
+  }
+  if (data?.error) throw new Error(data.error)
+  if (data?.refundError) throw new Error(`The order was cancelled, but the refund failed: ${data.refundError}. Please refund it from Payments`)
+  return data
 }
 
 // ─── Display ─────────────────────────────────────────────────────────────────────────────

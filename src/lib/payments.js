@@ -6,8 +6,7 @@ import { PAYMENT_LABEL, PAYMENT_STATUS_PILL, customerName } from './orders'
 // Payments page (schema: supabase/orders.sql + supabase/admin_data.sql).
 //   transactions  → one row per order, with its payment attempts (payments table)
 //   summary       → payment_summary() RPC (today, Melbourne)
-//   refunds       → refund_order() / decide_refund() RPCs. No payment provider is connected yet,
-//                   so a refund is recorded in the database only; no money moves.
+//   refunds       → the stripe-refund function, then refund_order() / decide_refund().
 
 function friendly(error) {
   if (error.code === '42P01' || error.code === 'PGRST205') return new Error('Payments aren’t set up yet · run supabase/orders.sql in the Supabase SQL Editor')
@@ -200,15 +199,34 @@ export function downloadRefundsCsv(rows) {
 }
 
 // ═══ Actions ═════════════════════════════════════════════════════════════════════════════
-/** Records a refund (amount null = everything that's left). Returns the refund payment row. */
-export async function refundOrder(orderId, amount, reason) {
-  return must(await supabase.rpc('refund_order', { p_order: orderId, p_amount: amount ?? null, p_reason: reason || null }))
+/** Calls the stripe-refund function, which sends the money through Stripe before anything is recorded. */
+async function stripeRefund(body) {
+  const { data, error } = await supabase.functions.invoke('stripe-refund', { body })
+  if (error) {
+    const reply = await error.context?.clone?.().json().catch(() => null)
+    throw new Error(reply?.error || 'Couldn’t reach the refund service. Please try again')
+  }
+  if (data?.error) throw new Error(data.error)
+  return data
 }
 
-/** Approve (records the refund) or reject a customer's refund request. */
-export async function decideRefund(requestId, approve, amount) {
-  return must(await supabase.rpc('decide_refund', { p_request: requestId, p_approve: approve, p_amount: approve ? amount ?? null : null }))
-}
+/**
+ * Refunds an order (amount null = everything that's left). `requestId` stays the same across retries
+ * of one refund, so a retry can't pay twice. `toCard` in the result says whether Stripe sent money.
+ */
+export const refundOrder = (orderId, amount, reason, requestId) =>
+  stripeRefund({ action: 'order', orderId, amount: amount ?? null, reason: reason || null, requestId })
+
+/** Approve (refunds it) or reject a customer's refund request. */
+export const decideRefund = (refundRequest, approve, amount, requestId) =>
+  stripeRefund({ action: 'request', refundRequest, approve, amount: approve ? amount ?? null : null, requestId })
+
+/** `{ balance, returnable }`: the customer's wallet and how much of it came from card top-ups. */
+export const walletReturnInfo = (customerId) => stripeRefund({ action: 'wallet-info', customerId })
+
+/** Sends wallet money back to the cards it was topped up from. */
+export const returnWalletToCard = (customerId, amount, requestId) =>
+  stripeRefund({ action: 'wallet-to-card', customerId, amount, requestId })
 
 // ═══ Export ══════════════════════════════════════════════════════════════════════════════
 const csvCell = (v) => {

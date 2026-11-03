@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from "react"
 import DeliveryPostcodesCard from "../components/DeliveryPostcodesCard"
+import ClosedDatesCard from "../components/ClosedDatesCard"
 import DeliverySlotsCard from "../components/DeliverySlotsCard"
 import { updateDeliverySettings, useDeliverySettings } from "../lib/delivery"
 import StoreMapPicker from "../components/StoreMapPicker"
@@ -334,6 +335,7 @@ export default function Settings({ v }) {
               </div>
             </div>
             <DeliverySlotsCard v={v} data-section="slots" />
+            <ClosedDatesCard v={v} data-section="closed-dates" />
             <DeliveryPostcodesCard v={v} />
             {biz.status === "error" && (
               <span style={{ padding: "12px 14px", borderRadius: "10px", background: "#FBF1DE", color: "#8A6100", font: "500 12.5px/1.5 Inter,system-ui,sans-serif" }}>

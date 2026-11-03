@@ -149,3 +149,28 @@ export async function copySlotsToAllDays(day, slots) {
   if (!slots.length) return
   await write(() => supabase.from('delivery_slots').insert(others.flatMap((weekday) => slots.map((s) => ({ ...slotRow(s), weekday, active: s.active })))).select('id'))
 }
+
+// ─── Closed dates ──────────────────────────────────────────────────────────────────────────
+// `public.delivery_date_overrides`: no slot ids = the whole day. The app and the server both honour it.
+const closedRes = createResource(async () => {
+  const { data, error } = await supabase.from('delivery_date_overrides').select('date, reason, closed_slot_ids').order('date')
+  if (error) throw friendly(error)
+  return data ?? []
+}, [])
+
+/** `{ status, data: [{ date, reason, closed_slot_ids }], error, loading, refetch }` */
+export const useClosedDates = closedRes.useResource
+
+async function writeClosed(run) {
+  try {
+    const { error } = await run()
+    if (error) throw error.code === '23505' ? new Error('That date is already closed') : friendly(error)
+  } finally {
+    closedRes.notify()
+  }
+}
+
+export const addClosedDate = (date, reason) =>
+  writeClosed(() => supabase.from('delivery_date_overrides').insert({ date, reason: reason.trim(), closed_slot_ids: [] }))
+
+export const removeClosedDate = (date) => writeClosed(() => supabase.from('delivery_date_overrides').delete().eq('date', date))

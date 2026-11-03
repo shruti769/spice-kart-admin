@@ -118,7 +118,7 @@ export default function OrderDetail({ v }) {
     run(() => setOrderStatus(o.id, s), `Order #${o.number} → ${statusLabel(s)} · customer notified`)
   }
   const doCancel = async () => {
-    const ok = await run(() => cancelOrder(o.id, reason), `Order #${o.number} cancelled · stock put back · customer notified`)
+    const ok = await run(() => cancelOrder(o.id, reason), `Order #${o.number} cancelled · stock put back · any payment refunded · customer notified`)
     if (ok) { setConfirmCancel(false); setReason('') }
   }
 
@@ -206,7 +206,7 @@ export default function OrderDetail({ v }) {
           <div style={{ ...card, border: '1px solid #F0D5CF', background: '#FDF7F5', padding: '16px 20px', display: 'flex', flexDirection: 'column', gap: '10px' }}>
             <span style={{ font: `600 14px/1.2 ${FONT}`, color: DANGER }}>Cancel order #{o.number}?</span>
             <span style={{ font: `400 12.5px/1.5 ${FONT}`, color: '#4A564E' }}>
-              The stock it took goes back on the shelf and the customer gets a notification.{o.payment_status === 'paid' ? ' The payment was captured, so raise a refund as well.' : ''}
+              The stock it took goes back on the shelf and the customer gets a notification.{o.payment_status === 'paid' ? ' The payment will be refunded automatically.' : ''}
             </span>
             <input value={reason} maxLength={200} onChange={(e) => setReason(e.target.value)} placeholder="Reason (optional), e.g. Out of stock, customer request" style={{ height: '36px', padding: '0 11px', border: `1px solid ${BORDER}`, borderRadius: '8px', font: `500 12.5px/1.2 ${FONT}`, outline: 'none', background: '#fff' }} />
             <span style={{ display: 'flex', gap: '8px', justifyContent: 'flex-end' }}>

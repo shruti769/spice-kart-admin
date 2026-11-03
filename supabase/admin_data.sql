@@ -265,10 +265,11 @@ alter table public.payments add column if not exists reference text unique defau
 alter table public.payments add column if not exists refund_reason text;
 update public.payments set reference = 'TXN-' || nextval('public.payment_ref_seq') where reference is null;
 
-/** Records a refund of `p_amount` (default: what's left) on an order. No money moves until a provider is connected. */
-create or replace function public.refund_order(p_order uuid, p_amount numeric default null, p_reason text default null) returns public.payments
+/** Records a refund of `p_amount` (default: what's left) on an order. Card money moves through the stripe-refund function, which passes its Stripe id. */
+drop function if exists public.refund_order(uuid, numeric, text);
+create or replace function public.refund_order(p_order uuid, p_amount numeric default null, p_reason text default null, p_provider_ref text default null) returns public.payments
 language plpgsql security definer set search_path = public as $$
-declare o public.orders; paid numeric; refunded numeric; amt numeric; p public.payments; m text;
+declare o public.orders; paid numeric; refunded numeric; amt numeric; p public.payments; m text; dest text;
 begin
   if not public.is_admin() then raise exception 'admins only' using errcode = '42501'; end if;
   select * into o from public.orders where id = p_order for update;
@@ -280,21 +281,28 @@ begin
   if amt <= 0 or amt > paid - refunded then
     raise exception 'Refund must be between $0.01 and $% (what’s left)', to_char(paid - refunded, 'FM999990.00') using errcode = 'P0001';
   end if;
+  select refund_destination into dest from public.business_settings limit 1;
+  if coalesce(dest, '') <> 'wallet' and p_provider_ref is null
+     and exists (select 1 from public.payments where order_id = p_order and status = 'succeeded' and provider_ref like 'pi\_%') then
+    raise exception 'This refund must be sent through Stripe. Please refresh the admin panel and try again' using errcode = 'P0001';
+  end if;
   select method into m from public.payments where order_id = p_order and status = 'succeeded' order by created_at desc limit 1;
-  insert into public.payments (order_id, amount, method, status, refund_reason)
-  values (p_order, amt, coalesce(m, o.payment_method), 'refunded', nullif(btrim(p_reason), '')) returning * into p;
+  insert into public.payments (order_id, amount, method, status, refund_reason, provider_ref)
+  values (p_order, amt, coalesce(m, o.payment_method), 'refunded', nullif(btrim(p_reason), ''), p_provider_ref) returning * into p;
   -- payments_sync_order sets 'refunded'; a partial refund is 'partially_refunded'.
   update public.orders set payment_status = case when refunded + amt >= paid then 'refunded' else 'partially_refunded' end where id = p_order;
   return p;
 end $$;
-grant execute on function public.refund_order(uuid, numeric, text) to authenticated;
+revoke execute on function public.refund_order(uuid, numeric, text, text) from public, anon;
+grant execute on function public.refund_order(uuid, numeric, text, text) to authenticated;
 
 /**
  * Approve or reject a customer's refund request, and tell the customer.
  * Approved + something was paid → the refund is recorded now (status 'paid').
  * Approved + nothing paid yet (no payment provider) → status 'approved' = processing, pay it out manually.
  */
-create or replace function public.decide_refund(p_request uuid, p_approve boolean, p_amount numeric default null) returns public.refund_requests
+drop function if exists public.decide_refund(uuid, boolean, numeric);
+create or replace function public.decide_refund(p_request uuid, p_approve boolean, p_amount numeric default null, p_provider_ref text default null) returns public.refund_requests
 language plpgsql security definer set search_path = public as $$
 declare r public.refund_requests; o public.orders; paid numeric; refunded numeric; amt numeric;
 begin
@@ -309,7 +317,7 @@ begin
     amt := round(coalesce(p_amount, r.amount, case when paid > 0 then paid - refunded else o.total end), 2);
     if amt <= 0 or amt > o.total then raise exception 'Refund must be between $0.01 and the order total ($%)', to_char(o.total, 'FM999990.00') using errcode = 'P0001'; end if;
     if paid - refunded > 0 then
-      perform public.refund_order(r.order_id, least(amt, paid - refunded), 'Refund request ' || r.number);
+      perform public.refund_order(r.order_id, least(amt, paid - refunded), 'Refund request ' || r.number, p_provider_ref);
       update public.refund_requests set status = 'paid', amount = least(amt, paid - refunded), decided_at = now() where id = p_request returning * into r;
     else
       update public.refund_requests set status = 'approved', amount = amt, decided_at = now() where id = p_request returning * into r;
@@ -326,7 +334,8 @@ begin
   perform public.kick_push_sender();
   return r;
 end $$;
-grant execute on function public.decide_refund(uuid, boolean, numeric) to authenticated;
+revoke execute on function public.decide_refund(uuid, boolean, numeric, text) from public, anon;
+grant execute on function public.decide_refund(uuid, boolean, numeric, text) to authenticated;
 
 /** Payments page cards for one Melbourne day (default today). */
 create or replace function public.payment_summary(p_day date default null) returns jsonb
