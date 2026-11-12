@@ -129,7 +129,6 @@ export const AUDIENCES = [
   ['new', 'New customers', 'Joined in the last 30 days'],
   ['inactive', 'Inactive customers', 'No order in 30+ days'],
   ['frequent', 'Frequent customers', '3+ orders in 60 days'],
-  ['melbourne', 'Melbourne metro', 'Postcodes 3000–3207'],
 ]
 export const audienceLabel = (a) => AUDIENCES.find(([k]) => k === a)?.[1] ?? a
 

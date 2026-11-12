@@ -315,7 +315,6 @@ export default function NewBanner({ v }) {
               <span style={{ ...cardTitle, paddingBottom: '6px' }}>Targeting</span>
               {[
                 ['allCustomers', 'All customers'],
-                ['melbourneOnly', 'Melbourne metro only'],
                 ['newCustomers', 'Show to new customers'],
                 ['trackClicks', 'Track banner clicks'],
               ].map(([key, label]) => (
