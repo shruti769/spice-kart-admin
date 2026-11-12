@@ -74,7 +74,7 @@ export default function FilterDrawer({ v }) {
                   All
                 </span>
                 <span style={{ font: "600 11.5px/1.2 Inter,system-ui,sans-serif", color: "#0B3D1F", background: "#F1F9DF", border: "1px solid #C7E88A", padding: "7px 10px", borderRadius: "7px", whiteSpace: "nowrap" }}>
-                  Express
+                  Standard
                 </span>
                 <span style={{ font: "600 11.5px/1.2 Inter,system-ui,sans-serif", color: "#4A564E", background: "#fff", border: "1px solid #E4E7E2", padding: "7px 10px", borderRadius: "7px", whiteSpace: "nowrap" }}>
                   Scheduled

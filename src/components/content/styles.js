@@ -29,8 +29,8 @@ export const PILL = {
   expired: ['Expired', '#A93826', '#FAEDEA'],
 }
 
-/** Today in Melbourne as 'YYYY-MM-DD' — the clock the read policies use. */
-export const todayMelbourne = () => new Date().toLocaleDateString('en-CA', { timeZone: 'Australia/Melbourne' })
+/** Today in Brisbane as 'YYYY-MM-DD' — the clock the read policies use. */
+export const todayBrisbane = () => new Date().toLocaleDateString('en-CA', { timeZone: 'Australia/Brisbane' })
 
 const toDate = (iso) => {
   const [y, m, d] = iso.slice(0, 10).split('-').map(Number)

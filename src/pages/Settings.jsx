@@ -77,11 +77,11 @@ function parseStoreForm(form) {
 
 // [delivery_settings column, label, unit] — edited here and saved with "Save settings".
 const DELIVERY_FIELDS = [
-  ["express_fee", "EXPRESS DELIVERY FEE", "$"],
+  ["express_fee", "STANDARD DELIVERY FEE", "$"],
   ["scheduled_fee", "SCHEDULED DELIVERY FEE", "$"],
   ["handling_fee", "HANDLING FEE", "$"],
   ["free_delivery_over", "FREE DELIVERY THRESHOLD", "$"],
-  ["express_eta_minutes", "EXPRESS ETA", "minutes"],
+  ["express_eta_minutes", "LATE ALERT AFTER", "minutes"],
 ]
 
 const toDeliveryForm = (settings) => Object.fromEntries(DELIVERY_FIELDS.map(([k]) => [k, String(settings[k])]))
@@ -301,7 +301,7 @@ export default function Settings({ v }) {
                 <span style={{ display: "flex", flexDirection: "column", gap: "6px" }}>
                   <span style={{ font: "600 10.5px/1.2 Inter,system-ui,sans-serif", letterSpacing: ".4px", color: "#7C8A81", textTransform: "uppercase", whiteSpace: "nowrap" }}>CURRENCY · TIME ZONE</span>
                   <span style={{ display: "flex", alignItems: "center", height: "36px", padding: "0 11px", border: "1px solid #E4E7E2", borderRadius: "8px", background: "#F6F7F4", font: "500 12.5px/1.2 Inter,system-ui,sans-serif", color: "#4A564E", whiteSpace: "nowrap" }}>
-                    AUD ($) · Australia/Melbourne
+                    AUD ($) · Australia/Brisbane
                   </span>
                 </span>
                 <StoreMapPicker form={storeForm} onChange={patchStore} disabled={storeQ.loading} />

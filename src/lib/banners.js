@@ -23,11 +23,11 @@ export const placementLabel = (p) => PLACEMENTS.find(([k]) => k === p)?.[1] ?? p
 export const PAGES = ['Offers page', 'New arrivals', 'Home']
 
 // ─── Display helpers ─────────────────────────────────────────────────────────────────────
-/** Today in Melbourne as 'YYYY-MM-DD' — the same clock the read policy uses. */
-const todayMelbourne = () => new Date().toLocaleDateString('en-CA', { timeZone: 'Australia/Melbourne' })
+/** Today in Brisbane as 'YYYY-MM-DD' — the same clock the read policy uses. */
+const todayBrisbane = () => new Date().toLocaleDateString('en-CA', { timeZone: 'Australia/Brisbane' })
 
 /** 'draft' | 'scheduled' | 'live' | 'expired' */
-export function bannerStatus(b, today = todayMelbourne()) {
+export function bannerStatus(b, today = todayBrisbane()) {
   if (b.status !== 'published') return 'draft'
   if (b.starts_on && b.starts_on > today) return 'scheduled'
   if (b.ends_on && b.ends_on < today) return 'expired'

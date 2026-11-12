@@ -73,7 +73,7 @@ export async function liveSearch(query) {
   ])
   const out = []
   for (const o of orders.data ?? []) out.push({
-    group: 'Orders', title: `#${o.number} · ${nameOf(o.customer)}`, subtitle: `${money(o.total)} · ${o.delivery_type === 'express' ? 'Express' : 'Scheduled'}`,
+    group: 'Orders', title: `#${o.number} · ${nameOf(o.customer)}`, subtitle: `${money(o.total)} · ${o.delivery_type === 'express' ? 'Standard' : 'Scheduled'}`,
     meta: STATUS[o.status] ?? o.status, badge: 'OR', open: (v) => v.openOrder(o),
   })
   for (const c of customers.data ?? []) out.push({

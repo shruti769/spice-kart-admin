@@ -123,8 +123,8 @@ export const updateContentSettings = (patch) => settingsStore.write((t) => t().u
 const collectionsStore = tableStore('seasonal_collections', [['starts_on', false], ['created_at', false]])
 export const useCollections = collectionsStore.useRows
 
-/** 'scheduled' | 'live' | 'ended' (dates are inclusive, Melbourne time). */
-export function collectionStatus(c, today = new Date().toLocaleDateString('en-CA', { timeZone: 'Australia/Melbourne' })) {
+/** 'scheduled' | 'live' | 'ended' (dates are inclusive, Brisbane time). */
+export function collectionStatus(c, today = new Date().toLocaleDateString('en-CA', { timeZone: 'Australia/Brisbane' })) {
   if (c.starts_on > today) return 'scheduled'
   if (c.ends_on < today) return 'ended'
   return 'live'

@@ -75,7 +75,7 @@ export default function Orders({ v }) {
         <div className="r-wrap" style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
           <select value={type} onChange={(e) => setType(e.target.value)} style={selectBox} aria-label="Delivery type">
             <option value="all">Type: All</option>
-            <option value="express">Express</option>
+            <option value="express">Standard</option>
             <option value="scheduled">Scheduled</option>
           </select>
           <select value={pay} onChange={(e) => setPay(e.target.value)} style={selectBox} aria-label="Payment status">
@@ -112,7 +112,7 @@ export default function Orders({ v }) {
                 <span style={cell}>{n}</span>
                 <span style={{ ...cell, color: INK, fontWeight: 600 }}>{money(o.total)}</span>
                 <span style={{ display: 'flex', flexDirection: 'column', gap: '3px', minWidth: '0' }}>
-                  <span style={cell}>{o.delivery_type === 'express' ? 'Express' : 'Scheduled'}</span>
+                  <span style={cell}>{o.delivery_type === 'express' ? 'Standard' : 'Scheduled'}</span>
                   {o.slot_label && <span style={{ ...cell, font: `400 11px/1.2 ${FONT}`, color: MUTED }}>{o.slot_label}</span>}
                 </span>
                 <span style={{ display: 'flex', flexDirection: 'column', gap: '4px', alignItems: 'flex-start', minWidth: '0' }}>

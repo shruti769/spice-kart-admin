@@ -2,7 +2,7 @@ import { useState } from 'react'
 import { AUDIENCES, LINK_PAGES, PLACEMENTS, TYPES, createAnnouncement, typeMeta, updateAnnouncement } from '../lib/announcements'
 import { useCategories } from '../lib/categories'
 import { isSupabaseConfigured } from '../lib/supabase'
-import { BORDER, FONT, INK, MUTED, btnPrimary, btnSecondary, errorText, hintText, inputStyle, labelStyle, selectStyle, todayMelbourne, withError } from '../components/content/styles'
+import { BORDER, FONT, INK, MUTED, btnPrimary, btnSecondary, errorText, hintText, inputStyle, labelStyle, selectStyle, todayBrisbane, withError } from '../components/content/styles'
 import { Modal } from '../components/content/ui'
 
 function Segmented({ options, value, onChange, label }) {
@@ -30,7 +30,7 @@ export default function AnnouncementModal({ v, announcement, onClose }) {
   const [placement, setPlacement] = useState(announcement?.placement ?? 'top_bar')
   const [audience, setAudience] = useState(announcement?.audience ?? 'all')
   const [link, setLink] = useState(announcement?.link ?? '')
-  const [starts, setStarts] = useState(announcement?.starts_on ?? todayMelbourne())
+  const [starts, setStarts] = useState(announcement?.starts_on ?? todayBrisbane())
   const [ends, setEnds] = useState(announcement?.ends_on ?? '')
   const [errors, setErrors] = useState({})
   const [saving, setSaving] = useState(false)

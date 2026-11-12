@@ -168,7 +168,7 @@ function RecentOrders({ v, now }) {
             </span>
             <span style={cellWrap}><span style={muted}>{n} item{n === 1 ? '' : 's'}</span></span>
             <span style={cellWrap}><span style={strong}>{aud(o.total)}</span></span>
-            <span style={cellWrap}><span style={muted}>{o.delivery_type === 'express' ? 'Express' : 'Scheduled'}</span></span>
+            <span style={cellWrap}><span style={muted}>{o.delivery_type === 'express' ? 'Standard' : 'Scheduled'}</span></span>
             <span style={cellWrap}><span style={tag(pfg, pbg)}>{pl}</span></span>
             <span style={cellWrap}><span style={tag(sfg, sbg)}>{DASH_STATUS_LABEL[o.status] ?? o.status}</span></span>
             <span style={cellWrap}><span style={muted}>{shortTime(o.placed_at, now)}</span></span>

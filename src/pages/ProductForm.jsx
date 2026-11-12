@@ -640,7 +640,7 @@ export default function ProductForm({ v }) {
             </div>
             <div style={{ ...cardStyle, gap: "2px" }}>
               <span style={{ font: "600 13.5px/1.2 Inter,system-ui,sans-serif", color: "#17201A", paddingBottom: "6px" }}>Delivery & visibility</span>
-              <ToggleRow title="Express delivery" subtitle="Available for 25-minute delivery" on={form.express_delivery} onChange={set('express_delivery')} />
+              <ToggleRow title="Standard delivery" subtitle="2–4 hours in Brisbane, next day elsewhere" on={form.express_delivery} onChange={set('express_delivery')} />
               <ToggleRow title="Scheduled delivery" subtitle="Available in booked windows" on={form.scheduled_delivery} onChange={set('scheduled_delivery')} />
               <ToggleRow title="Track inventory" on={form.track_inventory} onChange={set('track_inventory')} />
               <ToggleRow title="Sensitive item" subtitle="Personal care · blurred in customers' orders if they choose" on={form.sensitive} onChange={set('sensitive')} />

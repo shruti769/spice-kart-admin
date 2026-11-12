@@ -2,7 +2,7 @@ import { useEffect, useMemo, useRef, useState } from 'react'
 import { IMAGE_TYPES, compressImage, validateImage } from '../../lib/banners'
 import { collectionStatus, deleteCollection, saveCollection, useCollections } from '../../lib/content'
 import { useProducts } from '../../lib/products'
-import { BORDER, DIVIDER, FONT, INK, MUTED, PILL, btnPrimary, btnSecondary, ellipsis, errorText, hintText, inputStyle, labelStyle, shortDate, todayMelbourne, withError } from './styles'
+import { BORDER, DIVIDER, FONT, INK, MUTED, PILL, btnPrimary, btnSecondary, ellipsis, errorText, hintText, inputStyle, labelStyle, shortDate, todayBrisbane, withError } from './styles'
 import { Modal, Pill, SectionHead, Toggle, TrashIcon } from './ui'
 
 const STATUS = { scheduled: PILL.scheduled, live: PILL.live, ended: PILL.ended }
@@ -12,7 +12,7 @@ function CollectionModal({ v, collection, onClose }) {
   const products = useProducts()
   const [name, setName] = useState(collection?.name ?? '')
   const [tagline, setTagline] = useState(collection?.tagline ?? '')
-  const [starts, setStarts] = useState(collection?.starts_on ?? todayMelbourne())
+  const [starts, setStarts] = useState(collection?.starts_on ?? todayBrisbane())
   const [ends, setEnds] = useState(collection?.ends_on ?? '')
   const [picked, setPicked] = useState(collection?.product_ids ?? [])
   const [showOnHome, setShowOnHome] = useState(collection?.show_on_home ?? true)

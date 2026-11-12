@@ -11,7 +11,7 @@ const fmt = (t) => {
   return `${h % 12 || 12}:${String(m).padStart(2, '0')} ${h < 12 ? 'AM' : 'PM'}`
 }
 const byOpen = (a, b) => a.open.localeCompare(b.open)
-const todayMelbourne = () => new Date().toLocaleDateString('en-CA', { timeZone: 'Australia/Melbourne' })
+const todayBrisbane = () => new Date().toLocaleDateString('en-CA', { timeZone: 'Australia/Brisbane' })
 /** 'YYYY-MM-DD' → 'Mon' … 'Sun' */
 const weekdayOf = (iso) => {
   const [y, m, d] = iso.split('-').map(Number)
@@ -26,7 +26,7 @@ const overlaps = (a, b) => a.open < b.close && b.open < a.close
 /** Add / edit one opening window. `editing`: { day, index } or null (add: the picked date gives the weekday). */
 function HoursModal({ hours, editing, onClose, onSaved, v }) {
   const current = editing ? hours[editing.day][editing.index] : null
-  const [date, setDate] = useState(editing ? '' : todayMelbourne())
+  const [date, setDate] = useState(editing ? '' : todayBrisbane())
   const [open, setOpen] = useState(current?.open ?? '09:00')
   const [close, setClose] = useState(current?.close ?? '17:00')
   const [errors, setErrors] = useState({})
@@ -65,7 +65,7 @@ function HoursModal({ hours, editing, onClose, onSaved, v }) {
   return (
     <Modal
       title={editing ? `Edit ${DAYS.find(([k]) => k === editing.day)[1]} hours` : 'Add store hours'}
-      sub="Melbourne time. Express orders are only accepted inside these hours."
+      sub="Brisbane time. Standard delivery orders are only accepted inside these hours."
       width={480}
       busy={busy}
       onClose={onClose}
@@ -79,7 +79,7 @@ function HoursModal({ hours, editing, onClose, onSaved, v }) {
       {!editing && (
         <label style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
           <span style={labelStyle}>Date</span>
-          <input type="date" value={date} min={todayMelbourne()} onChange={(e) => { setDate(e.target.value); setErrors((x) => ({ ...x, date: undefined })) }} style={withError(inputStyle, errors.date)} />
+          <input type="date" value={date} min={todayBrisbane()} onChange={(e) => { setDate(e.target.value); setErrors((x) => ({ ...x, date: undefined })) }} style={withError(inputStyle, errors.date)} />
           {errors.date
             ? <span style={errorText}>{errors.date}</span>
             : <span style={hintText}>{date ? `${longDate(date)} · saved as ${DAYS.find(([k]) => k === weekdayOf(date))[1]} hours, every week` : 'The day is taken from the date'}</span>}
@@ -129,7 +129,7 @@ export default function StoreHoursCard({ v, hours: saved, openNow, disabled, onS
       <span className="r-wrap" style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
         <span className="r-full" style={{ display: 'flex', flexDirection: 'column', gap: '5px', flex: '1' }}>
           <span style={{ font: `600 13.5px/1.2 ${FONT}`, color: INK }}>Store hours</span>
-          <span style={{ font: `400 11.5px/1.4 ${FONT}`, color: MUTED }}>Melbourne time. Express orders are only accepted while the store is open; scheduled slots still work.</span>
+          <span style={{ font: `400 11.5px/1.4 ${FONT}`, color: MUTED }}>Brisbane time. Standard delivery orders are only accepted while the store is open; scheduled slots still work.</span>
         </span>
         {openNow != null && !empty && (
           <span style={{ font: `600 12px/1.2 ${FONT}`, color: openNow ? '#0B6B33' : DANGER, whiteSpace: 'nowrap' }}>● {openNow ? 'Open now' : 'Closed now'}</span>

@@ -177,7 +177,7 @@ export function NotificationsCard({ form, set, errors, disabled, dirty }) {
               style={withError(inputStyle, errors.digest_emails)}
             />
           </Field>
-          <Field label="At (Melbourne)">
+          <Field label="At (Brisbane time)">
             <select value={form.digest_hour} disabled={disabled} onChange={(e) => set({ digest_hour: Number(e.target.value) })} style={selectStyle}>
               {Array.from({ length: 24 }, (_, h) => <option key={h} value={h}>{`${h % 12 || 12}:00 ${h < 12 ? 'AM' : 'PM'}`}</option>)}
             </select>

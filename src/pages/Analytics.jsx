@@ -172,7 +172,7 @@ export default function Analytics({ v }) {
   const deliveryRows = [
     ['Average delivery time', dc.avg_minutes != null ? `${Number(dc.avg_minutes).toFixed(1)} min` : '—', change(dc.avg_minutes, dp.avg_minutes, { mode: 'min', upIsGood: false })],
     ['On-time rate', pct(dc.on_time_rate), change(dc.on_time_rate, dp.on_time_rate, { mode: 'pp' })],
-    ['Express share', pct(dc.express_share), change(dc.express_share, dp.express_share, { mode: 'pp' })],
+    ['Standard share', pct(dc.express_share), change(dc.express_share, dp.express_share, { mode: 'pp' })],
     ['Orders delivered', num(dc.delivered), change(dc.delivered, dp.delivered)],
     ['Refund rate', pct(refundRate ?? 0), change(refundRate ?? 0, prevRefundRate, { mode: 'pp', upIsGood: false })],
   ]
@@ -191,7 +191,7 @@ export default function Analytics({ v }) {
       ['New customers', cur.new_customers, prev.new_customers],
       ['Average delivery time (min, express)', dc.avg_minutes ?? '', dp.avg_minutes ?? ''],
       ['On-time rate (%)', dc.on_time_rate ?? '', dp.on_time_rate ?? ''],
-      ['Express share (%)', dc.express_share ?? '', dp.express_share ?? ''],
+      ['Standard share (%)', dc.express_share ?? '', dp.express_share ?? ''],
       ['Refund rate (%)', refundRate?.toFixed(1) ?? '', prevRefundRate?.toFixed(1) ?? ''],
       [],
       ['Date', 'Orders', 'Revenue (AUD)', 'New customers', 'Total customers'],

@@ -5,7 +5,7 @@ import { PAYMENT_LABEL, PAYMENT_STATUS_PILL, customerName } from './orders'
 
 // Payments page (schema: supabase/orders.sql + supabase/admin_data.sql).
 //   transactions  → one row per order, with its payment attempts (payments table)
-//   summary       → payment_summary() RPC (today, Melbourne)
+//   summary       → payment_summary() RPC (today, Brisbane)
 //   refunds       → the stripe-refund function, then refund_order() / decide_refund().
 
 function friendly(error) {
@@ -122,7 +122,7 @@ export const txDate = (o) => o.last?.created_at ?? o.placed_at
 export const aud = (n) => Number(n || 0).toLocaleString('en-AU', { style: 'currency', currency: 'AUD' })
 
 // ═══ Summary ═════════════════════════════════════════════════════════════════════════════
-/** Today's payment_summary() (Melbourne day), live; re-read every minute so the day rolls over. */
+/** Today's payment_summary() (Brisbane day), live; re-read every minute so the day rolls over. */
 export function usePaymentSummary() {
   return useLive(async () => must(await supabase.rpc('payment_summary')), ['orders', 'payments'], [], 60000)
 }
@@ -266,7 +266,7 @@ function saveCsv(lines, name) {
   const url = URL.createObjectURL(blob)
   const a = document.createElement('a')
   a.href = url
-  a.download = `spice-kart-${name}-${new Date().toLocaleDateString('en-CA', { timeZone: 'Australia/Melbourne' })}.csv`
+  a.download = `spice-kart-${name}-${new Date().toLocaleDateString('en-CA', { timeZone: 'Australia/Brisbane' })}.csv`
   document.body.appendChild(a)
   a.click()
   a.remove()

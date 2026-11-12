@@ -28,10 +28,10 @@ export const placementLabel = (p) => PLACEMENTS.find(([k]) => k === p)?.[1] ?? p
 /** Screens a tap can open (stored as 'page:<name>'); categories are 'category:<id>'. */
 export const LINK_PAGES = ['Offers page', 'Wallet', 'Delivery slots']
 
-const todayMelbourne = () => new Date().toLocaleDateString('en-CA', { timeZone: 'Australia/Melbourne' })
+const todayBrisbane = () => new Date().toLocaleDateString('en-CA', { timeZone: 'Australia/Brisbane' })
 
 /** 'paused' | 'scheduled' | 'expired' | 'live' */
-export function announcementStatus(a, today = todayMelbourne()) {
+export function announcementStatus(a, today = todayBrisbane()) {
   if (!a.active) return 'paused'
   if (a.starts_on && a.starts_on > today) return 'scheduled'
   if (a.ends_on && a.ends_on < today) return 'expired'

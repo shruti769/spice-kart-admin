@@ -70,7 +70,7 @@ export default function DeliveryPostcodesCard({ v, ...rest }) {
         </label>
         <label style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
           <span style={labelStyle}>Suburb (optional)</span>
-          <input value={suburb} onChange={(e) => setSuburb(e.target.value)} placeholder="Melbourne" maxLength={60} disabled={parsePostcodes(codes).valid.length > 1} style={input} />
+          <input value={suburb} onChange={(e) => setSuburb(e.target.value)} placeholder="Brisbane" maxLength={60} disabled={parsePostcodes(codes).valid.length > 1} style={input} />
         </label>
         <button type="submit" disabled={busy} className="hv1" style={{ ...btn, opacity: busy ? 0.6 : 1 }}>
           {busy ? 'Adding…' : 'Add'}

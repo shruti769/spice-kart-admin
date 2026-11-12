@@ -130,7 +130,7 @@ export default function OrderDetail({ v }) {
   const items = o.order_items ?? []
   const late = !cancelled && !done && o.promised_by && new Date(o.promised_by) < new Date()
   const c = o.customer
-  const typeLabel = o.delivery_type === 'express' ? 'Express delivery' : 'Scheduled delivery'
+  const typeLabel = o.delivery_type === 'express' ? 'Standard delivery' : 'Scheduled delivery'
   const zone = o.address_area || (o.address_line.match(/,\s*([^,]+?)\s+[A-Z]{2,3}\s+\d{4}$/)?.[1] ?? '—')
 
   // Timeline: when each step was reached (latest time per status) from order_status_events.
@@ -198,7 +198,7 @@ export default function OrderDetail({ v }) {
           </button>
           <span style={pill(sfg, sbg)}>{statusLabel(o.status)}</span>
           <span style={pill(pfg, pbg)}>{pl}</span>
-          <span style={pill('#2F4F9E', '#EEF2FB')}>{o.delivery_type === 'express' ? 'EXPRESS' : 'SCHEDULED'}</span>
+          <span style={pill('#2F4F9E', '#EEF2FB')}>{o.delivery_type === 'express' ? 'STANDARD' : 'SCHEDULED'}</span>
           {late && <span style={pill(DANGER, '#FAEDEA')}>Late</span>}
         </span>
 

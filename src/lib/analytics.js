@@ -4,9 +4,9 @@ import { useRealtime } from './notifications'
 import { isLowStock, isOutOfStock } from './products'
 
 // Dashboard + Analytics numbers (schema: supabase/orders.sql + the admin_* RPCs in supabase/admin_data.sql).
-// Days are Melbourne days; everything refetches live through Supabase Realtime.
+// Days are Brisbane days; everything refetches live through Supabase Realtime.
 
-const TZ = 'Australia/Melbourne'
+const TZ = 'Australia/Brisbane'
 const LIVE_TABLES = ['orders', 'order_items', 'customers', 'products', 'admin_alerts']
 
 function friendly(error) {
@@ -21,27 +21,27 @@ const must = ({ data, error, count }) => {
   return count ?? data
 }
 
-// ═══ Melbourne dates ═════════════════════════════════════════════════════════════════════
+// ═══ Brisbane dates ═════════════════════════════════════════════════════════════════════
 const partsFmt = new Intl.DateTimeFormat('en-CA', { timeZone: TZ, year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit', second: '2-digit', hourCycle: 'h23' })
 function melbParts(date) {
   const p = Object.fromEntries(partsFmt.formatToParts(date).map((x) => [x.type, x.value]))
   return { y: +p.year, m: +p.month, d: +p.day, h: +p.hour % 24, min: +p.minute, s: +p.second }
 }
-/** Melbourne UTC offset (ms) at `date`. */
+/** Brisbane UTC offset (ms) at `date`. */
 function offsetMs(date) {
   const p = melbParts(date)
   return Date.UTC(p.y, p.m - 1, p.d, p.h, p.min, p.s) - Math.floor(date.getTime() / 1000) * 1000
 }
 const pad = (n) => String(n).padStart(2, '0')
 
-/** Today's Melbourne date as 'YYYY-MM-DD'. */
+/** Today's Brisbane date as 'YYYY-MM-DD'. */
 export function melbToday(now = Date.now()) {
   const p = melbParts(new Date(now))
   return `${p.y}-${pad(p.m)}-${pad(p.d)}`
 }
-/** The current hour (0-23) in Melbourne. */
+/** The current hour (0-23) in Brisbane. */
 export const melbHour = (now = Date.now()) => melbParts(new Date(now)).h
-/** The instant a Melbourne day ('YYYY-MM-DD') starts. */
+/** The instant a Brisbane day ('YYYY-MM-DD') starts. */
 export function melbStart(ymd) {
   const [y, m, d] = ymd.split('-').map(Number)
   const guess = Date.UTC(y, m - 1, d)
@@ -58,9 +58,9 @@ const daysBetween = (a, b) => Math.round((Date.parse(`${b}T00:00:00Z`) - Date.pa
 export function dayLabel(ymd, opts = {}) {
   return new Date(`${ymd}T00:00:00Z`).toLocaleDateString('en-AU', { day: 'numeric', month: 'short', ...(opts.year ? { year: 'numeric' } : {}), timeZone: 'UTC' })
 }
-/** "Monday, 21 September 2026" in Melbourne. */
+/** "Monday, 21 September 2026" in Brisbane. */
 export const longDate = (now = Date.now()) => new Date(now).toLocaleDateString('en-AU', { timeZone: TZ, weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' })
-/** "Good morning" / "Good afternoon" / "Good evening" by the Melbourne clock. */
+/** "Good morning" / "Good afternoon" / "Good evening" by the Brisbane clock. */
 export function greeting(now = Date.now()) {
   const h = melbHour(now)
   return h < 12 ? 'Good morning' : h < 17 ? 'Good afternoon' : 'Good evening'
@@ -87,7 +87,7 @@ const RANGE_LABEL = { today: 'Today', '7d': 'Last 7 days', '30d': 'Last 30 days'
 
 /**
  * `{ fromDay, toDay (inclusive), from, to (ISO, [from, to)), days, label }` for a range key,
- * relative to Melbourne `today`; 'custom' uses `custom = { from, to }` ('YYYY-MM-DD', inclusive).
+ * relative to Brisbane `today`; 'custom' uses `custom = { from, to }` ('YYYY-MM-DD', inclusive).
  */
 export function rangeFor(key, today, custom) {
   let fromDay, toDay
@@ -222,7 +222,7 @@ function bucketSeries(series, range, hourly) {
 // ═══ Dashboard ═══════════════════════════════════════════════════════════════════════════
 /**
  * Everything on the dashboard except the recent-orders table.
- * `today` = Melbourne 'YYYY-MM-DD' (from useClock); `range` = rangeFor(...) for the chart + status panel.
+ * `today` = Brisbane 'YYYY-MM-DD' (from useClock); `range` = rangeFor(...) for the chart + status panel.
  */
 export function useDashboard(today, range) {
   return useLiveData(async () => {

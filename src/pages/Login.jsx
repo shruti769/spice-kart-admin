@@ -87,7 +87,7 @@ export default function Login({ v }) {
           <span style={{ marginTop: "auto", display: "flex", flexDirection: "column", gap: "14px", position: "relative", maxWidth: "420px" }}>
             <span style={{ font: "700 30px/1.25 Inter,system-ui", color: "#fff", letterSpacing: "-.6px" }}>Run the whole grocery operation from one place.</span>
             <span style={{ font: "400 13px/1.7 Inter,system-ui,sans-serif", color: "rgba(255,255,255,.66)" }}>
-              Orders, inventory, delivery, promotions and payments — live across Melbourne, Sydney and Brisbane metro.
+              Orders, inventory, delivery, promotions and payments — live across Australia.
             </span>
           </span>
         </div>
