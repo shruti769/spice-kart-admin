@@ -81,7 +81,7 @@ const DELIVERY_FIELDS = [
   ["scheduled_fee", "SCHEDULED DELIVERY FEE", "$"],
   ["handling_fee", "HANDLING FEE", "$"],
   ["free_delivery_over", "FREE DELIVERY THRESHOLD", "$"],
-  ["express_eta_minutes", "LATE ALERT AFTER", "minutes"],
+  ["express_eta_minutes", "BRISBANE LATE ALERT AFTER", "minutes"],
 ]
 
 const toDeliveryForm = (settings) => Object.fromEntries(DELIVERY_FIELDS.map(([k]) => [k, String(settings[k])]))
